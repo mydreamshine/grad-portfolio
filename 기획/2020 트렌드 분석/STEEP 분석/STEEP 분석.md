@@ -9,6 +9,8 @@
    - 환경에 따른 패널티 적용
      - 모래 바람 -> 시야 차단
      - 태풍 -> 이동속도 감소
+
+![image](https://i2.wp.com/www.onmsft.com/wp-content/uploads/2018/02/gigantic.jpg?fit=1365%2C768&ssl=1)
 ---
 ### 컨텐츠
   - 사회 이슈 분석을 통해 컨텐츠 확보
