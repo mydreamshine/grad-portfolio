@@ -5,7 +5,7 @@ The development member configuration is as follows:
 <br></br> 정명준 (Game Engineering)
 <br></br>
 <br></br>
-# Early development concept
+# Development concept
 <div>
   <img src="https://user-images.githubusercontent.com/32826146/69816287-6d0a8d80-123b-11ea-8109-fb9a0649c0f3.png" width="70%" align="center"></img>
   <br></br>
