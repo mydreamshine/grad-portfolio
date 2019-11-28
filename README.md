@@ -7,8 +7,12 @@ The development member configuration is as follows:
 <br></br>
 # Early development concept
 <div>
-  <img src="https://user-images.githubusercontent.com/32826146/68539703-e183a680-03ca-11ea-8e61-ad685f3131e9.png" width="70%" align="center"></img>
+  <img src="https://user-images.githubusercontent.com/32826146/69816287-6d0a8d80-123b-11ea-8109-fb9a0649c0f3.png" width="70%" align="center"></img>
   <br></br>
-  <img src="https://user-images.githubusercontent.com/32826146/68539704-e183a680-03ca-11ea-8cd6-d2c430f8b9cc.png" width="70%" align="center"></img>
+  <img src="https://user-images.githubusercontent.com/32826146/69816297-70057e00-123b-11ea-923c-b5c323eca135.png" width="70%" align="center"></img>
+  <br></br>
+  <img src="https://user-images.githubusercontent.com/32826146/69816300-71cf4180-123b-11ea-8a67-b1414eb3f4c7.png" width="70%" align="center"></img>
+  <br></br>
+  <img src="https://user-images.githubusercontent.com/32826146/69816305-73990500-123b-11ea-8166-51826d52d171.png" width="70%" align="center"></img>
 </div>
 <br></br>
