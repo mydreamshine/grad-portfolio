@@ -1,7 +1,14 @@
 # For UserTerminal
 User_Terminal/.vs
 User_Terminal/x64
-User_Terminal//User_Terminal/x64
+User_Terminal/User_Terminal/x64
+
+# For Streaming_Server
+Streaming_Server/.vs
+Streaming_Server/Debug
+Streaming_Server/x64
+Streaming_Server/Streaming_Server/x64
+Streaming_Server/Streaming_Server/Debug
 
 # Visual Studio 2015 user specific files
 .vs/
