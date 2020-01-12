@@ -270,6 +270,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//∫§≈Õ √ ±‚»≠
 	m_Vertex.clear();
 	m_Index.clear();
+	std::vector<CDiffusedVertex>().swap(m_Vertex);
+	std::vector<UINT>().swap(m_Index);
 }
 
 void CScene::ReleaseObjects() {

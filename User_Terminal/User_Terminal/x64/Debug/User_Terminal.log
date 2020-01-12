@@ -1,5 +1,0 @@
-﻿  source.cpp
-C:\Users\a-sae\Desktop\grad-portfolio\User_Terminal\User_Terminal\source.cpp(108,1): warning C4996:  'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um\winsock2.h(1831): message :  'inet_addr' 선언을 참조하십시오.
-C:\Users\a-sae\Desktop\grad-portfolio\User_Terminal\User_Terminal\source.cpp(201): warning C4715:  'SDL_main': 모든 제어 경로에서 값을 반환하지는 않습니다.
-  User_Terminal.vcxproj -> C:\Users\a-sae\Desktop\grad-portfolio\User_Terminal\x64\Debug\User_Terminal.exe

@@ -4,6 +4,7 @@
 #include <WS2tcpip.h>
 #include <SDL.h>
 #include <string>
+#include <thread>
 
 #ifndef CLEANUP_H
 #define CLEANUP_H
@@ -64,7 +65,28 @@ inline void cleanup<SDL_Surface>(SDL_Surface* surf) {
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+const int FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
+const int MAX_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
 
+SOCKET serverSocket;
+SDL_Window* window;
+SDL_Renderer* renderer;
+SDL_Texture* streaming_data;
+
+void error_display(const char* msg, int err_no)
+{
+	WCHAR* lpMsgBuf;
+	FormatMessage(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM,
+		NULL, err_no,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)& lpMsgBuf, 0, NULL);
+	std::cout << msg;
+	std::wcout << L"에러 " << lpMsgBuf << std::endl;
+	while (true);
+	LocalFree(lpMsgBuf);
+}
 void logSDLError(std::ostream& os, const std::string& msg) {
 	os << msg << " error: " << SDL_GetError() << std::endl;
 }
@@ -97,81 +119,30 @@ void renderTexture(SDL_Texture* tex, SDL_Renderer* ren, int x, int y) {
 	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
 	SDL_RenderCopy(ren, tex, NULL, &dst);
 }
-int main(int, char**) {
-	WSADATA wsa;
-	WSAStartup(MAKEWORD(2, 2), &wsa);
+void RecvFunc()
+{
+	bool canRender = false;
+	UINT8* completeFrame = new UINT8[FRAME_DATA_SIZE];
 
-	SOCKET serverSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-	
-	SOCKADDR_IN serverAddr;
-	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
-	serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(9000);
-
-	int retval = connect(serverSocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
-	if (retval != SOCKET_ERROR)
-		printf("연결 성공");
-
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		logSDLError(std::cout, "SDL_Init");
-		return 1;
-	}
-
-	SDL_Window* window = SDL_CreateWindow("Lesson 2", 100, 100, SCREEN_WIDTH,
-		SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-	if (window == nullptr) {
-		logSDLError(std::cout, "CreateWindow");
-		SDL_Quit();
-		return 1;
-	}
-
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1,
-		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == nullptr) {
-		logSDLError(std::cout, "CreateRenderer");
-		cleanup(window);
-		SDL_Quit();
-		return 1;
-	}
-
-	SDL_Texture* streaming_data = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	//SDL_Texture* streaming_data = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	
-	if (streaming_data == nullptr) {
-		cleanup(streaming_data);
-		SDL_Quit();
-		return 1;
-	}
-
-	UINT DataSize = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
 	UINT savedSize = 0;
-	
-	UINT8* receivedPacket = new UINT8[DataSize];
-	UINT8* receivedPointer = receivedPacket;
-	UINT8* savedPacket = new UINT8[DataSize];
+	UINT8* savedPacket = new UINT8[MAX_BUFFER_SIZE];
 	UINT8* savedPointer = savedPacket;
+	UINT8* receivedPacket = new UINT8[MAX_BUFFER_SIZE];
+	UINT8* receivedPointer = receivedPacket;
 
 	while (true)
 	{
-		int retval = recv(serverSocket, reinterpret_cast<char *>(receivedPacket), SCREEN_WIDTH * SCREEN_HEIGHT * 4, 0);
-		if (retval == 0 || retval == SOCKET_ERROR) break;
+		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), MAX_BUFFER_SIZE, 0);
+		if (retval == 0 || retval == SOCKET_ERROR) return;
 
 		while (retval > 0) {
-			if (savedSize + retval >= DataSize) {
-				UINT needBytes = DataSize - savedSize;
+			if (savedSize + retval >= FRAME_DATA_SIZE) {
+				UINT needBytes = FRAME_DATA_SIZE - savedSize;
 				memcpy(savedPointer, receivedPointer, needBytes);
-				
-				//Process Packet
-				int pitch;
-				int* pixels;
-				SDL_LockTexture(streaming_data, NULL, reinterpret_cast<void**>(&pixels), &pitch);
-				memcpy(pixels, savedPacket, DataSize);
-				SDL_UnlockTexture(streaming_data);
 
-				SDL_RenderClear(renderer);
-				SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
-				SDL_RenderPresent(renderer);
+				//Process Packet
+				canRender = true;
+				memcpy(completeFrame, savedPacket, FRAME_DATA_SIZE);
 
 				retval -= needBytes;
 				if (retval != 0)
@@ -189,7 +160,91 @@ int main(int, char**) {
 				receivedPointer = receivedPacket;
 			}
 		}
+
+		if (canRender == true) {
+			int pitch;
+			int* pixels;
+			SDL_LockTexture(streaming_data, NULL, reinterpret_cast<void**>(&pixels), &pitch);
+			memcpy(pixels, completeFrame, FRAME_DATA_SIZE);
+			SDL_UnlockTexture(streaming_data);
+
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
+			SDL_RenderPresent(renderer);
+		}
 	}
+}
+int main(int, char**) {
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
+
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		logSDLError(std::cout, "SDL_Init");
+		return 1;
+	}
+
+	window = SDL_CreateWindow("Lesson 2", 100, 100, SCREEN_WIDTH,
+		SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+	if (window == nullptr) {
+		logSDLError(std::cout, "CreateWindow");
+		SDL_Quit();
+		return 1;
+	}
+
+	renderer = SDL_CreateRenderer(window, -1,
+		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	if (renderer == nullptr) {
+		logSDLError(std::cout, "CreateRenderer");
+		cleanup(window);
+		SDL_Quit();
+		return 1;
+	}
+
+	streaming_data = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+	if (streaming_data == nullptr) {
+		cleanup(streaming_data);
+		SDL_Quit();
+		return 1;
+	}
+
+	serverSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (serverSocket == INVALID_SOCKET)
+		error_display("WSASocket()", WSAGetLastError());
+
+	SOCKADDR_IN serverAddr;
+	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
+	//serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	inet_pton(AF_INET, "127.0.0.1", reinterpret_cast<PVOID>(&serverAddr.sin_addr));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(9000);
+
+	int retval = connect(serverSocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
+	if (retval != SOCKET_ERROR)
+		printf("연결 성공");
+
+	std::thread recvThread{ RecvFunc };
+
+	SDL_Event e;
+	while (true)
+	{
+		while (SDL_PollEvent(&e))
+		{
+			switch (e.type)
+			{
+			case SDL_KEYDOWN:
+				break;
+
+			case SDL_KEYUP:
+				break;
+
+			default:
+				break;
+			}
+		}
+	}
+
+	recvThread.join();
 
 	closesocket(serverSocket);
 	WSACleanup();

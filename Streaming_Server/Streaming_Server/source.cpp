@@ -62,6 +62,7 @@ void InitializeClients()
 		clients[user_id].connect = false;
 
 		clients[user_id].recv_over = new OVER_EX;
+		memset(clients[user_id].recv_over, 0, sizeof(OVER_EX));
 		clients[user_id].recv_over->event_type = EV_RECV;
 		clients[user_id].recv_over->wsabuf->buf = clients[user_id].recv_over->net_buf;
 		clients[user_id].recv_over->wsabuf->len = sizeof(clients[user_id].recv_over->net_buf);
@@ -80,7 +81,7 @@ void SendFramePacket(int client, BYTE* frame)
 	memcpy(send_over->net_buf, frame, FRAME_DATA_SIZE);
 	send_over->wsabuf[0].buf = send_over->net_buf;
 	send_over->wsabuf[0].len = FRAME_DATA_SIZE;
-	WSASend(clients[client].socket, send_over->wsabuf, 1, 0, 0, &send_over->over, 0);
+	WSASend(clients[client].socket, send_over->wsabuf, 1, nullptr, 0, &send_over->over, nullptr);
 }
 void ProcessPacket(int client, void* packet) {};
 
@@ -111,6 +112,7 @@ void do_worker() {
 
 		if (num_byte == 0) {
 			DisconnectPlayer(key);
+			if (over_ex->event_type == EV_SEND) delete over_ex;
 			continue;
 		}
 
