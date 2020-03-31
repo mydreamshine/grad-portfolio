@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{71a99f5c-ae01-4e2d-86e6-861272544d2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\FileLoaders">
+      <UniqueIdentifier>{9bf600e2-25f8-459c-b614-8e96e514b92f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utilities">
+      <UniqueIdentifier>{79261645-cd84-4a65-b8ee-7f83495837ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Timer">
+      <UniqueIdentifier>{5918976c-5a3b-477e-bd53-56c92ca03279}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utilities\assimp">
+      <UniqueIdentifier>{488cbdd5-657b-4551-9b13-20ccff1262cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utilities\d3d12">
+      <UniqueIdentifier>{c8803dad-1b89-4db9-a680-71bbd19f8de3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ClientTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DXSample.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32Application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\FileLoader\ModelLoader.cpp">
+      <Filter>Common\FileLoaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Timer\Timer.cpp">
+      <Filter>Common\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\Camera.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\d3dUtil.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\DDSTextureLoader.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\GeometryGenerator.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\MathHelper.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Win32Application.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DXSample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DXSampleHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\DDSLoader.h">
+      <Filter>Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\ModelLoader.h">
+      <Filter>Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\TextureLoader.h">
+      <Filter>Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\TgaLoader.h">
+      <Filter>Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Timer\Timer.h">
+      <Filter>Common\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\Camera.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\d3dUtil.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\DDSTextureLoader.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\GeometryGenerator.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\MathHelper.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\UploadBuffer.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
