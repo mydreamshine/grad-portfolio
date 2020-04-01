@@ -104,13 +104,13 @@ void ClientTest::LoadPipeline()
         &swapChain
         ));
 
-    // This sample does not support fullscreen transitions.
+    // This app does not support fullscreen transitions.
     ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-    // Create descriptor heaps.
+    // Create rtv & dsv descriptor heaps.
     {
         // Describe and create a render target view (RTV) descriptor heap.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -123,16 +123,17 @@ void ClientTest::LoadPipeline()
         // Each frame has its own depth stencils (to write shadows onto) 
         // and then there is one for the scene itself.
         D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-        dsvHeapDesc.NumDescriptors = 1;
+        dsvHeapDesc.NumDescriptors = 2; // Add +1 DSV for shadow map.
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
 
         m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         m_cbvsrvuavDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        m_DsvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     }
 
-    // Create frame resources.
+    // Create rtv buffer view.
     {
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -145,7 +146,7 @@ void ClientTest::LoadPipeline()
         }
     }
 
-    // Create the depth stencil.
+    // Create the depth stencil buffer.
     {
         CD3DX12_RESOURCE_DESC depthStencilDesc(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -175,6 +176,9 @@ void ClientTest::LoadPipeline()
 
         // Create the depth stencil view.
         m_device->CreateDepthStencilView(m_depthStencil.Get(), nullptr, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+
+        // 두번째 depth stencil view(for shadowMap)에 대한 생성은
+        // ShadowMap 객체에서 이루어진다.
     }
 
     ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
@@ -188,7 +192,9 @@ void ClientTest::LoadAssets()
 {
     BuildRootSignature();
     BuildShadersAndInputLayout();
-    BuildPSOs();    
+    BuildPSOs();
+
+    m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
 
     BuildShapeGeometry();
     LoadSkinnedModels();
@@ -202,6 +208,8 @@ void ClientTest::LoadAssets()
     BuildConstantBufferView();
 
     BuildFrameResources();
+
+    BuildScene();
 
     // Close the command list and execute it to begin the initial GPU setup.
     ThrowIfFailed(m_commandList->Close());
@@ -242,15 +250,17 @@ void ClientTest::BuildRootSignature()
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
-    CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
     ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // t0: diffuseMap
+    ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // t1: shadowMap
 
-    CD3DX12_ROOT_PARAMETER1 rootParameters[5];
+    CD3DX12_ROOT_PARAMETER1 rootParameters[6];
     rootParameters[0].InitAsConstantBufferView(0); // ObjectConstants
     rootParameters[1].InitAsConstantBufferView(1); // SkinnedConstants
     rootParameters[2].InitAsConstantBufferView(2); // MaterialConstants
     rootParameters[3].InitAsConstantBufferView(3); // PassConstants
     rootParameters[4].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL); // t0: diffuseMap
+    rootParameters[5].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL); // t1: shadowMap
 
     auto staticSamplers = GetStaticSamplers();
 
@@ -269,8 +279,9 @@ void ClientTest::BuildRootSignature()
 void ClientTest::BuildDescriptorHeaps()
 {
     UINT TextureCount = (UINT)m_Textures.size();
+    UINT ShadowMapCount = 1;
 
-    UINT numDescriptors = TextureCount * gNumFrameResources;
+    UINT numDescriptors = TextureCount * gNumFrameResources + (ShadowMapCount + 1); // add +1 srv for nullSrv
 
     D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc;
     srvHeapDesc.NumDescriptors = numDescriptors;
@@ -280,31 +291,68 @@ void ClientTest::BuildDescriptorHeaps()
     ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 }
 
+// Srv buffer view case
+// ┌───────────────────────┐
+// │             Srv descriptor heaps             │
+// ├───────────┬───────────┤
+// │     texture_views    │                      │
+// ├───┬───┬───┤ null_view(for shadow)│
+// │frame0│frame1│frame2│                      │
+// └───┴───┴───┴───────────┘
 void ClientTest::BuildConstantBufferView()
 {
-    UINT texCount = (UINT)m_Textures.size();
+    UINT TextureCount = (UINT)m_Textures.size();
+    UINT ShadowMapCount = 1;
 
-    // Need a CBV descriptor for each object for each frame resource.
+    // Describe and create a SRV for the texture.
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = m_BackBufferFormat;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+    // Need a SRV descriptor for each object for each frame resource.
     for (int frameIndex = 0; frameIndex < gNumFrameResources; ++frameIndex)
     {
         UINT i = 0;
         for (auto& tex_iter : m_Textures)
         {
-            // Offset to the skinned cbv in the descriptor heap.
-            int heapIndex = texCount * frameIndex + i;
+            int heapIndex = TextureCount * frameIndex + i;
             auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
             handle.Offset(heapIndex, m_cbvsrvuavDescriptorSize);
 
-            // Describe and create a SRV for the texture.
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.Format = m_BackBufferFormat;
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D.MipLevels = 1;
             m_device->CreateShaderResourceView(tex_iter.second->Resource.Get(), &srvDesc, handle);
 
             i++;
         }
+    }
+
+    // Offset to the tex+shadowmap Srvs in the descriptor heap.
+    int heapIndex = TextureCount * gNumFrameResources + 1;
+    auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+    handle.Offset(heapIndex, m_cbvsrvuavDescriptorSize);
+    m_NullSrv = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+    m_NullSrv.Offset(heapIndex, m_cbvsrvuavDescriptorSize);
+
+    m_device->CreateShaderResourceView(nullptr, &srvDesc, handle);
+
+
+    // Create srv & dsv for shadowMap.
+    {
+        UINT ShadowMapHeapIndex = TextureCount * gNumFrameResources;
+
+        auto hCPUSrv = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+        hCPUSrv.Offset(ShadowMapHeapIndex, m_cbvsrvuavDescriptorSize);
+
+        auto hGPUSrv = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+        hGPUSrv.Offset(ShadowMapHeapIndex, m_cbvsrvuavDescriptorSize);
+
+        auto hCPUDsv = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+        hCPUDsv.Offset(1, m_DsvDescriptorSize);
+
+        m_ShadowMap->BuildDescriptors(hCPUSrv, hGPUSrv, hCPUDsv);
     }
 }
 
@@ -319,6 +367,10 @@ void ClientTest::BuildShadersAndInputLayout()
     m_Shaders["standardVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "VS", "vs_5_1");
     m_Shaders["skinnedVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", skinnedDefines, "VS", "vs_5_1");
     m_Shaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "PS", "ps_5_1");
+
+    m_Shaders["shadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
+    m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
 
     m_InputLayout =
     {
@@ -388,27 +440,67 @@ void ClientTest::BuildPSOs()
         m_Shaders["opaquePS"]->GetBufferSize()
     };
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedOpaque"])));
+
+    //
+    // PSO for shadow map pass.
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC smapPsoDesc = opaquePsoDesc;
+    smapPsoDesc.RasterizerState.DepthBias = 100000;
+    smapPsoDesc.RasterizerState.DepthBiasClamp = 0.0f;
+    smapPsoDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+    smapPsoDesc.pRootSignature = m_rootSignature.Get();
+    smapPsoDesc.VS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["shadowVS"]->GetBufferPointer()),
+        m_Shaders["shadowVS"]->GetBufferSize()
+    };
+    smapPsoDesc.PS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["shadowOpaquePS"]->GetBufferPointer()),
+        m_Shaders["shadowOpaquePS"]->GetBufferSize()
+    };
+
+    // Shadow map pass does not have a render target.
+    smapPsoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+    smapPsoDesc.NumRenderTargets = 0;
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&smapPsoDesc, IID_PPV_ARGS(&m_PSOs["shadow_opaque"])));
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedSmapPsoDesc = smapPsoDesc;
+    skinnedSmapPsoDesc.InputLayout = { m_SkinnedInputLayout.data(), (UINT)m_SkinnedInputLayout.size() };
+    skinnedSmapPsoDesc.VS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["skinnedShadowVS"]->GetBufferPointer()),
+        m_Shaders["skinnedShadowVS"]->GetBufferSize()
+    };
+    skinnedSmapPsoDesc.PS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["shadowOpaquePS"]->GetBufferPointer()),
+        m_Shaders["shadowOpaquePS"]->GetBufferSize()
+    };
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedSmapPsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedShadow_opaque"])));
+}
+
+void ClientTest::BuildScene()
+{
+    // Estimate the scene bounding sphere manually since we know how the scene was constructed.
+    // The grid is the "widest object" with a width of 500 and depth of 500.0f, and centered at
+    // the world space origin.  In general, you need to loop over every world space vertex
+    // position and compute the bounding sphere.
+    m_SceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
+    m_SceneBounds.Radius = sqrtf(250.0f * 250.0f + 250.0f * 250.0f);
 }
 
 void ClientTest::BuildFrameResources()
 {
-    UINT PassCount = 1;
+    UINT PassCount = 2; // Common Render Pass + Shadow Render Pass
     UINT ObjectCount = (UINT)m_AllRitems.size();
     UINT SkinnedCount = (UINT)m_ModelSkeltons.size();
     UINT MaterialCount = (UINT)m_Materials.size();
+
     for (int i = 0; i < gNumFrameResources; ++i)
     {
         m_FrameResources.push_back(std::make_unique<FrameResource>(m_device.Get(), PassCount, ObjectCount, SkinnedCount, MaterialCount));
         FrameResource* frame_resource = m_FrameResources.back().get();
-
-        PassConstants FramePassData;
-        XMFLOAT3 EyePosition = { 0.0f, 5.0f, -300.0f };
-        XMFLOAT3 LookAtPosition = { 0.0f, 100.0f, 0.0f };
-        XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
-        XMStoreFloat4x4(&FramePassData.Proj, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_width / m_height, 0.01f, 1000.0f));
-        XMStoreFloat4x4(&FramePassData.View, XMMatrixLookAtLH(XMLoadFloat3(&EyePosition), XMLoadFloat3(&LookAtPosition), XMLoadFloat3(&UpDirection)));
-        XMStoreFloat4x4(&FramePassData.Proj, XMMatrixTranspose(XMLoadFloat4x4(&FramePassData.Proj)));
-        XMStoreFloat4x4(&FramePassData.View, XMMatrixTranspose(XMLoadFloat4x4(&FramePassData.View)));
 
         ObjectConstants ObjectData;
         ObjectData.World = MathHelper::Identity4x4();
@@ -418,19 +510,21 @@ void ClientTest::BuildFrameResources()
         for (auto& skinnedTransform : SkinnedData.BoneTransform)
             XMStoreFloat4x4(&skinnedTransform, XMMatrixIdentity());
 
-        for (UINT j = 0; j < PassCount; ++j)
-            frame_resource->PassCB->CopyData(j, FramePassData);
         for (UINT j = 0; j < ObjectCount; ++j)
             frame_resource->ObjectCB->CopyData(j, ObjectData);
         for (UINT j = 0; j < SkinnedCount; ++j)
             frame_resource->SkinnedCB->CopyData(j, SkinnedData);
     }
+
+    m_CurrFrameResource = m_FrameResources[m_CurrFrameResourceIndex].get();
+
+    UpdateMainPassCB(m_Timer);
 }
 
 void ClientTest::BuildShapeGeometry()
 {
     GeometryGenerator geoGen;
-    GeometryGenerator::MeshData quad = geoGen.CreateQuad(0.0f, 0.0f, 100.0f, 100.0f, 0.0f);
+    GeometryGenerator::MeshData grid = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
 
     //
     // Concatenating all the geometry into one big vertex/index buffer.
@@ -438,36 +532,36 @@ void ClientTest::BuildShapeGeometry()
     //
 
     // Cache the vertex offsets to each object in the concatenated vertex buffer.
-    UINT quadVertexOffset = 0;
+    UINT gridVertexOffset = 0;
 
     // Cache the starting index for each object in the concatenated index buffer.
-    UINT quadIndexOffset = 0;
+    UINT gridIndexOffset = 0;
 
-    SubmeshGeometry quadSubmesh;
-    quadSubmesh.IndexCount = (UINT)quad.Indices32.size();
-    quadSubmesh.StartIndexLocation = quadIndexOffset;
-    quadSubmesh.BaseVertexLocation = quadVertexOffset;
+    SubmeshGeometry gridSubmesh;
+    gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
+    gridSubmesh.StartIndexLocation = gridIndexOffset;
+    gridSubmesh.BaseVertexLocation = gridVertexOffset;
 
     //
     // Extract the vertex elements we are interested in and pack the
     // vertices of all the meshes into one vertex buffer.
     //
 
-    auto totalVertexCount = quad.Vertices.size();
+    auto totalVertexCount = grid.Vertices.size();
 
     std::vector<DXTexturedVertex> vertices(totalVertexCount);
 
     UINT k = 0;
-    for (int i = 0; i < quad.Vertices.size(); ++i, ++k)
+    for (int i = 0; i < grid.Vertices.size(); ++i, ++k)
     {
-        vertices[k].xmf3Position = quad.Vertices[i].Position;
-        vertices[k].xmf3Normal = quad.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = quad.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = quad.Vertices[i].TangentU;
+        vertices[k].xmf3Position = grid.Vertices[i].Position;
+        vertices[k].xmf3Normal = grid.Vertices[i].Normal;
+        vertices[k].xmf2TextureUV = grid.Vertices[i].TexC;
+        vertices[k].xmf3Tangent = grid.Vertices[i].TangentU;
     }
 
     std::vector<std::uint16_t> indices;
-    indices.insert(indices.end(), std::begin(quad.GetIndices16()), std::end(quad.GetIndices16()));
+    indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
 
     const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXTexturedVertex);
     const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
@@ -492,7 +586,7 @@ void ClientTest::BuildShapeGeometry()
     geo->IndexFormat = DXGI_FORMAT_R16_UINT;
     geo->IndexBufferByteSize = ibByteSize;
 
-    geo->DrawArgs["quad"] = quadSubmesh;
+    geo->DrawArgs["grid"] = gridSubmesh;
 
     m_Geometries[geo->Name] = std::move(geo);
 }
@@ -771,7 +865,7 @@ void ClientTest::BuildMaterials()
         mat->NumFramesDirty = gNumFrameResources;
         mat->MatCBIndex = matCB_index++;
         mat->DiffuseSrvHeapIndex = diffuseSrvHeap_Index++;
-        mat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        mat->DiffuseAlbedo = XMFLOAT4(0.88f, 0.88f, 0.88f, 1.0f);
         mat->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
         mat->Roughness = 0.8f;
 
@@ -789,7 +883,8 @@ void ClientTest::BuildRenderItems()
     {
         auto ModelRitem = std::make_unique<RenderItem>();
         ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
+        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
+        XMStoreFloat4x4(&(ModelRitem->World), PosM);
         ModelRitem->TexTransform = MathHelper::Identity4x4();
         ModelRitem->ObjCBIndex = ObjCBIndex++;
         ModelRitem->Geo = m_Geometries["Meshtint Free Knight"].get();
@@ -810,7 +905,8 @@ void ClientTest::BuildRenderItems()
     {
         auto ModelRitem = std::make_unique<RenderItem>();
         ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
+        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
+        XMStoreFloat4x4(&(ModelRitem->World), PosM);
         ModelRitem->TexTransform = MathHelper::Identity4x4();
         ModelRitem->ObjCBIndex = ObjCBIndex++;
         ModelRitem->Geo = m_Geometries["TT_RTS_Demo_Character"].get();
@@ -831,7 +927,8 @@ void ClientTest::BuildRenderItems()
     {
         auto ModelRitem = std::make_unique<RenderItem>();
         ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
+        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
+        XMStoreFloat4x4(&(ModelRitem->World), PosM);
         ModelRitem->TexTransform = MathHelper::Identity4x4();
         ModelRitem->ObjCBIndex = ObjCBIndex++;
         ModelRitem->Geo = m_Geometries["claire@Dancing"].get();
@@ -852,7 +949,8 @@ void ClientTest::BuildRenderItems()
     {
         auto ModelRitem = std::make_unique<RenderItem>();
         ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
+        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
+        XMStoreFloat4x4(&(ModelRitem->World), PosM);
         ModelRitem->TexTransform = MathHelper::Identity4x4();
         ModelRitem->ObjCBIndex = ObjCBIndex++;
         ModelRitem->Geo = m_Geometries["Soldier_demo"].get();
@@ -894,12 +992,28 @@ void ClientTest::OnUpdate()
 {
     m_Timer.Tick(0.0f);
 
+    AnimateLights(m_Timer);
     AnimateSkeletons(m_Timer);
 
     UpdateObjectCBs(m_Timer);
     UpdateSkinnedCBs(m_Timer);
     UpdateMaterialCBs(m_Timer);
+    UpdateShadowTransform(m_Timer);
     UpdateMainPassCB(m_Timer);
+    UpdateShadowPassCB(m_Timer);
+}
+
+void ClientTest::AnimateLights(CTimer& gt)
+{
+    m_LightRotationAngle += 1.0f * gt.GetTimeElapsed();
+
+    XMMATRIX R = XMMatrixRotationY(m_LightRotationAngle);
+    for (int i = 0; i < 3; ++i)
+    {
+        XMVECTOR lightDir = XMLoadFloat3(&m_BaseLightDirections[i]);
+        lightDir = XMVector3TransformNormal(lightDir, R);
+        XMStoreFloat3(&m_RotatedLightDirections[i], lightDir);
+    }
 }
 
 void ClientTest::AnimateSkeletons(CTimer& gt)
@@ -991,43 +1105,128 @@ void ClientTest::UpdateMaterialCBs(CTimer& gt)
 
 void ClientTest::UpdateMainPassCB(CTimer& gt)
 {
-    XMFLOAT3 EyePosition = { 0.0f, 5.0f, -300.0f };
-    XMFLOAT3 LookAtPosition = { 0.0f, 100.0f, 0.0f };
+    XMFLOAT3 EyePosition = { 0.0f, 300.0f, -500.0f };
+    XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
-    XMFLOAT4X4 Projection, View;
 
-    XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_width / m_height, 0.01f, 1000.0f));
-    XMStoreFloat4x4(&View, XMMatrixLookAtLH(XMLoadFloat3(&EyePosition), XMLoadFloat3(&LookAtPosition), XMLoadFloat3(&UpDirection)));
+    m_Camera.SetPosition(EyePosition);
+    m_Camera.SetLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 1000.0f);
+    m_Camera.LookAt(EyePosition, LookAtPosition, UpDirection);
+    m_Camera.UpdateViewMatrix();
 
-    XMMATRIX view = XMLoadFloat4x4(&View);
-    XMMATRIX proj = XMLoadFloat4x4(&Projection);
+    XMMATRIX view = m_Camera.GetView();
+    XMMATRIX proj = m_Camera.GetProj();
 
     XMMATRIX viewProj = XMMatrixMultiply(view, proj);
     XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
     XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
     XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 
-    XMStoreFloat4x4(&mMainPassCB.View, XMMatrixTranspose(view));
-    XMStoreFloat4x4(&mMainPassCB.InvView, XMMatrixTranspose(invView));
-    XMStoreFloat4x4(&mMainPassCB.Proj, XMMatrixTranspose(proj));
-    XMStoreFloat4x4(&mMainPassCB.InvProj, XMMatrixTranspose(invProj));
-    XMStoreFloat4x4(&mMainPassCB.ViewProj, XMMatrixTranspose(viewProj));
-    XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-    mMainPassCB.EyePosW = EyePosition;
-    mMainPassCB.RenderTargetSize = XMFLOAT2((float)m_width, (float)m_height);
-    mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_width, 1.0f / m_height);
-    mMainPassCB.NearZ = 1.0f;
-    mMainPassCB.FarZ = 1000.0f;
-    mMainPassCB.TotalTime = gt.GetTotalTime();
-    mMainPassCB.DeltaTime = gt.GetTimeElapsed();
-    mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-    static int Rdeg = 0;
-    Rdeg = (Rdeg + 1) % 360;
-    mMainPassCB.Lights[0].Direction = { cosf((float)Rdeg * (MathHelper::Pi / 180.0f)), -0.1f, sinf((float)Rdeg * (MathHelper::Pi / 180.0f)) };
-    mMainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+    // Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+    XMMATRIX T(
+        0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, -0.5f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f, 1.0f);
+
+    XMMATRIX viewProjTex = XMMatrixMultiply(viewProj, T);
+    XMMATRIX shadowTransform = XMLoadFloat4x4(&m_ShadowTransform);
+
+    XMStoreFloat4x4(&m_MainPassCB.View, XMMatrixTranspose(view));
+    XMStoreFloat4x4(&m_MainPassCB.InvView, XMMatrixTranspose(invView));
+    XMStoreFloat4x4(&m_MainPassCB.Proj, XMMatrixTranspose(proj));
+    XMStoreFloat4x4(&m_MainPassCB.InvProj, XMMatrixTranspose(invProj));
+    XMStoreFloat4x4(&m_MainPassCB.ViewProj, XMMatrixTranspose(viewProj));
+    XMStoreFloat4x4(&m_MainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
+    XMStoreFloat4x4(&m_MainPassCB.ViewProjTex, XMMatrixTranspose(viewProjTex));
+    XMStoreFloat4x4(&m_MainPassCB.ShadowTransform, XMMatrixTranspose(shadowTransform));
+    m_MainPassCB.EyePosW = m_Camera.GetPosition3f();
+    m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_width, (float)m_height);
+    m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_width, 1.0f / m_height);
+    m_MainPassCB.NearZ = 1.0f;
+    m_MainPassCB.FarZ = 1000.0f;
+    m_MainPassCB.TotalTime = gt.GetTotalTime();
+    m_MainPassCB.DeltaTime = gt.GetTimeElapsed();
+    m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+    m_MainPassCB.Lights[0].Direction = m_RotatedLightDirections[0];
+    m_MainPassCB.Lights[0].Strength = { 0.9f, 0.9f, 0.7f };
+    m_MainPassCB.Lights[1].Direction = m_RotatedLightDirections[1];
+    m_MainPassCB.Lights[1].Strength = { 0.4f, 0.4f, 0.4f };
+    m_MainPassCB.Lights[2].Direction = m_RotatedLightDirections[2];
+    m_MainPassCB.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
 
     auto currPassCB = m_CurrFrameResource->PassCB.get();
-    currPassCB->CopyData(0, mMainPassCB);
+    currPassCB->CopyData(0, m_MainPassCB);
+}
+
+void ClientTest::UpdateShadowPassCB(CTimer& gt)
+{
+    XMMATRIX view = XMLoadFloat4x4(&m_LightView);
+    XMMATRIX proj = XMLoadFloat4x4(&m_LightProj);
+
+    XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+    XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+    XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
+    XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
+
+    UINT w = m_ShadowMap->Width();
+    UINT h = m_ShadowMap->Height();
+
+    XMStoreFloat4x4(&m_ShadowPassCB.View, XMMatrixTranspose(view));
+    XMStoreFloat4x4(&m_ShadowPassCB.InvView, XMMatrixTranspose(invView));
+    XMStoreFloat4x4(&m_ShadowPassCB.Proj, XMMatrixTranspose(proj));
+    XMStoreFloat4x4(&m_ShadowPassCB.InvProj, XMMatrixTranspose(invProj));
+    XMStoreFloat4x4(&m_ShadowPassCB.ViewProj, XMMatrixTranspose(viewProj));
+    XMStoreFloat4x4(&m_ShadowPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
+    m_ShadowPassCB.EyePosW = m_LightPosW;
+    m_ShadowPassCB.RenderTargetSize = XMFLOAT2((float)w, (float)h);
+    m_ShadowPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / w, 1.0f / h);
+    m_ShadowPassCB.NearZ = m_LightNearZ;
+    m_ShadowPassCB.FarZ = m_LightFarZ;
+
+    auto currPassCB = m_CurrFrameResource->PassCB.get();
+    currPassCB->CopyData(1, m_ShadowPassCB);
+}
+
+void ClientTest::UpdateShadowTransform(CTimer& gt)
+{
+    // Only the first "main" light casts a shadow.
+    XMVECTOR lightDir = XMLoadFloat3(&m_RotatedLightDirections[0]);
+    XMVECTOR lightPos = -2.0f * m_SceneBounds.Radius * lightDir;
+    XMVECTOR targetPos = XMLoadFloat3(&m_SceneBounds.Center);
+    XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+    XMStoreFloat3(&m_LightPosW, lightPos);
+
+    // Transform bounding sphere to light space.
+    XMFLOAT3 sphereCenterLS;
+    XMStoreFloat3(&sphereCenterLS, XMVector3TransformCoord(targetPos, lightView));
+
+    // Ortho frustum in light space encloses scene.
+    float l = sphereCenterLS.x - m_SceneBounds.Radius;
+    float b = sphereCenterLS.y - m_SceneBounds.Radius;
+    float n = sphereCenterLS.z - m_SceneBounds.Radius;
+    float r = sphereCenterLS.x + m_SceneBounds.Radius;
+    float t = sphereCenterLS.y + m_SceneBounds.Radius;
+    float f = sphereCenterLS.z + m_SceneBounds.Radius;
+
+    m_LightNearZ = n;
+    m_LightFarZ = f;
+    // 직교 투영 행렬
+    XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
+
+    // Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+    XMMATRIX T(
+        0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, -0.5f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f, 1.0f);
+
+    XMMATRIX S = lightView * lightProj * T;
+    XMStoreFloat4x4(&m_LightView, lightView);
+    XMStoreFloat4x4(&m_LightProj, lightProj);
+    XMStoreFloat4x4(&m_ShadowTransform, S);
 }
 
 // Render the scene.
@@ -1063,31 +1262,25 @@ void ClientTest::PopulateCommandList()
     ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvHeap.Get() };
     m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-    // Set necessary state.
-    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    // Shadow map pass.
+    {
+        m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-    // Set CameraInfo(world, view, proj)
-    m_commandList->RSSetViewports(1, &m_viewport);
-    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+        // Bind null SRV for shadow map pass.
+        m_commandList->SetGraphicsRootDescriptorTable(5, m_NullSrv);
 
-    // Indicate that the back buffer will be used as a render target.
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+        DrawSceneToShadowMap();
+    }
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    // Main rendering pass.
+    {
+        m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-    m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+        // Bind null SRV for shadow map pass.
+        m_commandList->SetGraphicsRootDescriptorTable(5, m_ShadowMap->Srv());
 
-    auto passCB = m_CurrFrameResource->PassCB->Resource();
-    m_commandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
-
-    m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::Opaque]);
-
-    m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+        DrawSceneToBackBuffer();
+    }
 
     // Indicate that the back buffer will now be used to present.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -1133,6 +1326,67 @@ void ClientTest::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::
     }
 }
 
+void ClientTest::DrawSceneToShadowMap()
+{
+    m_commandList->RSSetViewports(1, &m_ShadowMap->Viewport());
+    m_commandList->RSSetScissorRects(1, &m_ShadowMap->ScissorRect());
+
+    // Change to DEPTH_WRITE.
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
+        D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+    // Clear the back buffer and depth buffer.
+    m_commandList->ClearDepthStencilView(m_ShadowMap->Dsv(),
+        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+    // 장면을 깊이 버퍼에만 렌더링할 것이므로 렌더 대상은 널로 설정한다.
+    // 이처럼 널 렌더 대상을 지정하면 색상 쓰기가 비활성화된다.
+    // 반드시 활성 PSO의 렌더 대상 개수도 0으로 지정해야 함을 주의해야 한다.
+    m_commandList->OMSetRenderTargets(0, nullptr, false, &m_ShadowMap->Dsv());
+
+    // Bind the pass constant buffer for the shadow map pass.
+    UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
+    auto passCB = m_CurrFrameResource->PassCB->Resource();
+    D3D12_GPU_VIRTUAL_ADDRESS passCBAddress = passCB->GetGPUVirtualAddress() + 1 * passCBByteSize;
+    m_commandList->SetGraphicsRootConstantBufferView(3, passCBAddress);
+
+    m_commandList->SetPipelineState(m_PSOs["shadow_opaque"].Get());
+    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::Opaque]);
+
+    m_commandList->SetPipelineState(m_PSOs["skinnedShadow_opaque"].Get());
+    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+
+    // Change back to GENERIC_READ so we can read the texture in a shader.
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
+        D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+}
+
+void ClientTest::DrawSceneToBackBuffer()
+{
+    // Set CameraInfo(world, view, proj)
+    m_commandList->RSSetViewports(1, &m_viewport);
+    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+    // Indicate that the back buffer will be used as a render target.
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+
+    auto passCB = m_CurrFrameResource->PassCB->Resource();
+    m_commandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
+
+    m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
+    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::Opaque]);
+
+    m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
+    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+}
+
 void ClientTest::WaitForPreviousFrame()
 {
     // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
@@ -1159,7 +1413,7 @@ void ClientTest::WaitForPreviousFrame()
     m_CurrFrameResourceIndex = (m_CurrFrameResourceIndex + 1) % gNumFrameResources;
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> ClientTest::GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> ClientTest::GetStaticSamplers()
 {
     // 그래픽 응용 프로그램이 사용하는 표본추출기의 수는 그리 많지 않으므로,
     // 미리 만들어서 루트 시그니처에 포함시켜 둔다.
@@ -1210,8 +1464,21 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> ClientTest::GetStaticSamplers()
         0.0f,                              // mipLODBias
         8);                                // maxAnisotropy
 
+    const CD3DX12_STATIC_SAMPLER_DESC shadow(
+        6, // shaderRegister
+        D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressW
+        0.0f,                               // mipLODBias
+        16,                                 // maxAnisotropy
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK);
+
     return {
         pointWrap, pointClamp,
         linearWrap, linearClamp,
-        anisotropicWrap, anisotropicClamp };
+        anisotropicWrap, anisotropicClamp,
+        shadow
+    };
 }

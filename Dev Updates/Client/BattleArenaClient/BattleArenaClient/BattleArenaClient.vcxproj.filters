@@ -68,6 +68,9 @@
     <ClCompile Include="Common\Util\d3d12\MathHelper.cpp">
       <Filter>Common\Utilities\d3d12</Filter>
     </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\ShadowMap.cpp">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Win32Application.h">
@@ -122,6 +125,9 @@
       <Filter>Common\Utilities\d3d12</Filter>
     </ClInclude>
     <ClInclude Include="Common\Util\d3d12\UploadBuffer.h">
+      <Filter>Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Util\d3d12\ShadowMap.h">
       <Filter>Common\Utilities\d3d12</Filter>
     </ClInclude>
   </ItemGroup>

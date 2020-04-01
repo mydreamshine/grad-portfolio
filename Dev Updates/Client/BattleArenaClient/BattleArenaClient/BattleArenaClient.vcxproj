@@ -172,6 +172,7 @@
     <ClCompile Include="Common\Util\d3d12\MathHelper.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Common\Util\d3d12\ShadowMap.cpp" />
     <ClCompile Include="DXSample.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -200,6 +201,7 @@
     <ClInclude Include="Common\Util\d3d12\DDSTextureLoader.h" />
     <ClInclude Include="Common\Util\d3d12\GeometryGenerator.h" />
     <ClInclude Include="Common\Util\d3d12\MathHelper.h" />
+    <ClInclude Include="Common\Util\d3d12\ShadowMap.h" />
     <ClInclude Include="Common\Util\d3d12\UploadBuffer.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DXSample.h" />

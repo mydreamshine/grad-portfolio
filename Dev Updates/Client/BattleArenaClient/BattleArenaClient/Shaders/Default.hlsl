@@ -1,6 +1,6 @@
 // Defaults for number of lights.
 #ifndef NUM_DIR_LIGHTS
-#define NUM_DIR_LIGHTS 1
+#define NUM_DIR_LIGHTS 3
 #endif
 
 #ifndef NUM_POINT_LIGHTS
@@ -28,7 +28,8 @@ struct VSInput
 struct PSInput
 {
     float4 PosH    : SV_POSITION;
-    float3 PosW    : POSITION;
+    float4 ShadowPosH : POSITION0;
+    float3 PosW    : POSITION1;
     float3 NormalW : NORMAL;
     float2 uv : TEXCOORD;
 };
@@ -69,6 +70,9 @@ PSInput VS(VSInput vin)
     float4 uv = mul(float4(vin.uv, 0.0f, 1.0f), gTexTransform);
     vout.uv = mul(uv, gMatTransform).xy;
 
+    // Generate projective tex-coords to project shadow map onto scene.
+    vout.ShadowPosH = mul(PosW, gShadowTransform);
+
     return vout;
 }
 
@@ -85,10 +89,13 @@ float4 PS(PSInput pin) : SV_TARGET
     // 간접 조명을 흉내 내는 주변광
     float4 ambient = gAmbientLight * diffuseAlbedo;
 
+    // Only the first light casts a shadow.
+    float3 shadowFactor = float3(1.0f, 1.0f, 1.0f);
+    shadowFactor[0] = CalcShadowFactor(pin.ShadowPosH);
+
     // 직접 조명
     const float shininess = 1.0f - gRoughness;
     Material mat = { diffuseAlbedo, gFresnelR0, shininess };
-    float3 shadowFactor = 1.0f;
     float4 directLight = ComputeLighting(gLights, mat, pin.PosW,
         pin.NormalW, toEyeW, shadowFactor);
 
