@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{9185cbd5-4cc6-4c7a-ae0c-94310972036e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Header">
+      <UniqueIdentifier>{a4a252ea-ebe7-49c4-b52c-5c19addd8b60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Source">
+      <UniqueIdentifier>{53433334-9e99-408f-9f4a-21879944626a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleLogic">
+      <UniqueIdentifier>{b2081e2c-1a34-4438-af2a-79fc953b2851}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="소스.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\CLIENT.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\EVENT.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\OVER_EX.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\ROOM.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\csockaddr_in.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Object.cpp">
+      <Filter>BattleLogic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\PacketMgr.cpp">
+      <Filter>BattleLogic</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="battle_protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="BattleServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CLIENT.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\EVENT.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\OVER_EX.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\ROOM.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\csockaddr_in.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="general_config.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Config.h">
+      <Filter>BattleLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Object.h">
+      <Filter>BattleLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\PacketMgr.h">
+      <Filter>BattleLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Vector2d.h">
+      <Filter>BattleLogic</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
