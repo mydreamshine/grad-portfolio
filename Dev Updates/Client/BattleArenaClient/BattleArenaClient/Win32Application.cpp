@@ -94,7 +94,7 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
         if (pSample)
         {
             pSample->OnUpdate();
-            pSample->OnRender();
+            pSample->OnRender(hWnd);
         }
         return 0;
 

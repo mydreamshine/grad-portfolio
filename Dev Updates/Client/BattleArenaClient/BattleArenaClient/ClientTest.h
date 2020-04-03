@@ -57,6 +57,7 @@ enum class RenderLayer : int
 {
     Opaque = 0,
     SkinnedOpaque,
+    UIOpaque,
     Debug,
     Count
 };
@@ -68,7 +69,7 @@ public:
 
     virtual void OnInit();
     virtual void OnUpdate();
-    virtual void OnRender();
+    virtual void OnRender(HWND hwnd);
     virtual void OnDestroy();
 
 private:
@@ -104,6 +105,8 @@ private:
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
     void DrawSceneToShadowMap();
     void DrawSceneToBackBuffer();
+    void DrawSceneToUI();
+    void DrawSceneToTexts(HWND hwnd);
 
     void WaitForPreviousFrame();
 

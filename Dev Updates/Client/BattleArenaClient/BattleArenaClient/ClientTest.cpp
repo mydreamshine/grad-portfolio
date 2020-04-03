@@ -372,6 +372,9 @@ void ClientTest::BuildShadersAndInputLayout()
     m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
     m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
 
+    m_Shaders["UIOpaqueVS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["UIOpaquePS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "PS", "ps_5_1");
+
     m_InputLayout =
     {
         { "POSITION",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -478,6 +481,23 @@ void ClientTest::BuildPSOs()
         m_Shaders["shadowOpaquePS"]->GetBufferSize()
     };
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedSmapPsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedShadow_opaque"])));
+
+    //
+    // PSO for UI pass.
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC UIOpaquePsoDesc = opaquePsoDesc;
+    UIOpaquePsoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
+    UIOpaquePsoDesc.VS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["UIOpaqueVS"]->GetBufferPointer()),
+        m_Shaders["UIOpaqueVS"]->GetBufferSize()
+    };
+    UIOpaquePsoDesc.PS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["UIOpaquePS"]->GetBufferPointer()),
+        m_Shaders["UIOpaquePS"]->GetBufferSize()
+    };
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["UI_opaque"])));
 }
 
 void ClientTest::BuildScene()
@@ -526,6 +546,11 @@ void ClientTest::BuildShapeGeometry()
     GeometryGenerator geoGen;
     GeometryGenerator::MeshData grid = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
 
+    // UI Position relative to DC(Device Coordinate) with origin at screen center.
+    GeometryGenerator::MeshData UI_quad1 = geoGen.CreateQuad(-(float)m_width/2 + 10.0f, (float)m_height/2 - 10.0f, 400.0f, 150.0f, 0.0f);
+    GeometryGenerator::MeshData UI_quad2 = geoGen.CreateQuad((float)m_width/2 - 410.0f, (float)m_height/2 - 10.0f, 400.0f, 150.0f, 0.0f);
+    GeometryGenerator::MeshData UI_quad3 = geoGen.CreateQuad(-200.0f, -(float)m_height/2 + 160.0f, 400.0f, 150.0f, 0.0f);
+
     //
     // Concatenating all the geometry into one big vertex/index buffer.
     // So define the regions in the buffer each submesh covers.
@@ -533,21 +558,46 @@ void ClientTest::BuildShapeGeometry()
 
     // Cache the vertex offsets to each object in the concatenated vertex buffer.
     UINT gridVertexOffset = 0;
+    UINT UI_quad1_VertexOffset = (UINT)grid.Vertices.size();
+    UINT UI_quad2_VertexOffset = UI_quad1_VertexOffset + (UINT)UI_quad1.Vertices.size();
+    UINT UI_quad3_VertexOffset = UI_quad2_VertexOffset + (UINT)UI_quad2.Vertices.size();
 
     // Cache the starting index for each object in the concatenated index buffer.
     UINT gridIndexOffset = 0;
+    UINT UI_quad1_IndexOffset = (UINT)grid.Indices32.size();
+    UINT UI_quad2_IndexOffset = UI_quad1_IndexOffset + (UINT)UI_quad1.Indices32.size();
+    UINT UI_quad3_IndexOffset = UI_quad2_IndexOffset + (UINT)UI_quad2.Indices32.size();
 
     SubmeshGeometry gridSubmesh;
     gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
     gridSubmesh.StartIndexLocation = gridIndexOffset;
     gridSubmesh.BaseVertexLocation = gridVertexOffset;
 
+    SubmeshGeometry quad1Submesh;
+    quad1Submesh.IndexCount = (UINT)UI_quad1.Indices32.size();
+    quad1Submesh.StartIndexLocation = UI_quad1_IndexOffset;
+    quad1Submesh.BaseVertexLocation = UI_quad1_VertexOffset;
+
+    SubmeshGeometry quad2Submesh;
+    quad2Submesh.IndexCount = (UINT)UI_quad2.Indices32.size();
+    quad2Submesh.StartIndexLocation = UI_quad2_IndexOffset;
+    quad2Submesh.BaseVertexLocation = UI_quad2_VertexOffset;
+
+    SubmeshGeometry quad3Submesh;
+    quad3Submesh.IndexCount = (UINT)UI_quad3.Indices32.size();
+    quad3Submesh.StartIndexLocation = UI_quad3_IndexOffset;
+    quad3Submesh.BaseVertexLocation = UI_quad3_VertexOffset;
+
     //
     // Extract the vertex elements we are interested in and pack the
     // vertices of all the meshes into one vertex buffer.
     //
 
-    auto totalVertexCount = grid.Vertices.size();
+    auto totalVertexCount =
+        grid.Vertices.size() +
+        UI_quad1.Vertices.size() +
+        UI_quad2.Vertices.size() + 
+        UI_quad3.Vertices.size();
 
     std::vector<DXTexturedVertex> vertices(totalVertexCount);
 
@@ -560,8 +610,35 @@ void ClientTest::BuildShapeGeometry()
         vertices[k].xmf3Tangent = grid.Vertices[i].TangentU;
     }
 
+    for (int i = 0; i < UI_quad1.Vertices.size(); ++i, ++k)
+    {
+        vertices[k].xmf3Position = UI_quad1.Vertices[i].Position;
+        vertices[k].xmf3Normal = UI_quad1.Vertices[i].Normal;
+        vertices[k].xmf2TextureUV = UI_quad1.Vertices[i].TexC;
+        vertices[k].xmf3Tangent = UI_quad1.Vertices[i].TangentU;
+    }
+
+    for (int i = 0; i < UI_quad2.Vertices.size(); ++i, ++k)
+    {
+        vertices[k].xmf3Position = UI_quad2.Vertices[i].Position;
+        vertices[k].xmf3Normal = UI_quad2.Vertices[i].Normal;
+        vertices[k].xmf2TextureUV = UI_quad2.Vertices[i].TexC;
+        vertices[k].xmf3Tangent = UI_quad2.Vertices[i].TangentU;
+    }
+
+    for (int i = 0; i < UI_quad3.Vertices.size(); ++i, ++k)
+    {
+        vertices[k].xmf3Position = UI_quad3.Vertices[i].Position;
+        vertices[k].xmf3Normal = UI_quad3.Vertices[i].Normal;
+        vertices[k].xmf2TextureUV = UI_quad3.Vertices[i].TexC;
+        vertices[k].xmf3Tangent = UI_quad3.Vertices[i].TangentU;
+    }
+
     std::vector<std::uint16_t> indices;
     indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
+    indices.insert(indices.end(), std::begin(UI_quad1.GetIndices16()), std::end(UI_quad1.GetIndices16()));
+    indices.insert(indices.end(), std::begin(UI_quad2.GetIndices16()), std::end(UI_quad2.GetIndices16()));
+    indices.insert(indices.end(), std::begin(UI_quad3.GetIndices16()), std::end(UI_quad3.GetIndices16()));
 
     const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXTexturedVertex);
     const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
@@ -587,6 +664,9 @@ void ClientTest::BuildShapeGeometry()
     geo->IndexBufferByteSize = ibByteSize;
 
     geo->DrawArgs["grid"] = gridSubmesh;
+    geo->DrawArgs["UI_quad1"] = quad1Submesh;
+    geo->DrawArgs["UI_quad2"] = quad2Submesh;
+    geo->DrawArgs["UI_quad3"] = quad3Submesh;
 
     m_Geometries[geo->Name] = std::move(geo);
 }
@@ -703,7 +783,8 @@ void ClientTest::LoadTextures()
         "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga",
         "Models/ToonyTinyPeople/Materials/TT_RTS_Units_blue.tga",
         "Models/Soldier_demo/Materials/demo_soldier_512.tga",
-        "Models/Soldier_demo/Materials/demo_weapon.tga"
+        "Models/Soldier_demo/Materials/demo_weapon.tga",
+        "UI/ui_test.tga"
     };
 
     for (auto& texture_path : material_filepaths)
@@ -765,7 +846,7 @@ void ClientTest::LoadTextures()
             D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
     }
 
-    // Create the texture.
+    // Create the non-tex texture.
     {
         auto& tex = m_Textures["checkerboard"] = std::make_unique<Texture>();
         tex->Name = "checkerboard";
@@ -978,11 +1059,19 @@ void ClientTest::BuildRenderItems()
         ModelRitem->ObjCBIndex = ObjCBIndex++;
         ModelRitem->Geo = m_Geometries["shapeGeo"].get();
         ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["checkerboard"].get();
         ModelRitem->IndexCount = subMesh.second.IndexCount;
         ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
         ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::Opaque].push_back(ModelRitem.get());
+        if (subMesh.first.find("UI") != std::string::npos)
+        {
+            m_RitemLayer[(int)RenderLayer::UIOpaque].push_back(ModelRitem.get());
+            ModelRitem->Mat = m_Materials["ui_test"].get();
+        }
+        else
+        {
+            m_RitemLayer[(int)RenderLayer::Opaque].push_back(ModelRitem.get());
+            ModelRitem->Mat = m_Materials["checkerboard"].get();
+        }
         m_AllRitems.push_back(std::move(ModelRitem));
     }
 }
@@ -1230,7 +1319,7 @@ void ClientTest::UpdateShadowTransform(CTimer& gt)
 }
 
 // Render the scene.
-void ClientTest::OnRender()
+void ClientTest::OnRender(HWND hwnd)
 {
     // Record all the commands we need to render the scene into the command list.
     PopulateCommandList();
@@ -1238,6 +1327,8 @@ void ClientTest::OnRender()
     // Execute the command list.
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    DrawSceneToTexts(hwnd);
 
     // Present the frame.
     ThrowIfFailed(m_swapChain->Present(1, 0));
@@ -1272,18 +1363,28 @@ void ClientTest::PopulateCommandList()
         DrawSceneToShadowMap();
     }
 
-    // Main rendering pass.
+    // Set CameraInfo(world, view, proj)
+    m_commandList->RSSetViewports(1, &m_viewport);
+    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+    // Indicate that the back buffer will be used as a render target.
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+
+    // Main render pass.
     {
         m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-        // Bind null SRV for shadow map pass.
+        // Bind ShadowMap SRV for main render map pass.
         m_commandList->SetGraphicsRootDescriptorTable(5, m_ShadowMap->Srv());
 
         DrawSceneToBackBuffer();
     }
 
     // Indicate that the back buffer will now be used to present.
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
     ThrowIfFailed(m_commandList->Close());
 }
@@ -1363,17 +1464,11 @@ void ClientTest::DrawSceneToShadowMap()
 
 void ClientTest::DrawSceneToBackBuffer()
 {
-    // Set CameraInfo(world, view, proj)
-    m_commandList->RSSetViewports(1, &m_viewport);
-    m_commandList->RSSetScissorRects(1, &m_scissorRect);
-
-    // Indicate that the back buffer will be used as a render target.
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
+        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -1385,6 +1480,22 @@ void ClientTest::DrawSceneToBackBuffer()
 
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
     DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+
+    // UI render.
+    DrawSceneToUI();
+}
+
+void ClientTest::DrawSceneToUI()
+{
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
+        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+    m_commandList->SetPipelineState(m_PSOs["UI_opaque"].Get());
+    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::UIOpaque]);
+}
+
+void ClientTest::DrawSceneToTexts(HWND hwnd)
+{
 }
 
 void ClientTest::WaitForPreviousFrame()
