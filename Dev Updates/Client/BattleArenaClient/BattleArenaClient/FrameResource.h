@@ -2,6 +2,7 @@
 #include "Common/Util/d3d12/d3dUtil.h"
 #include "Common/Util/d3d12/MathHelper.h"
 #include "Common/Util/d3d12/UploadBuffer.h"
+#include "Common/FileLoader/ModelLoader.h"
 
 struct ObjectConstants
 {
@@ -64,6 +65,54 @@ struct DXSkinnedVertex
     DirectX::XMFLOAT2 xmf2TextureUV;
     float             fBoneWeights[4]; // last Weight not used, calculated inside the vertex shader
     int32_t           i32BoneIndices[4];
+};
+
+struct RenderItem
+{
+    DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
+
+    DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
+
+    // CPU에서 GPU로의 명령 전달에 대한 비용을 최소화하기 위해
+    // 렌더item의 렌더 업데이트가 필요한 경우에만 업데이트를 하게 만든다.
+    // 이를 처리하기 위한 로직으로는
+    // FrameResource별로 해당 렌더 Item을 렌더 업데이트를 하되
+    // NumFramesDirty의 값이 0 초과일 경우에만 하게 한다.
+    // 그리고 해당 렌더 Item의 렌더 업데이트 예약을 완료한 후에
+    // NumFramesDirty을 1 감소시킨다.
+    // 통상적으로 FrameResource마다 동일한 렌더 Item에 대한 업데이트가
+    // 보장되어야 하므로 렌더 업데이트가 필요한 렌더 Item의
+    // NumFramesDirty를 gNumFrameResources으로 한다.
+    int NumFramesDirty = gNumFrameResources;
+
+    // Index into GPU constant buffer corresponding to the ObjectCB for this render item.
+    UINT ObjCBIndex = -1;
+
+    Material* Mat = nullptr;
+    MeshGeometry* Geo = nullptr;
+
+    // Primitive topology.
+    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+    // DrawIndexedInstanced parameters.
+    UINT IndexCount = 0;
+    UINT StartIndexLocation = 0;
+    int BaseVertexLocation = 0;
+
+    // Index into GPU constant buffer corresponding to the SkinndCB for this render item.
+    UINT SkinCBIndex = -1;
+
+    // nullptr if this render-item is not animated by skinned mesh.
+    aiModelData::aiSkeleton* Skeleton = nullptr;
+};
+
+enum class RenderLayer : int
+{
+    Opaque = 0,
+    SkinnedOpaque,
+    UIOpaque,
+    Debug,
+    Count
 };
 
 // Stores the resources needed for the CPU to build the command lists

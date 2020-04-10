@@ -7,8 +7,7 @@ ClientTest::ClientTest(UINT width, UINT height, std::wstring name) :
     DXSample(width, height, name),
     m_frameIndex(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-    m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-    m_rtvDescriptorSize(0)
+    m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height))
 {
 }
 
@@ -196,20 +195,13 @@ void ClientTest::LoadAssets()
 
     m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
 
-    BuildShapeGeometry();
-    LoadSkinnedModels();
-
-    LoadTextures();
-
-    BuildMaterials();
-    BuildRenderItems();
+    BuildScene();
 
     BuildDescriptorHeaps();
     BuildConstantBufferView();
 
     BuildFrameResources();
 
-    BuildScene();
 
     // Close the command list and execute it to begin the initial GPU setup.
     ThrowIfFailed(m_commandList->Close());
@@ -227,14 +219,8 @@ void ClientTest::LoadAssets()
         WaitForPreviousFrame();
     }
 
-    for (auto& e : m_AllRitems)
-    {
-        if (e->Geo != nullptr)
-            e->Geo->DisposeUploaders();
-    }
-
-    for (auto& tex_iter : m_Textures)
-        tex_iter.second->UploadHeap = nullptr;
+    for (auto& scene : m_Scenes)
+        scene.second->DisposeUploaders();
 }
 
 // Create the root signature.
@@ -317,13 +303,13 @@ void ClientTest::BuildConstantBufferView()
     for (int frameIndex = 0; frameIndex < gNumFrameResources; ++frameIndex)
     {
         UINT i = 0;
-        for (auto& tex_iter : m_Textures)
+        for (auto& tex : m_Textures)
         {
             int heapIndex = TextureCount * frameIndex + i;
             auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
             handle.Offset(heapIndex, m_cbvsrvuavDescriptorSize);
 
-            m_device->CreateShaderResourceView(tex_iter.second->Resource.Get(), &srvDesc, handle);
+            m_device->CreateShaderResourceView(tex->Resource.Get(), &srvDesc, handle);
 
             i++;
         }
@@ -502,12 +488,49 @@ void ClientTest::BuildPSOs()
 
 void ClientTest::BuildScene()
 {
-    // Estimate the scene bounding sphere manually since we know how the scene was constructed.
-    // The grid is the "widest object" with a width of 500 and depth of 500.0f, and centered at
-    // the world space origin.  In general, you need to loop over every world space vertex
-    // position and compute the bounding sphere.
-    m_SceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
-    m_SceneBounds.Radius = sqrtf(250.0f * 250.0f + 250.0f * 250.0f);
+    m_Scenes["LoginScene"] = std::make_unique<LoginScene>(m_width, m_height);
+    m_Scenes["PlayGameScene"] = std::make_unique<PlayGameScene>(m_width, m_height);
+
+    int matCB_index = 0;
+    int diffuseSrvHeap_index = 0;
+    int objCB_index = 0;
+    int skinnedCB_index = 0;
+    for (auto& scene_iter : m_Scenes)
+    {
+        auto& scene = scene_iter.second;
+        scene->OnInit(m_device.Get(), m_commandList.Get(),
+            m_BackBufferFormat,
+            matCB_index, diffuseSrvHeap_index, objCB_index, skinnedCB_index);
+
+        // unique_ptr이라서 copy메소드를 쓸 수가 없다.
+        /*m_AllRitems.insert(m_AllRitems.end(), scene->GetAllRitems().begin(), scene->GetAllRitems().end());
+        m_Geometries.insert(std::begin(scene->GetGeometries()), std::end(scene->GetGeometries()));
+        m_Materials.insert(std::begin(scene->GetMaterials()), std::end(scene->GetMaterials()));
+        m_Textures.insert(std::begin(scene->GetTextures()), std::end(scene->GetTextures()));
+        m_ModelSkeltons.insert(std::begin(scene->GetModelSkeltons()), std::end(scene->GetModelSkeltons()));*/
+        auto& sceneAllRitems = scene->GetAllRitems();
+        for (auto& Ritem : sceneAllRitems)
+            m_AllRitems.push_back(Ritem.get());
+
+        auto& sceneGeometries = scene->GetGeometries();
+        for (auto& Geo_iter : sceneGeometries)
+            m_Geometries.insert(std::make_pair<std::string, MeshGeometry*>(Geo_iter.first.c_str(), Geo_iter.second.get()));
+
+        auto& sceneMaterials = scene->GetMaterials();
+        for (auto& Mat_iter : sceneMaterials)
+            m_Materials.insert(std::make_pair<std::string, Material*>(Mat_iter.first.c_str(), Mat_iter.second.get()));
+
+        auto& sceneTextures = scene->GetTextures();
+        for (auto& Tex_iter : sceneTextures)
+            m_Textures.push_back(Tex_iter.second.get());
+
+        auto& sceneModelSkeletons = scene->GetModelSkeltons();
+        for (auto& ModelSkeleton_iter : sceneModelSkeletons)
+            m_ModelSkeltons.insert(std::make_pair<std::string, aiModelData::aiSkeleton*>(ModelSkeleton_iter.first.c_str(), ModelSkeleton_iter.second.get()));
+    }
+
+    m_CurrSceneName = "PlayGameScene";
+    m_CurrScene = m_Scenes["PlayGameScene"].get();
 }
 
 void ClientTest::BuildFrameResources()
@@ -537,543 +560,6 @@ void ClientTest::BuildFrameResources()
     }
 
     m_CurrFrameResource = m_FrameResources[m_CurrFrameResourceIndex].get();
-
-    UpdateMainPassCB(m_Timer);
-}
-
-void ClientTest::BuildShapeGeometry()
-{
-    GeometryGenerator geoGen;
-    GeometryGenerator::MeshData grid = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
-
-    // UI Position relative to DC(Device Coordinate) with origin at screen center.
-    GeometryGenerator::MeshData UI_quad1 = geoGen.CreateQuad(-(float)m_width/2 + 10.0f, (float)m_height/2 - 10.0f, 400.0f, 150.0f, 0.0f);
-    GeometryGenerator::MeshData UI_quad2 = geoGen.CreateQuad((float)m_width/2 - 410.0f, (float)m_height/2 - 10.0f, 400.0f, 150.0f, 0.0f);
-    GeometryGenerator::MeshData UI_quad3 = geoGen.CreateQuad(-200.0f, -(float)m_height/2 + 160.0f, 400.0f, 150.0f, 0.0f);
-
-    //
-    // Concatenating all the geometry into one big vertex/index buffer.
-    // So define the regions in the buffer each submesh covers.
-    //
-
-    // Cache the vertex offsets to each object in the concatenated vertex buffer.
-    UINT gridVertexOffset = 0;
-    UINT UI_quad1_VertexOffset = (UINT)grid.Vertices.size();
-    UINT UI_quad2_VertexOffset = UI_quad1_VertexOffset + (UINT)UI_quad1.Vertices.size();
-    UINT UI_quad3_VertexOffset = UI_quad2_VertexOffset + (UINT)UI_quad2.Vertices.size();
-
-    // Cache the starting index for each object in the concatenated index buffer.
-    UINT gridIndexOffset = 0;
-    UINT UI_quad1_IndexOffset = (UINT)grid.Indices32.size();
-    UINT UI_quad2_IndexOffset = UI_quad1_IndexOffset + (UINT)UI_quad1.Indices32.size();
-    UINT UI_quad3_IndexOffset = UI_quad2_IndexOffset + (UINT)UI_quad2.Indices32.size();
-
-    SubmeshGeometry gridSubmesh;
-    gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
-    gridSubmesh.StartIndexLocation = gridIndexOffset;
-    gridSubmesh.BaseVertexLocation = gridVertexOffset;
-
-    SubmeshGeometry quad1Submesh;
-    quad1Submesh.IndexCount = (UINT)UI_quad1.Indices32.size();
-    quad1Submesh.StartIndexLocation = UI_quad1_IndexOffset;
-    quad1Submesh.BaseVertexLocation = UI_quad1_VertexOffset;
-
-    SubmeshGeometry quad2Submesh;
-    quad2Submesh.IndexCount = (UINT)UI_quad2.Indices32.size();
-    quad2Submesh.StartIndexLocation = UI_quad2_IndexOffset;
-    quad2Submesh.BaseVertexLocation = UI_quad2_VertexOffset;
-
-    SubmeshGeometry quad3Submesh;
-    quad3Submesh.IndexCount = (UINT)UI_quad3.Indices32.size();
-    quad3Submesh.StartIndexLocation = UI_quad3_IndexOffset;
-    quad3Submesh.BaseVertexLocation = UI_quad3_VertexOffset;
-
-    //
-    // Extract the vertex elements we are interested in and pack the
-    // vertices of all the meshes into one vertex buffer.
-    //
-
-    auto totalVertexCount =
-        grid.Vertices.size() +
-        UI_quad1.Vertices.size() +
-        UI_quad2.Vertices.size() + 
-        UI_quad3.Vertices.size();
-
-    std::vector<DXTexturedVertex> vertices(totalVertexCount);
-
-    UINT k = 0;
-    for (int i = 0; i < grid.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = grid.Vertices[i].Position;
-        vertices[k].xmf3Normal = grid.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = grid.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = grid.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad1.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad1.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad1.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad1.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad1.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad2.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad2.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad2.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad2.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad2.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad3.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad3.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad3.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad3.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad3.Vertices[i].TangentU;
-    }
-
-    std::vector<std::uint16_t> indices;
-    indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad1.GetIndices16()), std::end(UI_quad1.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad2.GetIndices16()), std::end(UI_quad2.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad3.GetIndices16()), std::end(UI_quad3.GetIndices16()));
-
-    const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXTexturedVertex);
-    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-    auto geo = std::make_unique<MeshGeometry>();
-    geo->Name = "shapeGeo";
-
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-    CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-    CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-    geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_device.Get(),
-        m_commandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-    geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_device.Get(),
-        m_commandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-    geo->VertexByteStride = sizeof(DXTexturedVertex);
-    geo->VertexBufferByteSize = vbByteSize;
-    geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-    geo->IndexBufferByteSize = ibByteSize;
-
-    geo->DrawArgs["grid"] = gridSubmesh;
-    geo->DrawArgs["UI_quad1"] = quad1Submesh;
-    geo->DrawArgs["UI_quad2"] = quad2Submesh;
-    geo->DrawArgs["UI_quad3"] = quad3Submesh;
-
-    m_Geometries[geo->Name] = std::move(geo);
-}
-
-void ClientTest::LoadSkinnedModels()
-{
-    std::string mesh_path = "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
-    std::vector<std::string> anim_paths = { "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx" };
-    LoadSkinnedModelData(mesh_path, anim_paths);
-
-    mesh_path = "Models/ToonyTinyPeople/TT_RTS_Demo_Character.fbx";
-    anim_paths = { "Models/ToonyTinyPeople/Animations/infantry_01_idle.fbx" };
-    LoadSkinnedModelData(mesh_path, anim_paths);
-
-    mesh_path = "Models/claire@Dancing.fbx";
-    anim_paths = { "Models/claire@Dancing.fbx" };
-    LoadSkinnedModelData(mesh_path, anim_paths);
-
-    mesh_path = "Models/Soldier_demo/Soldier_demo.fbx";
-    anim_paths = { "Models/Soldier_demo/Animations/demo_mixamo_idle.fbx" };
-    LoadSkinnedModelData(mesh_path, anim_paths);
-}
-
-void ClientTest::LoadSkinnedModelData(const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths)
-{
-    m_ModelLoader.loadMeshAndSkeleton(mesh_filepath);
-    for (auto& anim_path : anim_filepaths)
-        m_ModelLoader.loadAnimation(anim_path);
-
-    std::string ModelName, Anim0_Name;
-    getFileName(mesh_filepath.c_str(), ModelName);
-    getFileName(anim_filepaths[0].c_str(), Anim0_Name);
-
-    // aiSkeleton data move
-    if (m_ModelLoader.mSkeleton != nullptr)
-    {
-        std::string skeletonName = m_ModelLoader.mSkeleton->mName;
-        auto animSk = std::move(m_ModelLoader.mSkeleton);
-        animSk->AnimPlay(Anim0_Name);
-        animSk->AnimLoop(Anim0_Name, true);
-        animSk->SkinnedCBIndex = (int)m_ModelSkeltons.size();
-        m_ModelSkeltons[skeletonName] = std::move(animSk);
-    }
-
-    // aiMesh to dxMesh
-    if (!m_ModelLoader.mMeshes.empty())
-    {
-        auto& meshGeo = m_Geometries[ModelName] = std::make_unique<MeshGeometry>();
-        meshGeo->Name = ModelName;
-
-        std::vector<DXSkinnedVertex> vertices;
-        std::vector<std::uint32_t>   indices;
-
-        int sm_id = 0;
-        for (size_t m = 0; m < m_ModelLoader.mMeshes.size(); ++m)
-        {
-            std::vector<aiModelData::aiVertex>& aiVertices = m_ModelLoader.mMeshes[m].mVertices;
-            std::vector<UINT>& dxIndices = m_ModelLoader.mMeshes[m].mIndices;
-            std::vector<DXSkinnedVertex> dxVertieces;
-            for (size_t v = 0; v < aiVertices.size(); ++v)
-            {
-                dxVertieces.emplace_back();
-                DXSkinnedVertex& Vertex = dxVertieces.back();
-                Vertex.xmf3Position = { (float)aiVertices[v].vPosition.x, (float)aiVertices[v].vPosition.y, (float)aiVertices[v].vPosition.z };
-                Vertex.xmf2TextureUV = { (float)aiVertices[v].vTextureUV[0].x,  (float)aiVertices[v].vTextureUV[0].y }; // diffuseMap_desc + normalMap_desc + etc.texMap + ...
-                Vertex.xmf3Normal = { (float)aiVertices[v].vNormal.x, (float)aiVertices[v].vNormal.y, (float)aiVertices[v].vNormal.z };
-                Vertex.xmf3Tangent = { (float)aiVertices[v].vTangent.x, (float)aiVertices[v].vTangent.y, (float)aiVertices[v].vTangent.z };
-                for (int w = 0; w < 4; ++w)
-                {
-                    Vertex.fBoneWeights[w] = (float)aiVertices[v].fBoneWeights[w];
-                    Vertex.i32BoneIndices[w] = (int)aiVertices[v].i32BoneIndices[w];
-                }
-            }
-            vertices.insert(vertices.end(), dxVertieces.begin(), dxVertieces.end());
-            indices.insert(indices.end(), dxIndices.begin(), dxIndices.end());
-
-            SubmeshGeometry submesh;
-            submesh.IndexCount = (UINT)dxIndices.size();
-            submesh.StartIndexLocation = (UINT)(indices.size() - dxIndices.size());
-            submesh.BaseVertexLocation = (INT)(vertices.size() - dxVertieces.size());
-
-            std::string& meshName = m_ModelLoader.mMeshes[m].mName;
-            if (meshGeo->DrawArgs.find(meshName) != meshGeo->DrawArgs.end())
-                meshName = meshName + "_" + std::to_string(sm_id++);
-            meshGeo->DrawArgs[meshName] = submesh;
-        }
-
-        const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXSkinnedVertex);
-        const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint32_t);
-
-        ThrowIfFailed(D3DCreateBlob(vbByteSize, &meshGeo->VertexBufferCPU));
-        CopyMemory(meshGeo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-        ThrowIfFailed(D3DCreateBlob(ibByteSize, &meshGeo->IndexBufferCPU));
-        CopyMemory(meshGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-        meshGeo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_device.Get(),
-            m_commandList.Get(), vertices.data(), vbByteSize, meshGeo->VertexBufferUploader);
-
-        meshGeo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_device.Get(),
-            m_commandList.Get(), indices.data(), ibByteSize, meshGeo->IndexBufferUploader);
-
-        meshGeo->VertexByteStride = sizeof(DXSkinnedVertex);
-        meshGeo->VertexBufferByteSize = vbByteSize;
-        meshGeo->IndexFormat = DXGI_FORMAT_R32_UINT;
-        meshGeo->IndexBufferByteSize = ibByteSize;
-    }
-}
-
-void ClientTest::LoadTextures()
-{
-    std::vector<std::string> material_filepaths = 
-    {
-        "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga",
-        "Models/ToonyTinyPeople/Materials/TT_RTS_Units_blue.tga",
-        "Models/Soldier_demo/Materials/demo_soldier_512.tga",
-        "Models/Soldier_demo/Materials/demo_weapon.tga",
-        "UI/ui_test.tga"
-    };
-
-    for (auto& texture_path : material_filepaths)
-    {
-        TextureLoader texLoader(texture_path.c_str());
-        TextureData texInfo;
-        texLoader.MoveTextureData(texInfo);
-        if (texInfo.Pixels == nullptr) continue;
-        std::vector<std::uint8_t>& Pixels = *texInfo.Pixels;
-        if (Pixels.empty()) continue;
-
-        UINT texWidth = (UINT)texInfo.Width;
-        UINT texHeight = (UINT)texInfo.Height;
-        UINT texPixelSize = texInfo.BytesPerPixel;
-
-        std::string texName;
-        getFileName(texture_path.c_str(), texName);
-        auto& tex = m_Textures[texName] = std::make_unique<Texture>();
-        tex->Name = texName;
-
-        // Describe and create a Texture2D.
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = m_BackBufferFormat;
-        textureDesc.Width = texWidth;
-        textureDesc.Height = texHeight;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&tex->Resource)));
-
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex->Resource.Get(), 0, 1);
-
-        // Create the GPU upload buffer.
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&tex->UploadHeap)));
-
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = Pixels.data();
-        textureData.RowPitch = texWidth * texPixelSize;
-        textureData.SlicePitch = textureData.RowPitch * texHeight;
-
-        UpdateSubresources(m_commandList.Get(), tex->Resource.Get(), tex->UploadHeap.Get(), 0, 0, 1, &textureData);
-        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(tex->Resource.Get(),
-            D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-    }
-
-    // Create the non-tex texture.
-    {
-        auto& tex = m_Textures["checkerboard"] = std::make_unique<Texture>();
-        tex->Name = "checkerboard";
-
-        // Describe and create a Texture2D.
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.Width = 256;
-        textureDesc.Height = 256;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&tex->Resource)));
-
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex->Resource.Get(), 0, 1);
-
-        // Create the GPU upload buffer.
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&tex->UploadHeap)));
-
-        // Copy data to the intermediate upload heap and then schedule a copy 
-        // from the upload heap to the Texture2D.
-        std::vector<UINT8> texture = GenerateTextureData();
-
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = &texture[0];
-        textureData.RowPitch = 256 * 4;
-        textureData.SlicePitch = textureData.RowPitch * 256;
-
-        UpdateSubresources(m_commandList.Get(), tex->Resource.Get(), tex->UploadHeap.Get(), 0, 0, 1, &textureData);
-        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(tex->Resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-    }
-}
-
-// Generate a simple black and white checkerboard texture.
-std::vector<UINT8> ClientTest::GenerateTextureData()
-{
-    const UINT rowPitch = 256 * 4;
-    const UINT cellPitch = rowPitch >> 4;        // The width of a cell in the checkboard texture.
-    const UINT cellHeight = 256 >> 4;    // The height of a cell in the checkerboard texture.
-    const UINT textureSize = rowPitch * 256;
-
-    std::vector<UINT8> data(textureSize);
-    UINT8* pData = &data[0];
-
-    for (UINT n = 0; n < textureSize; n += 4)
-    {
-        UINT x = n % rowPitch;
-        UINT y = n / rowPitch;
-        UINT i = x / cellPitch;
-        UINT j = y / cellHeight;
-
-        if (i % 2 == j % 2)
-        {
-            pData[n] = 0x00;        // R
-            pData[n + 1] = 0x00;    // G
-            pData[n + 2] = 0x00;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-        else
-        {
-            pData[n] = 0xff;        // R
-            pData[n + 1] = 0xff;    // G
-            pData[n + 2] = 0xff;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-    }
-
-    return data;
-}
-
-void ClientTest::BuildMaterials()
-{
-    int matCB_index = 0;
-    int diffuseSrvHeap_Index = 0;
-    for (auto& tex_iter : m_Textures)
-    {
-        auto& tex = tex_iter.second;
-
-        auto mat = std::make_unique<Material>();
-        mat->Name = tex->Name;
-        mat->NumFramesDirty = gNumFrameResources;
-        mat->MatCBIndex = matCB_index++;
-        mat->DiffuseSrvHeapIndex = diffuseSrvHeap_Index++;
-        mat->DiffuseAlbedo = XMFLOAT4(0.88f, 0.88f, 0.88f, 1.0f);
-        mat->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
-        mat->Roughness = 0.8f;
-
-        m_Materials[mat->Name] = std::move(mat);
-    }
-}
-
-void ClientTest::BuildRenderItems()
-{
-    UINT ObjCBIndex = 0;
-    UINT SkinCBIndex = 0;
-
-    MeshGeometry* Geo = m_Geometries["Meshtint Free Knight"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = ObjCBIndex++;
-        ModelRitem->Geo = m_Geometries["Meshtint Free Knight"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["Meshtint Free Knight"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["Meshtint Free Knight"].get();
-        ModelRitem->SkinCBIndex = SkinCBIndex;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
-
-    SkinCBIndex++;
-    Geo = m_Geometries["TT_RTS_Demo_Character"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = ObjCBIndex++;
-        ModelRitem->Geo = m_Geometries["TT_RTS_Demo_Character"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["TT_RTS_Units_blue"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["TT_RTS_Demo_Character"].get();
-        ModelRitem->SkinCBIndex = SkinCBIndex;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
-
-    SkinCBIndex++;
-    Geo = m_Geometries["claire@Dancing"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = ObjCBIndex++;
-        ModelRitem->Geo = m_Geometries["claire@Dancing"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["checkerboard"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["claire@Dancing"].get();
-        ModelRitem->SkinCBIndex = SkinCBIndex;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
-
-    SkinCBIndex++;
-    Geo = m_Geometries["Soldier_demo"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = ObjCBIndex++;
-        ModelRitem->Geo = m_Geometries["Soldier_demo"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        if(subMesh.first == "Soldier_mesh_0")
-            ModelRitem->Mat = m_Materials["demo_weapon"].get();
-        else
-            ModelRitem->Mat = m_Materials["demo_soldier_512"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["Soldier_demo"].get();
-        ModelRitem->SkinCBIndex = SkinCBIndex;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
-
-    Geo = m_Geometries["shapeGeo"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = ObjCBIndex++;
-        ModelRitem->Geo = m_Geometries["shapeGeo"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        if (subMesh.first.find("UI") != std::string::npos)
-        {
-            m_RitemLayer[(int)RenderLayer::UIOpaque].push_back(ModelRitem.get());
-            ModelRitem->Mat = m_Materials["ui_test"].get();
-        }
-        else
-        {
-            m_RitemLayer[(int)RenderLayer::Opaque].push_back(ModelRitem.get());
-            ModelRitem->Mat = m_Materials["checkerboard"].get();
-        }
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
 }
 
 // Update frame-based values.
@@ -1081,241 +567,23 @@ void ClientTest::OnUpdate()
 {
     m_Timer.Tick(0.0f);
 
-    AnimateLights(m_Timer);
-    AnimateSkeletons(m_Timer);
-
-    UpdateObjectCBs(m_Timer);
-    UpdateSkinnedCBs(m_Timer);
-    UpdateMaterialCBs(m_Timer);
-    UpdateShadowTransform(m_Timer);
-    UpdateMainPassCB(m_Timer);
-    UpdateShadowPassCB(m_Timer);
-}
-
-void ClientTest::AnimateLights(CTimer& gt)
-{
-    m_LightRotationAngle += 1.0f * gt.GetTimeElapsed();
-
-    XMMATRIX R = XMMatrixRotationY(m_LightRotationAngle);
-    for (int i = 0; i < 3; ++i)
+    static const std::string sceneNames[2] = { "LoginScene", "PlayGameScene" };
+    static int sn = 0;
+    static int sub = 0;
+    float totalTime = m_Timer.GetTotalTime();
+    int totalTime_i = (int)totalTime;
+    if ((totalTime_i != 0) && (totalTime_i % 3 == 0))
     {
-        XMVECTOR lightDir = XMLoadFloat3(&m_BaseLightDirections[i]);
-        lightDir = XMVector3TransformNormal(lightDir, R);
-        XMStoreFloat3(&m_RotatedLightDirections[i], lightDir);
-    }
-}
-
-void ClientTest::AnimateSkeletons(CTimer& gt)
-{
-    for (auto& skleton_iter : m_ModelSkeltons)
-    {
-        auto skleton = skleton_iter.second.get();
-        std::string animName = skleton->mCurrPlayingAnimName;
-        if (skleton->AnimIsPlaying(animName))
-            skleton->UpdateAnimationTransforms(animName, m_Timer.GetTimeElapsed());
-    }
-}
-
-void ClientTest::UpdateObjectCBs(CTimer& gt)
-{
-    auto currObjectCB = m_CurrFrameResource->ObjectCB.get();
-    for (auto& e : m_AllRitems)
-    {
-        // Only update the cbuffer data if the constants have changed.  
-        // This needs to be tracked per frame resource.
-        if (e->NumFramesDirty > 0)
+        if (sub < totalTime_i / 3)
         {
-            XMMATRIX world = XMLoadFloat4x4(&e->World);
-            XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
-
-            ObjectConstants objConstants;
-            XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
-            XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-
-            currObjectCB->CopyData(e->ObjCBIndex, objConstants);
-
-            // Next FrameResource need to be updated too.
-            e->NumFramesDirty--;
+            sub = totalTime_i / 3;
+            sn = (sn + 1) % 2;
+            m_CurrSceneName = sceneNames[sn];
+            m_CurrScene = m_Scenes[m_CurrSceneName].get();
+            m_CurrScene->OnInitProperties();
         }
     }
-}
-
-void aiM2dxM(XMFLOAT4X4& dest, aiMatrix4x4& source)
-{
-    for (int i = 0; i < 4; ++i)
-    {
-        for (int j = 0; j < 4; ++j)
-            dest.m[i][j] = source[i][j];
-    }
-}
-void ClientTest::UpdateSkinnedCBs(CTimer& gt)
-{
-    auto currSkinnedCB = m_CurrFrameResource->SkinnedCB.get();
-    for(auto& skleton_iter : m_ModelSkeltons)
-    {
-        auto skleton = skleton_iter.second.get();
-        std::string animName = skleton->mCurrPlayingAnimName;
-        if (skleton->AnimIsPlaying(animName))
-        {
-            SkinnedConstants SkinnedInfo;
-            for (size_t i = 0; i < skleton->mCurrAnimTransforms.size(); ++i)
-                aiM2dxM(SkinnedInfo.BoneTransform[i], skleton->mCurrAnimTransforms[i]);
-
-            currSkinnedCB->CopyData(skleton->SkinnedCBIndex, SkinnedInfo);
-        }
-    }
-}
-
-void ClientTest::UpdateMaterialCBs(CTimer& gt)
-{
-    auto currMaterialCB = m_CurrFrameResource->MaterialCB.get();
-    for (auto& e : m_Materials)
-    {
-        // Only update the cbuffer data if the constants have changed.  If the cbuffer
-        // data changes, it needs to be updated for each FrameResource.
-        Material* mat = e.second.get();
-        if (mat->NumFramesDirty > 0)
-        {
-            XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
-
-            MaterialConstants matConstants;
-            matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
-            matConstants.FresnelR0 = mat->FresnelR0;
-            matConstants.Roughness = mat->Roughness;
-            XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
-
-            currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
-
-            // Next FrameResource need to be updated too.
-            mat->NumFramesDirty--;
-        }
-    }
-}
-
-void ClientTest::UpdateMainPassCB(CTimer& gt)
-{
-    XMFLOAT3 EyePosition = { 0.0f, 300.0f, -500.0f };
-    XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
-    XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
-
-    m_Camera.SetPosition(EyePosition);
-    m_Camera.SetLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 1000.0f);
-    m_Camera.LookAt(EyePosition, LookAtPosition, UpDirection);
-    m_Camera.UpdateViewMatrix();
-
-    XMMATRIX view = m_Camera.GetView();
-    XMMATRIX proj = m_Camera.GetProj();
-
-    XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-    XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
-    XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
-    XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-
-    // Transform NDC space [-1,+1]^2 to texture space [0,1]^2
-    XMMATRIX T(
-        0.5f, 0.0f, 0.0f, 0.0f,
-        0.0f, -0.5f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f, 1.0f);
-
-    XMMATRIX viewProjTex = XMMatrixMultiply(viewProj, T);
-    XMMATRIX shadowTransform = XMLoadFloat4x4(&m_ShadowTransform);
-
-    XMStoreFloat4x4(&m_MainPassCB.View, XMMatrixTranspose(view));
-    XMStoreFloat4x4(&m_MainPassCB.InvView, XMMatrixTranspose(invView));
-    XMStoreFloat4x4(&m_MainPassCB.Proj, XMMatrixTranspose(proj));
-    XMStoreFloat4x4(&m_MainPassCB.InvProj, XMMatrixTranspose(invProj));
-    XMStoreFloat4x4(&m_MainPassCB.ViewProj, XMMatrixTranspose(viewProj));
-    XMStoreFloat4x4(&m_MainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-    XMStoreFloat4x4(&m_MainPassCB.ViewProjTex, XMMatrixTranspose(viewProjTex));
-    XMStoreFloat4x4(&m_MainPassCB.ShadowTransform, XMMatrixTranspose(shadowTransform));
-    m_MainPassCB.EyePosW = m_Camera.GetPosition3f();
-    m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_width, (float)m_height);
-    m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_width, 1.0f / m_height);
-    m_MainPassCB.NearZ = 1.0f;
-    m_MainPassCB.FarZ = 1000.0f;
-    m_MainPassCB.TotalTime = gt.GetTotalTime();
-    m_MainPassCB.DeltaTime = gt.GetTimeElapsed();
-    m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-    m_MainPassCB.Lights[0].Direction = m_RotatedLightDirections[0];
-    m_MainPassCB.Lights[0].Strength = { 0.9f, 0.9f, 0.7f };
-    m_MainPassCB.Lights[1].Direction = m_RotatedLightDirections[1];
-    m_MainPassCB.Lights[1].Strength = { 0.4f, 0.4f, 0.4f };
-    m_MainPassCB.Lights[2].Direction = m_RotatedLightDirections[2];
-    m_MainPassCB.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
-
-    auto currPassCB = m_CurrFrameResource->PassCB.get();
-    currPassCB->CopyData(0, m_MainPassCB);
-}
-
-void ClientTest::UpdateShadowPassCB(CTimer& gt)
-{
-    XMMATRIX view = XMLoadFloat4x4(&m_LightView);
-    XMMATRIX proj = XMLoadFloat4x4(&m_LightProj);
-
-    XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-    XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
-    XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
-    XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-
-    UINT w = m_ShadowMap->Width();
-    UINT h = m_ShadowMap->Height();
-
-    XMStoreFloat4x4(&m_ShadowPassCB.View, XMMatrixTranspose(view));
-    XMStoreFloat4x4(&m_ShadowPassCB.InvView, XMMatrixTranspose(invView));
-    XMStoreFloat4x4(&m_ShadowPassCB.Proj, XMMatrixTranspose(proj));
-    XMStoreFloat4x4(&m_ShadowPassCB.InvProj, XMMatrixTranspose(invProj));
-    XMStoreFloat4x4(&m_ShadowPassCB.ViewProj, XMMatrixTranspose(viewProj));
-    XMStoreFloat4x4(&m_ShadowPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-    m_ShadowPassCB.EyePosW = m_LightPosW;
-    m_ShadowPassCB.RenderTargetSize = XMFLOAT2((float)w, (float)h);
-    m_ShadowPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / w, 1.0f / h);
-    m_ShadowPassCB.NearZ = m_LightNearZ;
-    m_ShadowPassCB.FarZ = m_LightFarZ;
-
-    auto currPassCB = m_CurrFrameResource->PassCB.get();
-    currPassCB->CopyData(1, m_ShadowPassCB);
-}
-
-void ClientTest::UpdateShadowTransform(CTimer& gt)
-{
-    // Only the first "main" light casts a shadow.
-    XMVECTOR lightDir = XMLoadFloat3(&m_RotatedLightDirections[0]);
-    XMVECTOR lightPos = -2.0f * m_SceneBounds.Radius * lightDir;
-    XMVECTOR targetPos = XMLoadFloat3(&m_SceneBounds.Center);
-    XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
-
-    XMStoreFloat3(&m_LightPosW, lightPos);
-
-    // Transform bounding sphere to light space.
-    XMFLOAT3 sphereCenterLS;
-    XMStoreFloat3(&sphereCenterLS, XMVector3TransformCoord(targetPos, lightView));
-
-    // Ortho frustum in light space encloses scene.
-    float l = sphereCenterLS.x - m_SceneBounds.Radius;
-    float b = sphereCenterLS.y - m_SceneBounds.Radius;
-    float n = sphereCenterLS.z - m_SceneBounds.Radius;
-    float r = sphereCenterLS.x + m_SceneBounds.Radius;
-    float t = sphereCenterLS.y + m_SceneBounds.Radius;
-    float f = sphereCenterLS.z + m_SceneBounds.Radius;
-
-    m_LightNearZ = n;
-    m_LightFarZ = f;
-    // 직교 투영 행렬
-    XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
-
-    // Transform NDC space [-1,+1]^2 to texture space [0,1]^2
-    XMMATRIX T(
-        0.5f, 0.0f, 0.0f, 0.0f,
-        0.0f, -0.5f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f, 1.0f);
-
-    XMMATRIX S = lightView * lightProj * T;
-    XMStoreFloat4x4(&m_LightView, lightView);
-    XMStoreFloat4x4(&m_LightProj, lightProj);
-    XMStoreFloat4x4(&m_ShadowTransform, S);
+    m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_Timer);
 }
 
 // Render the scene.
@@ -1452,10 +720,12 @@ void ClientTest::DrawSceneToShadowMap()
     m_commandList->SetGraphicsRootConstantBufferView(3, passCBAddress);
 
     m_commandList->SetPipelineState(m_PSOs["shadow_opaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::Opaque]);
+    auto& OpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::Opaque);
+    DrawRenderItems(m_commandList.Get(), OpaqueRitemLayer);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedShadow_opaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+    auto& SkinnedOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::SkinnedOpaque);
+    DrawRenderItems(m_commandList.Get(), SkinnedOpaqueRitemLayer);
 
     // Change back to GENERIC_READ so we can read the texture in a shader.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
@@ -1476,10 +746,12 @@ void ClientTest::DrawSceneToBackBuffer()
     m_commandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::Opaque]);
+    auto& OpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::Opaque);
+    DrawRenderItems(m_commandList.Get(), OpaqueRitemLayer);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::SkinnedOpaque]);
+    auto& SkinnedOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::SkinnedOpaque);
+    DrawRenderItems(m_commandList.Get(), SkinnedOpaqueRitemLayer);
 
     // UI render.
     DrawSceneToUI();
@@ -1491,7 +763,8 @@ void ClientTest::DrawSceneToUI()
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->SetPipelineState(m_PSOs["UI_opaque"].Get());
-    DrawRenderItems(m_commandList.Get(), m_RitemLayer[(int)RenderLayer::UIOpaque]);
+    auto& UIOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::UIOpaque);
+    DrawRenderItems(m_commandList.Get(), UIOpaqueRitemLayer);
 }
 
 void ClientTest::DrawSceneToTexts(HWND hwnd)
