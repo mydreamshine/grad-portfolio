@@ -1,7 +1,9 @@
 #include "OVER_EX.h"
 #include "..//LobbyServer/LobbyServer/lobby_protocol.h"
 
-OVER_EX::OVER_EX() {}
+OVER_EX::OVER_EX() :
+	ev_type(0)
+{}
 OVER_EX::OVER_EX(int ev) :
 	ev_type(ev)
 {

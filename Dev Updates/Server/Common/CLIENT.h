@@ -10,7 +10,7 @@ class ROOM;
 		ROOM* room{ nullptr };
 
 		int id{ 0 };
-		char savedPacket[200];
+		char savedPacket[200]{};
 		size_t saved_size{ 0 };
 		size_t need_size{ 4 };
 

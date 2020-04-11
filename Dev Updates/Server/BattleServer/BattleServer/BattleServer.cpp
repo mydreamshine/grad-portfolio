@@ -91,12 +91,12 @@ namespace BattleArena {
 	}
 	void BATTLESERVER::Run()
 	{
+		wprintf(L"[SERVER ON]\n");
 		CSOCKADDR_IN clientAddr{};
 		SOCKET clientSocket{};
 		while (true)
 		{
 			clientSocket = accept(m_listenSocket, clientAddr.getSockAddr(), clientAddr.len());
-		
 			CLIENT* client = new CLIENT{};
 			client->socket = clientSocket;
 			client->recv_over.init();
@@ -104,7 +104,6 @@ namespace BattleArena {
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(client->socket), m_iocp, reinterpret_cast<ULONG_PTR>(client), 0);
 			client->set_recv();
 			std::wcout << L"[CLIENT - " << clientSocket << L"] Accept" << std::endl;
-
 		}
 	}
 	void BATTLESERVER::do_worker()
@@ -125,7 +124,6 @@ namespace BattleArena {
 					closesocket(client->socket);
 				if(client != &m_Lobby)
 					delete client;
-				//DisconnectPlayer(key);
 				continue;
 			}
 
@@ -240,7 +238,6 @@ namespace BattleArena {
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
 		switch (packet->type)
 		{
-
 		default:
 			printf("[CLIENT %lld] - Unknown Packet\n", client->socket);
 			while (true);
