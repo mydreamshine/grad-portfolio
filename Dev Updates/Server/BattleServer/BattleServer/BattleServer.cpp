@@ -84,7 +84,7 @@ namespace BattleArena {
 		roomListLock.lock();
 		for (int i = 0; i < MAX_ROOM; ++i) {
 			roomList.emplace_back(i);
-			m_Rooms[i].init();
+			m_Rooms[i] = nullptr;
 		}
 		roomListLock.unlock();
 		wprintf(L" Done.\n");
@@ -132,11 +132,9 @@ namespace BattleArena {
 			OVER_EX* over_ex = reinterpret_cast<OVER_EX*>(over);
 			switch (over_ex->event_type())
 			{
-			case EV_RECV: {
-				/*ProcessPacket(client, over_ex->data());*/
+			case EV_RECV:
 				client->room->process_packet(client, ReceivedBytes);
 				client->set_recv();
-			}
 				break;
 
 			case EV_AUTHO:
@@ -152,12 +150,12 @@ namespace BattleArena {
 			case EV_UPDATE:
 			{
 				//Template Error
-				duration<float>fElapsedTime {high_resolution_clock::now() - m_Rooms[key].last_update_time};
+				duration<float>fElapsedTime {high_resolution_clock::now() - m_Rooms[key]->last_update_time};
 				wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
-				if (true == m_Rooms[key].update(fElapsedTime.count())) {
+				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
-					m_Rooms[key].end();
-					m_Rooms[key].init();
+					m_Rooms[key]->end();
+					delete m_Rooms[key];
 					roomListLock.lock();
 					roomList.emplace_back(key);
 					roomListLock.unlock();
@@ -185,7 +183,7 @@ namespace BattleArena {
 			timer_lock.lock();
 			if (true == timer_queue.empty()) {
 				timer_lock.unlock();
-				this_thread::sleep_for(10ms);
+				this_thread::sleep_for(3ms);
 				continue;
 			}
 
@@ -193,7 +191,7 @@ namespace BattleArena {
 
 			if (ev.wakeup_time > high_resolution_clock::now()) {
 				timer_lock.unlock();
-				this_thread::sleep_for(10ms);
+				this_thread::sleep_for(3ms);
 				continue;
 			}
 			EVENT<EVENT_TYPE> p_ev = ev;
@@ -265,6 +263,12 @@ namespace BattleArena {
 			}
 			else empty_room = -1;
 			roomListLock.unlock();
+
+			if (empty_room != -1) {
+				m_Rooms[empty_room] = new NGPROOM;
+				m_Rooms[empty_room]->init();
+			}
+
 			wprintf(L"[LOBBY] - Room Response %d", empty_room);
 			send_packet_response_room(empty_room);
 			break;
@@ -283,12 +287,12 @@ namespace BattleArena {
 		case CB_PACKET_REQUEST_LOGIN: {
 			cb_packet_request_login* packet = reinterpret_cast<cb_packet_request_login*>(buffer);
 			client->recv_over.set_event(EV_RECV);
-			client->room = &m_Rooms[packet->room_id];
-			if (true == m_Rooms[packet->room_id].regist(client)) {
+			client->room = m_Rooms[packet->room_id];
+			if (true == m_Rooms[packet->room_id]->regist(client)) {
 				wprintf(L"[ROOM %d] - GAME START\n", packet->room_id);
 				//All user COnnected, Start Game
-				m_Rooms[packet->room_id].last_update_time = high_resolution_clock::now();
-				m_Rooms[packet->room_id].start();
+				m_Rooms[packet->room_id]->last_update_time = high_resolution_clock::now();
+				m_Rooms[packet->room_id]->start();
 				add_event(packet->room_id, EV_UPDATE, UPDATE_INTERVAL);
 			}
 		}

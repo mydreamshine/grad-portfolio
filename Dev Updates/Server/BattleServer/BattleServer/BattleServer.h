@@ -18,7 +18,7 @@
 namespace BattleArena {
 	constexpr auto MAX_ROOM = 100;
 	//constexpr auto MATCHUP_NUM = 2;
-	constexpr auto UPDATE_INTERVAL = 33; //ms
+	constexpr auto UPDATE_INTERVAL = 30; //ms
 
 	void error_display(const char* msg, int err_no);
 
@@ -35,7 +35,7 @@ namespace BattleArena {
 		SOCKET m_listenSocket;
 		CLIENT m_Lobby;
 
-		ROOM m_Rooms[MAX_ROOM];
+		ROOM *m_Rooms[MAX_ROOM];
 		std::mutex roomListLock;
 		std::list<DWORD> roomList;
 

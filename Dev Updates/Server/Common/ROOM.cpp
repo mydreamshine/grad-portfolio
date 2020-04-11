@@ -1,7 +1,7 @@
 #include "ROOM.h"
 #include "CLIENT.h"
 
-bool ROOM::update(float elapsedTime)
+bool NGPROOM::update(float elapsedTime)
 {
 	last_update_time = std::chrono::high_resolution_clock::now();
 	ProcessPacket();
@@ -9,17 +9,18 @@ bool ROOM::update(float elapsedTime)
 	SendGameState();
 	return retval;
 }
-void ROOM::init()
+void NGPROOM::init()
 {
-	player_num = 0;
+	clients = new CLIENT* [MATCHUP_NUM];
 
+	player_num = 0;
 	PlayerList.clear();
 	while (!idQueue.empty()) idQueue.pop();
 	idQueue.emplace(player1);
 	idQueue.emplace(player2);
 	idQueue.emplace(player3);
 }
-bool ROOM::regist(CLIENT* client)
+bool NGPROOM::regist(CLIENT* client)
 {
 	int idx = player_num++;
 	clients[idx] = client;
@@ -28,6 +29,7 @@ bool ROOM::regist(CLIENT* client)
 	int id = idQueue.front(); idQueue.pop();
 	idlock.unlock();
 	client->id = id;
+
 	//敲饭捞绢 立加贸府
 	send_packet_player_id(client->socket, id);
 	PlayerList[id] = Player();
@@ -45,30 +47,31 @@ bool ROOM::regist(CLIENT* client)
 		return true;
 	return false;
 }
-void ROOM::disconnect(CLIENT* client)
+void NGPROOM::disconnect(CLIENT* client)
 {
 	PlayerList[client->id].m_isConnect = false;
 }
-void ROOM::process_packet(CLIENT* client, int ReceivedBytes)
+void NGPROOM::process_packet(CLIENT* client, int ReceivedBytes)
 {
 	PacketReceiver(client, ReceivedBytes);
 }
-void ROOM::start()
+void NGPROOM::start()
 {
 	SendQueue.emplace_back(make_packet_game_start());
 	Initialize();
 }
-void ROOM::end()
+void NGPROOM::end()
 {
 	DeleteObjects();
-	for (int i = 0; i < MATCHUP_NUM; ++i) {
+	for (int i=0;i<MATCHUP_NUM;++i)
+	{
 		SOCKET tmp = clients[i]->socket;
 		clients[i]->socket = INVALID_SOCKET;
 		closesocket(tmp);
 	}
+	delete[] clients;
 };
-
-void ROOM::PacketReceiver(CLIENT* client, int ReceivedBytes)
+void NGPROOM::PacketReceiver(CLIENT* client, int ReceivedBytes)
 {
 	int retval = ReceivedBytes;
 

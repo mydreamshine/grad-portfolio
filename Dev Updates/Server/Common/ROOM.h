@@ -18,27 +18,40 @@
 #define COMMON_BULLET_NUM 128
 #define COMMON_BULLET_DAMAGE 1
 
-#define MATCHUP_NUM 3
-
 class CLIENT;
 class ROOM
 {
 public:
-	std::atomic<int> player_num;
-	CLIENT* clients[MATCHUP_NUM];
+	virtual void init() = 0;
+	virtual bool regist(CLIENT* client) = 0;
+	virtual void disconnect(CLIENT* client) = 0;
+	virtual void start() = 0;
+	virtual void end() = 0;
+	virtual bool update(float elapsedTime) = 0;
+	virtual void process_packet(CLIENT* client, int ReceivedBytes) = 0;
+
 	std::chrono::high_resolution_clock::time_point last_update_time;
 
+protected:
+	int MATCHUP_NUM = 0;
+	std::atomic<int> player_num;
+	CLIENT** clients;
+};
+
+class NGPROOM : public ROOM
+{
+public:
 	virtual void init();
 	virtual bool regist(CLIENT* client);
 	virtual void disconnect(CLIENT* client);
 	virtual void start();
 	virtual void end();
-
 	virtual bool update(float elapsedTime);
 	virtual void process_packet(CLIENT* client, int ReceivedBytes);
-	
 
+private:
 	//ID
+	int MATCHUP_NUM = 3;
 	std::queue<int> idQueue;
 	std::mutex idlock;
 
@@ -119,7 +132,7 @@ public:
 	{
 		int packet = 0;
 		pTurnOn(packet, id);
-		send(client, (const char*)& packet, sizeof(int), 0);
+		send(client, (const char*)&packet, sizeof(int), 0);
 	}
 	void reserve_packet_player_pos(const Player& mover, std::vector<int>& dat)
 	{
@@ -129,7 +142,7 @@ public:
 		pTurnOn(packet, obj_player);
 		pTurnOn(packet, obj_position);
 
-		int* p_pos = (int*)& mover.m_pos.x;
+		int* p_pos = (int*)&mover.m_pos.x;
 		dat.emplace_back(packet);
 		dat.emplace_back(*p_pos++);
 		dat.emplace_back(*p_pos++);
@@ -146,7 +159,7 @@ public:
 		pTurnOn(packet, obj_bullet);
 		pTurnOn(packet, obj_position);
 
-		int* p_pos = (int*)& shooter.bullets[idx].m_pos.x;
+		int* p_pos = (int*)&shooter.bullets[idx].m_pos.x;
 		dat.emplace_back(packet);
 		dat.emplace_back(*p_pos++);
 		dat.emplace_back(*p_pos++);
@@ -161,7 +174,7 @@ public:
 		pTurnOn(packet, obj_bullet);
 		pTurnOn(packet, obj_position);
 
-		int* p_pos = (int*)& m_commonBullet[idx].m_pos.x;
+		int* p_pos = (int*)&m_commonBullet[idx].m_pos.x;
 		dat.emplace_back(packet);
 		dat.emplace_back(*p_pos++);
 		dat.emplace_back(*p_pos++);
@@ -177,7 +190,7 @@ public:
 		pTurnOn(packet, obj_item);
 		pTurnOn(packet, obj_position);
 
-		int* p_pos = (int*)& m_item[idx]->m_pos.x;
+		int* p_pos = (int*)&m_item[idx]->m_pos.x;
 		dat.emplace_back(packet);
 		dat.emplace_back(*p_pos++);
 		dat.emplace_back(*p_pos++);
