@@ -154,11 +154,9 @@ namespace BattleArena {
 				wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
 				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
-					m_Rooms[key]->end();
+					//m_Rooms[key]->end();
 					delete m_Rooms[key];
-					roomListLock.lock();
-					roomList.emplace_back(key);
-					roomListLock.unlock();
+					set_empty_room(key);
 				}
 				else add_event(static_cast<int>(key), EV_UPDATE, UPDATE_INTERVAL);
 			}
@@ -254,23 +252,15 @@ namespace BattleArena {
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
 		switch (packet->type)
 		{
-		case SB_PACKET_REQUEST_ROOM:
-			int empty_room;
-			roomListLock.lock();
-			if (false == roomList.empty()) {
-				empty_room = roomList.front();
-				roomList.pop_front();
-			}
-			else empty_room = -1;
-			roomListLock.unlock();
-
+		case SB_PACKET_REQUEST_ROOM: {
+			sb_packet_request_room* room_packet = reinterpret_cast<sb_packet_request_room*>(buffer);
+			int empty_room = get_empty_room();
 			if (empty_room != -1) {
-				m_Rooms[empty_room] = new NGPROOM;
-				m_Rooms[empty_room]->init();
+				m_Rooms[empty_room] = make_game_mode(room_packet->mode);
 			}
-
 			wprintf(L"[LOBBY] - Room Response %d", empty_room);
 			send_packet_response_room(empty_room);
+		}
 			break;
 
 		default:
@@ -303,5 +293,36 @@ namespace BattleArena {
 			while (true);
 			break;
 		}
+	}
+
+	//get the empty_room number from roomList
+	int BATTLESERVER::get_empty_room()
+	{
+		int empty_room;
+		roomListLock.lock();
+		if (false == roomList.empty()) {
+			empty_room = roomList.front();
+			roomList.pop_front();
+		}
+		else empty_room = -1;
+		roomListLock.unlock();
+		return empty_room;
+	}
+	//set the empty_room number to roomList
+	void BATTLESERVER::set_empty_room(int num)
+	{
+		roomListLock.lock();
+		roomList.emplace_back(num);
+		roomListLock.unlock();
+	}
+	//make gameroom(normal, deathmatch, etc...)
+	ROOM* BATTLESERVER::make_game_mode(int mode)
+	{
+		ROOM* newgame = nullptr;
+		switch (mode) {
+		case GAMEMODE_NGP:
+			newgame = new NGPROOM;
+		}
+		return newgame;
 	}
 }

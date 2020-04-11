@@ -22,6 +22,7 @@ class CLIENT;
 class ROOM
 {
 public:
+	virtual ~ROOM();
 	virtual void init() = 0;
 	virtual bool regist(CLIENT* client) = 0;
 	virtual void disconnect(CLIENT* client) = 0;
@@ -41,6 +42,8 @@ protected:
 class NGPROOM : public ROOM
 {
 public:
+	NGPROOM();
+	virtual ~NGPROOM();
 	virtual void init();
 	virtual bool regist(CLIENT* client);
 	virtual void disconnect(CLIENT* client);

@@ -60,6 +60,9 @@ namespace BattleArena {
 		void ProcessLobbyPacket(void* buffer);
 		void ProcessAuthoPacket(CLIENT* client, void* buffer);
 
+		int get_empty_room();
+		void set_empty_room(int num);
+		ROOM* make_game_mode(int mode);
 	public:
 		BATTLESERVER();
 		~BATTLESERVER();

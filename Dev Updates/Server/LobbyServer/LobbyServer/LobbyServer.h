@@ -92,7 +92,7 @@ namespace BattleArena {
 		void send_packet(int client, void* buff);
 		void send_packet_default(int client, int TYPE);
 		void send_packet_room_info(int client, int room_id);
-		void send_packet_request_room();
+		void send_packet_request_room(char mode);
 		void ProcessPacket(DWORD client, void* packet);
 
 	public:

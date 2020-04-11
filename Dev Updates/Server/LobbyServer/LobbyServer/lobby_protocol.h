@@ -12,6 +12,8 @@
 
 #define SB_PACKET_REQUEST_ROOM 0
 
+#define GAMEMODE_NGP 0
+
 struct common_default_packet
 {
 	CHAR size;
@@ -27,6 +29,7 @@ struct sc_packet_match_room_info
 struct sb_packet_request_room
 {
 	common_default_packet cdp;
+	char mode;
 };
 
 struct bs_packet_response_room

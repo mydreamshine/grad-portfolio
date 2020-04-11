@@ -1,6 +1,15 @@
 #include "ROOM.h"
 #include "CLIENT.h"
 
+ROOM::~ROOM() {};
+NGPROOM::NGPROOM()
+{
+	init();
+}
+NGPROOM::~NGPROOM()
+{
+	end();
+}
 bool NGPROOM::update(float elapsedTime)
 {
 	last_update_time = std::chrono::high_resolution_clock::now();
@@ -132,3 +141,4 @@ void NGPROOM::PacketReceiver(CLIENT* client, int ReceivedBytes)
 	}
 	RecvLock.unlock();
 }
+

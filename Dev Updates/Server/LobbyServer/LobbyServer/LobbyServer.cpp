@@ -170,14 +170,14 @@ namespace BattleArena {
 		mri.room_id = room_id;
 		send_packet(client, &mri);
 	}
-	void LOBBYSERVER::send_packet_request_room()
+	void LOBBYSERVER::send_packet_request_room(char mode)
 	{
 		sb_packet_request_room packet;
 		packet.cdp.size = sizeof(packet);
 		packet.cdp.type = SB_PACKET_REQUEST_ROOM;
+		packet.mode = mode;
 		send_packet(BATTLE_KEY, &packet);
 	}
-
 
 	void LOBBYSERVER::ProcessPacket(DWORD client, void* buffer)
 	{
@@ -220,7 +220,7 @@ namespace BattleArena {
 				waiterLock.lock();
 				m_waiters.emplace_back(room_waiter);
 				waiterLock.unlock();
-				send_packet_request_room();
+				send_packet_request_room(GAMEMODE_NGP);
 				wprintf(L"[MATCH MAKE]\n");
 			}
 			else queueLock.unlock();
