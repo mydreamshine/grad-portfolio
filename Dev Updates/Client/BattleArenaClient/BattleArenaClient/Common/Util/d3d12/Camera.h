@@ -38,7 +38,8 @@ public:
 	float GetFarWindowHeight()const;
 	
 	// Set frustum.
-	void SetLens(float fovY, float aspect, float zn, float zf);
+	void SetPerspectiveLens(float fovY, float aspect, float zn, float zf);
+	void SetOrthographicLens(UINT ViewWidth, UINT ViewHeight, float zn, float zf);
 
 	// Define camera space via LookAt parameters.
 	void LookAt(DirectX::FXMVECTOR pos, DirectX::FXMVECTOR target, DirectX::FXMVECTOR worldUp);
