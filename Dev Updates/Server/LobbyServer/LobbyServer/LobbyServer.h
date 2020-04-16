@@ -6,59 +6,57 @@
 #include <atomic>
 #include <list>
 #include <map>
+#include <iostream>
+#include "DBMANAGER.h"
+
+//Commons
+#include "..\..\Common\CSOCKADDR_IN.h"
+#include "..\..\Common\OVER_EX.h"
+
+#define BATTLE_OFFLINE
 
 namespace BattleArena {
+	//DB
 	constexpr auto MAX_BUFFER_SIZE = 200;
 	constexpr auto MAX_USER = 100;
 	constexpr auto BATTLE_KEY = MAX_USER;
 	constexpr auto MATCHUP_NUM = 3;
 
-	//SOCKADDR_IN Wrapping Class
 	enum EVENT_TYPE {EV_RECV, EV_SEND, EV_BATTLE};
-	class CSOCKADDR_IN
-	{
-	private:
-		int size;
-		SOCKADDR_IN addr;
+	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY };
 
+	class CLIENT
+	{
 	public:
-		CSOCKADDR_IN();
-		CSOCKADDR_IN(unsigned long addr, short port);
-		CSOCKADDR_IN(const char* addr, short port);
-
-		int* len() { return &size; };
-		SOCKADDR* getSockAddr() { return reinterpret_cast<SOCKADDR*>(&addr); };
-	};
-
-	//Extend OVERLAPPED
-	class OVER_EX
-	{
-	private:
-		WSAOVERLAPPED over;
-		WSABUF wsabuf;
-		char packet[MAX_BUFFER_SIZE];
-		EVENT_TYPE ev_type;
-
-	public:
-		OVER_EX();
-		OVER_EX(EVENT_TYPE ev);
-		OVER_EX(EVENT_TYPE ev, void* buff);
-		WSABUF* buffer() { return &wsabuf; }
-		char* data() { return packet; }
-		WSAOVERLAPPED* overlapped() { return &over; }
-		EVENT_TYPE event_type() { return ev_type; }
-		void set_event(EVENT_TYPE ev) { ev_type = ev; }
-		void reset();
-		void init();
-	};
-
-	//REAL USER
-	enum CL_STATE {ST_QUEUE, ST_IDLE, ST_PLAY};
-	struct CLIENT
-	{
 		OVER_EX recv_over{};
 		SOCKET socket{ INVALID_SOCKET };
 		CL_STATE state{ ST_IDLE };
+
+		void set_recv()
+		{
+			recv_over.reset();
+			DWORD flag = 0;
+			if (SOCKET_ERROR == WSARecv(socket, recv_over.buffer(), 1, nullptr, &flag, recv_over.overlapped(), nullptr))
+			{
+				int err_no = WSAGetLastError();
+				if (WSA_IO_PENDING != err_no)
+					error_display("Error at WSARecv()", err_no);
+			}
+		}
+		void error_display(const char* msg, int err_no)
+		{
+			WCHAR* lpMsgBuf;
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER |
+				FORMAT_MESSAGE_FROM_SYSTEM,
+				NULL, err_no,
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+				(LPTSTR)&lpMsgBuf, 0, NULL);
+			std::cout << msg;
+			std::wcout << L"¿¡·¯ " << lpMsgBuf << std::endl;
+			while (true);
+			LocalFree(lpMsgBuf);
+		}
 	};
 	struct ROOM_WAITER
 	{
@@ -68,12 +66,15 @@ namespace BattleArena {
 	class LOBBYSERVER
 	{
 	private:
+		std::vector<std::thread> m_threads;
 		std::atomic<int> player_num;
 		HANDLE m_iocp;
 		SOCKET m_listenSocket;
 		SOCKET m_battleSocket;
-		CLIENT m_clients[MAX_USER + 1];
 		
+		CLIENT m_clients[MAX_USER + 1];
+		std::map<int, int> client_table; //connected user table that consist of (user UID, m_clients's INDEX)
+
 		//Match Queue
 		std::mutex queueLock;
 		std::list<int> m_queueList;
@@ -81,9 +82,8 @@ namespace BattleArena {
 		
 		std::mutex waiterLock;
 		std::list<ROOM_WAITER> m_waiters;
-		
-		std::vector<std::thread> m_threads;
 
+		//Func
 		void error_display(const char* msg, int err_no);
 		void InitWSA();
 		void InitThreads();
@@ -93,8 +93,12 @@ namespace BattleArena {
 		void send_packet_default(int client, int TYPE);
 		void send_packet_room_info(int client, int room_id);
 		void send_packet_request_room(char mode);
-		void ProcessPacket(DWORD client, void* packet);
+		void process_packet(DWORD client, void* packet);
+		void process_packet_response_room(void* buffer);
 
+		void match_enqueue(DWORD client);
+		void match_dequeue(DWORD client);
+		void match_make();
 	public:
 		LOBBYSERVER();
 		~LOBBYSERVER();

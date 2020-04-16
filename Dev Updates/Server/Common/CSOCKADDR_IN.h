@@ -9,7 +9,8 @@ private:
 
 public:
 	CSOCKADDR_IN();
-	CSOCKADDR_IN(long addr, short port);
+	CSOCKADDR_IN(unsigned long addr, short port);
+	CSOCKADDR_IN(const char* addr, short port);
 
 	int* len();
 	SOCKADDR* getSockAddr();

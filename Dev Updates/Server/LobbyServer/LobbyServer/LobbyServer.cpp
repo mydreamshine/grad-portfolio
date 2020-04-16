@@ -1,8 +1,9 @@
 #pragma comment(lib, "ws2_32")
 #include "LobbyServer.h"
-#include <iostream>
 #include "lobby_protocol.h"
 #include "..//..//BattleServer/BattleServer/battle_protocol.h"
+
+thread_local DBMANAGER DBManager{};
 
 namespace BattleArena {
 	void LOBBYSERVER::error_display(const char* msg, int err_no)
@@ -24,6 +25,8 @@ namespace BattleArena {
 		m_listenSocket(INVALID_SOCKET),
 		m_battleSocket(INVALID_SOCKET)
 	{
+		std::wcout.imbue(std::locale("korean"));
+		setlocale(LC_ALL, "korean");
 		wprintf(L"[LOBBY SERVER]\n");
 		InitWSA();
 		InitThreads();
@@ -57,23 +60,19 @@ namespace BattleArena {
 			error_display("Error at Listen()", WSAGetLastError());
 		wprintf(L" Done.\n");
 
+#ifndef BATTLE_OFFLINE
 		wprintf(L"Connecting to BattleServer...");
 		while (SOCKET_ERROR == ::connect(m_battleSocket, battleserverAddr.getSockAddr(), *battleserverAddr.len()))
 			wprintf(L"\n Can't access to BattleServer... Retry...");
 		m_clients[BATTLE_KEY].socket = m_battleSocket;
 		m_clients[BATTLE_KEY].state = ST_IDLE;
 		m_clients[BATTLE_KEY].recv_over.init();
-		/*m_clients[BATTLE_KEY].recv_over.set_event(EV_BATTLE);*/
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_battleSocket), m_iocp, BATTLE_KEY, 0);
-		DWORD flag = 0;
-		if (SOCKET_ERROR == WSARecv(m_clients[BATTLE_KEY].socket, m_clients[BATTLE_KEY].recv_over.buffer(), 1, nullptr, &flag, m_clients[BATTLE_KEY].recv_over.overlapped(), nullptr))
-		{
-			int err_no = WSAGetLastError();
-			if (WSA_IO_PENDING != err_no)
-				error_display("Error at WSARecv()", err_no);
-		}
-
+		m_clients[BATTLE_KEY].set_recv();
 		wprintf(L" Done.\n");
+#else
+		wprintf(L"[BATTLE_OFFLINE MODE]\n");
+#endif
 	}
 	void LOBBYSERVER::InitThreads()
 	{
@@ -96,18 +95,12 @@ namespace BattleArena {
 			m_clients[new_id].recv_over.init();
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_clients[new_id].socket), m_iocp, new_id, 0);
 			std::wcout << L"[CLIENT - " << new_id << L"] Accept" << std::endl;
-
-			DWORD flag = 0;
-			if (0 != WSARecv(m_clients[new_id].socket, m_clients[new_id].recv_over.buffer(), 1, NULL, &flag, m_clients[new_id].recv_over.overlapped(), NULL))
-			{
-				int err_no = WSAGetLastError();
-				if (WSA_IO_PENDING != err_no)
-					error_display("Error at WSARecv()", err_no);
-			}
+			m_clients[new_id].set_recv();
 		}
 	}
 	void LOBBYSERVER::do_worker()
 	{
+		DBManager.init();
 		DWORD ReceivedBytes;
 		ULONGLONG key;
 		OVERLAPPED* over;
@@ -118,7 +111,6 @@ namespace BattleArena {
 			if (0 == ReceivedBytes) {
 				std::wcout << L"[CLIENT - " << key << L"] Disconnected" << std::endl;
 				closesocket(m_clients[key].socket);
-				//DisconnectPlayer(key);
 				continue;
 			}
 
@@ -126,16 +118,9 @@ namespace BattleArena {
 			DWORD client = static_cast<DWORD>(key);
 			switch (over_ex->event_type())
 			{
-			case EV_RECV: {
-				ProcessPacket(client, over_ex->data());
-				DWORD flag = 0;
-				if (SOCKET_ERROR == WSARecv(m_clients[client].socket, m_clients[client].recv_over.buffer(), 1, nullptr, &flag, m_clients[client].recv_over.overlapped(), nullptr))
-				{
-					int err_no = WSAGetLastError();
-					if (WSA_IO_PENDING != err_no)
-						error_display("Error at WSARecv()", err_no);
-				}
-			}
+			case EV_RECV:
+				process_packet(client, over_ex->data());
+				m_clients[client].set_recv();
 				break;
 
 			case EV_SEND:
@@ -179,85 +164,37 @@ namespace BattleArena {
 		send_packet(BATTLE_KEY, &packet);
 	}
 
-	void LOBBYSERVER::ProcessPacket(DWORD client, void* buffer)
+	void LOBBYSERVER::process_packet(DWORD client, void* buffer)
 	{
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
 		switch (packet->type)
 		{
-		case CS_PACKET_MATCH_ENQUEUE: {
+		case CS_PACKET_REQUEST_LOGIN: 
+		{
+			cs_packet_request_login* cprl = reinterpret_cast<cs_packet_request_login*>(buffer);
+			int uid = DBManager.id_check(cprl->id);
+			if (uid != RESULT_NO_ID)
+				send_packet_default(client, SC_PACKET_LOGIN_OK);
+			else
+				send_packet_default(client, SC_PACKET_LOGIN_FAIL);
+		}
+			break;
+
+		case CS_PACKET_MATCH_ENQUEUE:
 			if (ST_QUEUE == m_clients[client].state) break;
-			queueLock.lock();
-			m_queueList.emplace_back(client);
-			m_queueMap.emplace(std::make_pair(client, std::prev(m_queueList.end())));
-			m_clients[client].state = ST_QUEUE;
-			std::list<int> cpyqueue{ m_queueList };
-			queueLock.unlock();
-			send_packet_default(client, SC_PACKET_MATCH_ENQUEUE);
-
-			wprintf(L"[CLIENT %d] - ENQUEUE\n", client);
-			wprintf(L"[QUEUE STATUS - ");
-			for (auto i = cpyqueue.begin(); i != cpyqueue.end(); ++i)
-				wprintf(L"%d ", *i);
-			wprintf(L"]\n");
-
-			/*If Players enough to make match,
-			Make Room_Waiter and 
-			Request Battle server to Empty room*/
-			queueLock.lock();
-			if (m_queueList.size() >= MATCHUP_NUM)
-			{
-				std::list<int>::iterator waiter = m_queueList.begin();
-				ROOM_WAITER room_waiter;
-				for (int i = 0; i < MATCHUP_NUM; ++i)
-				{
-					room_waiter.waiter[i] = *waiter;
-					m_clients[*waiter].state = ST_PLAY;
-					m_queueMap.erase(*waiter);
-					m_queueList.erase(waiter++);
-				}
-				queueLock.unlock();
-
-				waiterLock.lock();
-				m_waiters.emplace_back(room_waiter);
-				waiterLock.unlock();
-				send_packet_request_room(GAMEMODE_NGP);
-				wprintf(L"[MATCH MAKE]\n");
-			}
-			else queueLock.unlock();
-		}
+			match_enqueue(client);
+#ifndef BATTLE_OFFLINE
+			match_make();
+#endif
 			break;
 
-		case CS_PACKET_MATCH_DEQUEUE: {
+		case CS_PACKET_MATCH_DEQUEUE:
 			if (ST_IDLE == m_clients[client].state) break;
-			queueLock.lock();
-			m_queueList.erase(m_queueMap[client]);
-			m_queueMap.erase(client);
-			m_clients[client].state = ST_IDLE;
-			std::list<int> cpyqueue{ m_queueList };
-			queueLock.unlock();
-			send_packet_default(client, SC_PACKET_MATCH_DEQUEUE);
-
-			wprintf(L"[CLIENT %d] - DEQUEUE\n", client);
-			wprintf(L"[QUEUE STATUS - ");
-			for (auto i = cpyqueue.begin(); i != cpyqueue.end(); ++i)
-				wprintf(L"%d ", *i);
-			wprintf(L"]\n");
-		}
+			match_dequeue(client);
 			break;
 
-		case BS_PACKET_RESPONSE_ROOM: {
-			//ProcessRequestRoomPacket();
-			bs_packet_response_room* packet = reinterpret_cast<bs_packet_response_room*>(buffer);
-			waiterLock.lock();
-			std::list<ROOM_WAITER>::iterator w = m_waiters.begin();
-			for (int i = 0; i < MATCHUP_NUM; ++i)
-			{
-				m_clients[w->waiter[i]].state = ST_IDLE;
-				send_packet_room_info(w->waiter[i], packet->room_id);
-			}
-			m_waiters.erase(w);
-			waiterLock.unlock();
-		}
+		case BS_PACKET_RESPONSE_ROOM:
+			process_packet_response_room(buffer);
 			break;
 
 		default:
@@ -266,47 +203,73 @@ namespace BattleArena {
 			break;
 		}
 	}
+	void LOBBYSERVER::process_packet_response_room(void* buffer)
+	{
+		bs_packet_response_room* packet = reinterpret_cast<bs_packet_response_room*>(buffer);
+		waiterLock.lock();
+		std::list<ROOM_WAITER>::iterator w = m_waiters.begin();
+		for (int i = 0; i < MATCHUP_NUM; ++i)
+		{
+			m_clients[w->waiter[i]].state = ST_IDLE;
+			send_packet_room_info(w->waiter[i], packet->room_id);
+		}
+		m_waiters.erase(w);
+		waiterLock.unlock();
+	}
+	void LOBBYSERVER::match_enqueue(DWORD client)
+	{
+		queueLock.lock();
+		m_queueList.emplace_back(client);
+		m_queueMap.emplace(std::make_pair(client, std::prev(m_queueList.end())));
+		m_clients[client].state = ST_QUEUE;
+		std::list<int> cpyqueue{ m_queueList };
+		queueLock.unlock();
+		send_packet_default(client, SC_PACKET_MATCH_ENQUEUE);
 
-	CSOCKADDR_IN::CSOCKADDR_IN()
-	{
-		size = sizeof(SOCKADDR_IN);
-		memset(&addr, 0, sizeof(SOCKADDR_IN));
+		wprintf(L"[CLIENT %d] - ENQUEUE\n", client);
+		wprintf(L"[QUEUE STATUS - ");
+		for (auto i = cpyqueue.begin(); i != cpyqueue.end(); ++i)
+			wprintf(L"%d ", *i);
+		wprintf(L"]\n");
 	}
-	CSOCKADDR_IN::CSOCKADDR_IN(unsigned long address, short port) :
-		CSOCKADDR_IN()
+	void LOBBYSERVER::match_dequeue(DWORD client)
 	{
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = htonl(address);
-		addr.sin_port = htons(port);
+		queueLock.lock();
+		m_queueList.erase(m_queueMap[client]);
+		m_queueMap.erase(client);
+		m_clients[client].state = ST_IDLE;
+		std::list<int> cpyqueue{ m_queueList };
+		queueLock.unlock();
+		send_packet_default(client, SC_PACKET_MATCH_DEQUEUE);
+
+		wprintf(L"[CLIENT %d] - DEQUEUE\n", client);
+		wprintf(L"[QUEUE STATUS - ");
+		for (auto i = cpyqueue.begin(); i != cpyqueue.end(); ++i)
+			wprintf(L"%d ", *i);
+		wprintf(L"]\n");
 	}
-	CSOCKADDR_IN::CSOCKADDR_IN(const char* address, short port) :
-		CSOCKADDR_IN()
+	void LOBBYSERVER::match_make()
 	{
-		addr.sin_family = AF_INET;
-		InetPton(AF_INET, address, &addr.sin_addr);
-		addr.sin_port = htons(port);
-	}
-	OVER_EX::OVER_EX() {}
-	OVER_EX::OVER_EX(EVENT_TYPE ev) :
-		ev_type(ev)
-	{
-		init();
-	}
-	OVER_EX::OVER_EX(EVENT_TYPE ev, void* buff) :
-		OVER_EX(ev)
-	{
-		common_default_packet* cdp = reinterpret_cast<common_default_packet*>(buff);
-		memcpy(packet, cdp, cdp->size);
-		wsabuf.len = cdp->size;
-	}
-	void OVER_EX::init()
-	{
-		memset(&over, 0, sizeof(WSAOVERLAPPED));
-		wsabuf.buf = packet;
-		wsabuf.len = sizeof(packet);
-	}
-	void OVER_EX::reset()
-	{
-		memset(&over, 0, sizeof(WSAOVERLAPPED));
+		queueLock.lock();
+		if (m_queueList.size() >= MATCHUP_NUM)
+		{
+			std::list<int>::iterator waiter = m_queueList.begin();
+			ROOM_WAITER room_waiter;
+			for (int i = 0; i < MATCHUP_NUM; ++i)
+			{
+				room_waiter.waiter[i] = *waiter;
+				m_clients[*waiter].state = ST_PLAY;
+				m_queueMap.erase(*waiter);
+				m_queueList.erase(waiter++);
+			}
+			queueLock.unlock();
+
+			waiterLock.lock();
+			m_waiters.emplace_back(room_waiter);
+			waiterLock.unlock();
+			send_packet_request_room(GAMEMODE_NGP);
+			wprintf(L"[MATCH MAKE]\n");
+		}
+		else queueLock.unlock();
 	}
 }

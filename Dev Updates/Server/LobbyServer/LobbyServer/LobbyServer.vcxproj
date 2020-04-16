@@ -42,7 +42,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -87,6 +87,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,11 +124,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\CLIENT.cpp" />
+    <ClCompile Include="..\..\Common\csockaddr_in.cpp" />
+    <ClCompile Include="..\..\Common\EVENT.cpp" />
+    <ClCompile Include="..\..\Common\OVER_EX.cpp" />
+    <ClCompile Include="DBMANAGER.cpp" />
     <ClCompile Include="LobbyServer.cpp" />
-    <ClCompile Include="소스.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h" />
+    <ClInclude Include="..\..\Common\CLIENT.h" />
+    <ClInclude Include="..\..\Common\CSOCKADDR_IN.h" />
+    <ClInclude Include="..\..\Common\EVENT.h" />
+    <ClInclude Include="..\..\Common\OVER_EX.h" />
+    <ClInclude Include="DBMANAGER.h" />
     <ClInclude Include="LobbyServer.h" />
     <ClInclude Include="lobby_protocol.h" />
   </ItemGroup>
