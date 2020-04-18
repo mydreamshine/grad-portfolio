@@ -23,43 +23,54 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 
 void PlayGameScene::OnInitProperties()
 {
-    for (auto& e : m_AllRitems)
+    for (auto& obj : m_SkinnedObjects)
     {
-        if (e->Geo->Name == "Meshtint Free Knight")
+        if (obj->m_Name == "Meshtint Free Knight")
         {
-            e->NumFramesDirty = gNumFrameResources;
+            obj->NumObjectCBDirty = gNumFrameResources;
             XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(e->World), PosM);
-            e->TexTransform = MathHelper::Identity4x4();
-            e->Skeleton->AnimStop(e->Skeleton->mCurrPlayingAnimName);
-            e->Skeleton->AnimPlay("Meshtint Free Knight@Battle Idle");
+            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
+            obj->m_TexTransform = MathHelper::Identity4x4();
+            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
+            obj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
         }
-        else if (e->Geo->Name == "TT_RTS_Demo_Character")
+        else if (obj->m_Name == "TT_RTS_Demo_Character")
         {
-            e->NumFramesDirty = gNumFrameResources;
+            obj->NumObjectCBDirty = gNumFrameResources;
             XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(e->World), PosM);
-            e->TexTransform = MathHelper::Identity4x4();
-            e->Skeleton->AnimStop(e->Skeleton->mCurrPlayingAnimName);
-            e->Skeleton->AnimPlay("infantry_01_idle");
+            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
+            obj->m_TexTransform = MathHelper::Identity4x4();
+            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
+            obj->m_AnimInfo->AnimPlay("infantry_01_idle");
         }
-        else if (e->Geo->Name == "claire@Dancing")
+        else if (obj->m_Name == "claire@Dancing")
         {
-            e->NumFramesDirty = gNumFrameResources;
+            obj->NumObjectCBDirty = gNumFrameResources;
             XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(e->World), PosM);
-            e->TexTransform = MathHelper::Identity4x4();
-            e->Skeleton->AnimStop(e->Skeleton->mCurrPlayingAnimName);
-            e->Skeleton->AnimPlay("claire@Dancing");
+            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
+            obj->m_TexTransform = MathHelper::Identity4x4();
+            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
+            obj->m_AnimInfo->AnimPlay("claire@Dancing");
         }
-        else if (e->Geo->Name == "Soldier_demo")
+        else if (obj->m_Name == "Soldier_demo")
         {
-            e->NumFramesDirty = gNumFrameResources;
+            obj->NumObjectCBDirty = gNumFrameResources;
             XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(e->World), PosM);
-            e->TexTransform = MathHelper::Identity4x4();
-            e->Skeleton->AnimStop(e->Skeleton->mCurrPlayingAnimName);
-            e->Skeleton->AnimPlay("demo_mixamo_idle");
+            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
+            obj->m_TexTransform = MathHelper::Identity4x4();
+            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
+            obj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
+        }
+        else
+        {
+            obj->m_Name = "";
+            obj->NumObjectCBDirty = 0;
+            obj->m_WorldTransform = MathHelper::Identity4x4();
+            obj->m_TexTransform = MathHelper::Identity4x4();
+            obj->m_AnimInfo->Init();
+            obj->m_RenderItems.clear();
+            obj->m_Skeleton = nullptr;
+            obj->Activated = false;
         }
     }
 
@@ -91,131 +102,29 @@ void PlayGameScene::DisposeUploaders()
 void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 {
     GeometryGenerator geoGen;
-    GeometryGenerator::MeshData grid = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
+
+    float wnd_width = (float)m_width;
+    float wnd_height = (float)m_height;
+    float wnd_top = wnd_height / 2;
+    float wnd_bottom = -wnd_top;
+    float wnd_right = wnd_width / 2;
+    float wnd_left = -wnd_right;
 
     // UI Position relative to DC(Device Coordinate) with origin at screen center.
-    GeometryGenerator::MeshData UI_quad1 = geoGen.CreateQuad(-(float)m_width / 2 + 10.0f, (float)m_height / 2 - 10.0f, 400.0f, 150.0f, 0.0f);
-    GeometryGenerator::MeshData UI_quad2 = geoGen.CreateQuad((float)m_width / 2 - 410.0f, (float)m_height / 2 - 10.0f, 400.0f, 150.0f, 0.0f);
-    GeometryGenerator::MeshData UI_quad3 = geoGen.CreateQuad(-200.0f, -(float)m_height / 2 + 160.0f, 400.0f, 150.0f, 0.0f);
+    std::unordered_map<std::string, GeometryGenerator::MeshData> UI_Meshes;
+    UI_Meshes["UI_quad1"] = geoGen.CreateQuad(wnd_left + 10.0f, wnd_top - 10.0f, 400.0f, 150.0f, 0.0f);
+    UI_Meshes["UI_quad2"] = geoGen.CreateQuad(wnd_right - 410.0f, wnd_top - 10.0f, 400.0f, 150.0f, 0.0f);
+    UI_Meshes["UI_quad3"] = geoGen.CreateQuad(-200.0f, wnd_bottom + 160.0f, 400.0f, 150.0f, 0.0f);
 
-    //
-    // Concatenating all the geometry into one big vertex/index buffer.
-    // So define the regions in the buffer each submesh covers.
-    //
+    m_Geometries["PlayGameSceneUIGeo"]
+        = std::move(Scene::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UI_Meshes));
 
-    // Cache the vertex offsets to each object in the concatenated vertex buffer.
-    UINT gridVertexOffset = 0;
-    UINT UI_quad1_VertexOffset = (UINT)grid.Vertices.size();
-    UINT UI_quad2_VertexOffset = UI_quad1_VertexOffset + (UINT)UI_quad1.Vertices.size();
-    UINT UI_quad3_VertexOffset = UI_quad2_VertexOffset + (UINT)UI_quad2.Vertices.size();
 
-    // Cache the starting index for each object in the concatenated index buffer.
-    UINT gridIndexOffset = 0;
-    UINT UI_quad1_IndexOffset = (UINT)grid.Indices32.size();
-    UINT UI_quad2_IndexOffset = UI_quad1_IndexOffset + (UINT)UI_quad1.Indices32.size();
-    UINT UI_quad3_IndexOffset = UI_quad2_IndexOffset + (UINT)UI_quad2.Indices32.size();
+    std::unordered_map<std::string, GeometryGenerator::MeshData> Geo_Meshs;
+    Geo_Meshs["ground_grid"] = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
 
-    SubmeshGeometry gridSubmesh;
-    gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
-    gridSubmesh.StartIndexLocation = gridIndexOffset;
-    gridSubmesh.BaseVertexLocation = gridVertexOffset;
-
-    SubmeshGeometry quad1Submesh;
-    quad1Submesh.IndexCount = (UINT)UI_quad1.Indices32.size();
-    quad1Submesh.StartIndexLocation = UI_quad1_IndexOffset;
-    quad1Submesh.BaseVertexLocation = UI_quad1_VertexOffset;
-
-    SubmeshGeometry quad2Submesh;
-    quad2Submesh.IndexCount = (UINT)UI_quad2.Indices32.size();
-    quad2Submesh.StartIndexLocation = UI_quad2_IndexOffset;
-    quad2Submesh.BaseVertexLocation = UI_quad2_VertexOffset;
-
-    SubmeshGeometry quad3Submesh;
-    quad3Submesh.IndexCount = (UINT)UI_quad3.Indices32.size();
-    quad3Submesh.StartIndexLocation = UI_quad3_IndexOffset;
-    quad3Submesh.BaseVertexLocation = UI_quad3_VertexOffset;
-
-    //
-    // Extract the vertex elements we are interested in and pack the
-    // vertices of all the meshes into one vertex buffer.
-    //
-
-    auto totalVertexCount =
-        grid.Vertices.size() +
-        UI_quad1.Vertices.size() +
-        UI_quad2.Vertices.size() +
-        UI_quad3.Vertices.size();
-
-    std::vector<DXTexturedVertex> vertices(totalVertexCount);
-
-    UINT k = 0;
-    for (int i = 0; i < grid.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = grid.Vertices[i].Position;
-        vertices[k].xmf3Normal = grid.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = grid.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = grid.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad1.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad1.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad1.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad1.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad1.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad2.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad2.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad2.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad2.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad2.Vertices[i].TangentU;
-    }
-
-    for (int i = 0; i < UI_quad3.Vertices.size(); ++i, ++k)
-    {
-        vertices[k].xmf3Position = UI_quad3.Vertices[i].Position;
-        vertices[k].xmf3Normal = UI_quad3.Vertices[i].Normal;
-        vertices[k].xmf2TextureUV = UI_quad3.Vertices[i].TexC;
-        vertices[k].xmf3Tangent = UI_quad3.Vertices[i].TangentU;
-    }
-
-    std::vector<std::uint16_t> indices;
-    indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad1.GetIndices16()), std::end(UI_quad1.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad2.GetIndices16()), std::end(UI_quad2.GetIndices16()));
-    indices.insert(indices.end(), std::begin(UI_quad3.GetIndices16()), std::end(UI_quad3.GetIndices16()));
-
-    const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXTexturedVertex);
-    const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-    auto geo = std::make_unique<MeshGeometry>();
-    geo->Name = "shapeGeo";
-
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-    CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-    CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-    geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-    geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-    geo->VertexByteStride = sizeof(DXTexturedVertex);
-    geo->VertexBufferByteSize = vbByteSize;
-    geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-    geo->IndexBufferByteSize = ibByteSize;
-
-    geo->DrawArgs["grid"] = gridSubmesh;
-    geo->DrawArgs["UI_quad1"] = quad1Submesh;
-    geo->DrawArgs["UI_quad2"] = quad2Submesh;
-    geo->DrawArgs["UI_quad3"] = quad3Submesh;
-
-    m_Geometries[geo->Name] = std::move(geo);
+    m_Geometries["GamePlayGround"]
+        = std::move(Scene::BuildMeshGeometry(device, commandList, "GamePlayGround", Geo_Meshs));
 }
 
 void PlayGameScene::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
@@ -375,125 +284,256 @@ void PlayGameScene::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index)
 
         m_Materials[mat->Name] = std::move(mat);
     }
+    m_nMatCB = (UINT)m_Materials.size();
 }
 
-void PlayGameScene::BuildRenderItems(int& objCB_index, int& skinnedCB_index)
+void PlayGameScene::BuildRenderItems()
 {
-    MeshGeometry* Geo = m_Geometries["Meshtint Free Knight"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = objCB_index++;
-        ModelRitem->Geo = m_Geometries["Meshtint Free Knight"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["Meshtint Free Knight"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["Meshtint Free Knight"].get();
-        ModelRitem->SkinCBIndex = skinnedCB_index;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Meshtint Free Knight"].get());
+    for (auto& subMesh : m_Geometries["Meshtint Free Knight"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
 
-    skinnedCB_index++;
-    Geo = m_Geometries["TT_RTS_Demo_Character"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = objCB_index++;
-        ModelRitem->Geo = m_Geometries["TT_RTS_Demo_Character"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["TT_RTS_Units_blue"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["TT_RTS_Demo_Character"].get();
-        ModelRitem->SkinCBIndex = skinnedCB_index;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["TT_RTS_Demo_Character"].get());
+    for (auto& subMesh : m_Geometries["TT_RTS_Demo_Character"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["TT_RTS_Units_blue"].get();
 
-    skinnedCB_index++;
-    Geo = m_Geometries["claire@Dancing"].get();
-    for (auto& subMesh : Geo->DrawArgs)
-    {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = objCB_index++;
-        ModelRitem->Geo = m_Geometries["claire@Dancing"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->Mat = m_Materials["checkerboard"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["claire@Dancing"].get();
-        ModelRitem->SkinCBIndex = skinnedCB_index;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
-    }
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["claire@Dancing"].get());
+    for (auto& subMesh : m_Geometries["claire@Dancing"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
 
-    skinnedCB_index++;
-    Geo = m_Geometries["Soldier_demo"].get();
-    for (auto& subMesh : Geo->DrawArgs)
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Soldier_demo"].get());
+    for (auto& subMesh : m_Geometries["Soldier_demo"]->DrawArgs)
     {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
-        XMStoreFloat4x4(&(ModelRitem->World), PosM);
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = objCB_index++;
-        ModelRitem->Geo = m_Geometries["Soldier_demo"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         if (subMesh.first == "Soldier_mesh_0")
-            ModelRitem->Mat = m_Materials["demo_weapon"].get();
+            m_AllRitems[subMesh.first]->Mat = m_Materials["demo_weapon"].get();
         else
-            ModelRitem->Mat = m_Materials["demo_soldier_512"].get();
-        ModelRitem->Skeleton = m_ModelSkeltons["Soldier_demo"].get();
-        ModelRitem->SkinCBIndex = skinnedCB_index;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        m_RitemLayer[(int)RenderLayer::SkinnedOpaque].push_back(ModelRitem.get());
-        m_AllRitems.push_back(std::move(ModelRitem));
+            m_AllRitems[subMesh.first]->Mat = m_Materials["demo_soldier_512"].get();
     }
 
-    Geo = m_Geometries["shapeGeo"].get();
-    for (auto& subMesh : Geo->DrawArgs)
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["GamePlayGround"].get());
+    for(auto& subMesh : m_Geometries["GamePlayGround"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
+
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["PlayGameSceneUIGeo"].get());
+    for (auto& subMesh : m_Geometries["PlayGameSceneUIGeo"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["ui_test"].get();
+}
+
+void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
+{
+    ObjectManager objManager;
+
+    for (auto& geo_iter : m_Geometries)
     {
-        auto ModelRitem = std::make_unique<RenderItem>();
-        ModelRitem->NumFramesDirty = gNumFrameResources;
-        ModelRitem->World = MathHelper::Identity4x4();
-        ModelRitem->TexTransform = MathHelper::Identity4x4();
-        ModelRitem->ObjCBIndex = objCB_index++;
-        ModelRitem->Geo = m_Geometries["shapeGeo"].get();
-        ModelRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        ModelRitem->IndexCount = subMesh.second.IndexCount;
-        ModelRitem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        ModelRitem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-        if (subMesh.first.find("UI") != std::string::npos)
+        if (geo_iter.first == "Meshtint Free Knight")
         {
-            m_RitemLayer[(int)RenderLayer::UIOpaque].push_back(ModelRitem.get());
-            ModelRitem->Mat = m_Materials["ui_test"].get();
+            auto newObj = objManager.GenerateSkinnedObject(
+                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+                m_MaxSkinnedObject, m_MaxWorldObject);
+
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->NumObjectCBDirty = gNumFrameResources;
+
+            newObj->m_Type = ObjectType::CharacterGeo;
+            XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
+            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            newObj->ObjCBIndex = objCB_index++;
+            newObj->m_Skeleton = m_ModelSkeltons["Meshtint Free Knight"].get();
+            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
+            newObj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
+            newObj->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+            newObj->SkinCBIndex = skinnedCB_index++;
+
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
         }
-        else
+        else if (geo_iter.first == "TT_RTS_Demo_Character")
         {
-            m_RitemLayer[(int)RenderLayer::Opaque].push_back(ModelRitem.get());
-            ModelRitem->Mat = m_Materials["checkerboard"].get();
+            auto newObj = objManager.GenerateSkinnedObject(
+                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+                m_MaxSkinnedObject, m_MaxWorldObject);
+
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->NumObjectCBDirty = gNumFrameResources;
+
+            newObj->m_Type = ObjectType::CharacterGeo;
+            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
+            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            newObj->ObjCBIndex = objCB_index++;
+            newObj->m_Skeleton = m_ModelSkeltons["TT_RTS_Demo_Character"].get();
+            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
+            newObj->m_AnimInfo->AnimPlay("infantry_01_idle");
+            newObj->m_AnimInfo->AnimLoop("infantry_01_idle");
+            newObj->SkinCBIndex = skinnedCB_index++;
+
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
         }
-        m_AllRitems.push_back(std::move(ModelRitem));
+        else if (geo_iter.first == "claire@Dancing")
+        {
+            auto newObj = objManager.GenerateSkinnedObject(
+                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+                m_MaxSkinnedObject, m_MaxWorldObject);
+
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->NumObjectCBDirty = gNumFrameResources;
+
+            newObj->m_Type = ObjectType::CharacterGeo;
+            XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
+            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            newObj->ObjCBIndex = objCB_index++;
+            newObj->m_Skeleton = m_ModelSkeltons["claire@Dancing"].get();
+            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
+            newObj->m_AnimInfo->AnimPlay("claire@Dancing");
+            newObj->m_AnimInfo->AnimLoop("claire@Dancing");
+            newObj->SkinCBIndex = skinnedCB_index++;
+
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+        }
+        else if (geo_iter.first == "Soldier_demo")
+        {
+            auto newObj = objManager.GenerateSkinnedObject(
+                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+                m_MaxSkinnedObject, m_MaxWorldObject);
+
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->NumObjectCBDirty = gNumFrameResources;
+
+            newObj->m_Type = ObjectType::CharacterGeo;
+            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
+            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            newObj->ObjCBIndex = objCB_index++;
+            newObj->m_Skeleton = m_ModelSkeltons["Soldier_demo"].get();
+            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
+            newObj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
+            newObj->m_AnimInfo->AnimLoop("demo_mixamo_idle");
+            newObj->SkinCBIndex = skinnedCB_index++;
+
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+        }
+        else if (geo_iter.first == "GamePlayGround")
+        {
+            auto newObj = objManager.GenerateWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->NumObjectCBDirty = gNumFrameResources;
+
+            newObj->m_Type = ObjectType::LandGeo;
+            XMMATRIX PosM = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            newObj->ObjCBIndex = objCB_index++;
+
+            m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
+        }
+        else if (geo_iter.first == "PlayGameSceneUIGeo")
+        {
+            auto newObj = std::make_unique<Object>();
+            newObj->m_Type = ObjectType::UI;
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->Activated = true;
+
+            m_ObjRenderLayer[(int)RenderLayer::UIOpaque].push_back(newObj.get());
+            m_UIObjects.push_back(newObj.get());
+            m_AllObjects.push_back(std::move(newObj));
+        }
     }
+
+    const UINT nDeAcativateSkinnedCB = m_MaxSkinnedObject - (UINT)m_SkinnedObjects.size();
+    // SkinnedCB를 지닌(Skeleton이 있는) 오브젝트를 생성하면
+    // SkinnedCB뿐만 아니라 ObjCB도(WorldObject도) 잡히기 때문에
+    // WorldObject보다 적은 SkinnedObject를 먼저 생성해준다.
+    for (UINT i = 0; i < nDeAcativateSkinnedCB; ++i)
+    {
+        auto newObj = objManager.GenerateSkinnedObject(
+            m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+            m_MaxSkinnedObject, m_MaxWorldObject);
+
+        newObj->NumObjectCBDirty = 0;
+        newObj->m_Type = ObjectType::CharacterGeo;
+        newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
+        newObj->ObjCBIndex = objCB_index++;
+        newObj->SkinCBIndex = skinnedCB_index++;
+
+        m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+    }
+
+    const UINT nDeActivateObjCB = m_MaxWorldObject - (UINT)m_WorldObjects.size();
+    for (UINT i = 0; i < nDeActivateObjCB; ++i)
+    {
+        auto newObj = objManager.GenerateWorldObject(
+            m_AllObjects, m_WorldObjects,
+            m_MaxWorldObject);
+
+        newObj->NumObjectCBDirty = 0;
+        newObj->ObjCBIndex = objCB_index++;
+
+        m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
+    }
+
+    for (UINT i = m_MaxSkinnedObject - nDeAcativateSkinnedCB; i < m_MaxSkinnedObject; ++i)
+        m_SkinnedObjects[i]->Activated = false;
+    for (UINT i = m_MaxWorldObject - nDeActivateObjCB; i < m_MaxWorldObject; ++i)
+        m_WorldObjects[i]->Activated = false;
+
+    m_nObjCB = (UINT)m_WorldObjects.size();
+    m_nSKinnedCB = (UINT)m_SkinnedObjects.size();
+}
+
+void PlayGameScene::RandomCreateSkinnedObject()
+{
+    ObjectManager objManager;
+    auto newObj = objManager.GenerateSkinnedObject(
+        m_AllObjects, m_SkinnedObjects, m_WorldObjects,
+        m_MaxSkinnedObject, m_MaxWorldObject);
+
+    if (newObj == nullptr) return;
+
+    int rand_i = MathHelper::Rand(0, 3);
+    static int CreateNum = 0;
+
+    std::string objName = m_SkinnedObjects[rand_i]->m_Name;
+    newObj->m_Name = objName + std::to_string(++CreateNum);
+    newObj->m_RenderItems = m_SkinnedObjects[rand_i]->m_RenderItems;
+    newObj->NumObjectCBDirty = gNumFrameResources;
+    newObj->m_Skeleton = m_SkinnedObjects[rand_i]->m_Skeleton;
+    if (objName.find("Meshtint Free Knight") != std::string::npos)
+    {
+        newObj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
+        newObj->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+    }
+    else if (objName.find("TT_RTS_Demo_Character") != std::string::npos)
+    {
+        newObj->m_AnimInfo->AnimPlay("infantry_01_idle");
+        newObj->m_AnimInfo->AnimLoop("infantry_01_idle");
+    }
+    else if (objName.find("claire@Dancing") != std::string::npos)
+    {
+        newObj->m_AnimInfo->AnimPlay("claire@Dancing");
+        newObj->m_AnimInfo->AnimLoop("claire@Dancing");
+    }
+    else if (objName.find("Soldier_demo") != std::string::npos)
+    {
+        newObj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
+        newObj->m_AnimInfo->AnimLoop("demo_mixamo_idle");
+    }
+
+    float x, y, z;
+    x = -200.0f + MathHelper::RandF() * 400.0f;
+    y = 0;
+    z = -200.0f + MathHelper::RandF() * 400.0f;
+
+    XMMATRIX PosM = XMMatrixTranslation(x, y, z);
+    XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
 }
 
 std::vector<UINT8> PlayGameScene::GenerateTextureData()
@@ -577,12 +617,15 @@ void PlayGameScene::AnimateLights(CTimer& gt)
 
 void PlayGameScene::AnimateSkeletons(CTimer& gt)
 {
-    for (auto& skleton_iter : m_ModelSkeltons)
+    for (auto& obj : m_SkinnedObjects)
     {
-        auto skleton = skleton_iter.second.get();
-        std::string animName = skleton->mCurrPlayingAnimName;
-        if (skleton->AnimIsPlaying(animName))
-            skleton->UpdateAnimationTransforms(animName, gt.GetTimeElapsed());
+        std::string& AnimName = obj->m_AnimInfo->CurrPlayingAnimName;
+        bool isSetted = false;
+        if (obj->m_AnimInfo->AnimIsPlaying(AnimName, isSetted) == true)
+        {
+            if (isSetted == false) continue;
+            obj->m_Skeleton->UpdateAnimationTransforms(*(obj->m_AnimInfo), gt.GetTimeElapsed());
+        }
     }
 }
 

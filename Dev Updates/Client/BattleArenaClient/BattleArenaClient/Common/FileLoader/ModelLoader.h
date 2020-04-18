@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <map>
+#include <set>
 
 #include "../Util/assimp/Importer.hpp"
 #include "../Util/assimp/scene.h"
@@ -38,6 +39,62 @@ namespace aiModelData
 		}
 	};
 
+	struct AnimInfo
+	{
+		std::string CurrPlayingAnimName;
+		std::vector<aiMatrix4x4> CurrAnimJointTransforms;
+		float CurrAnimTimePos = 0.0f;
+		bool CurrAnimIsLoop = false;
+		bool CurrAnimIsStop = true;
+		bool CurrAnimIsPause = false;
+
+		void Init()
+		{
+			CurrPlayingAnimName.clear();
+			CurrAnimJointTransforms.clear();
+			CurrAnimTimePos = 0.0f;
+			CurrAnimIsLoop = false;
+			CurrAnimIsStop = true;
+			CurrAnimIsPause = false;
+		}
+
+		void AnimPlay(const std::string& AnimName)
+		{
+			CurrPlayingAnimName = AnimName;
+			CurrAnimTimePos = 0.0f;
+			CurrAnimIsStop = false;
+			CurrAnimIsPause = false;
+		}
+		void AnimStop(const std::string& AnimName)
+		{
+			if (CurrPlayingAnimName != AnimName) return;
+			CurrAnimTimePos = 0.0f;
+			CurrAnimIsStop = true;
+			CurrAnimIsPause = false;
+		}
+		void AnimResume(const std::string& AnimName)
+		{
+			if (CurrPlayingAnimName != AnimName) return;
+			CurrAnimIsPause = false;
+		}
+		void AnimPause(const std::string& AnimName)
+		{
+			if (CurrPlayingAnimName != AnimName) return;
+			CurrAnimIsPause = true;
+		}
+		void AnimLoop(const std::string& AnimName, bool isLooping = true)
+		{
+			if (CurrPlayingAnimName != AnimName) return;
+			CurrAnimIsLoop = isLooping;
+		}
+		bool AnimIsPlaying(const std::string& AnimName, bool& isSetted)
+		{
+			if (CurrPlayingAnimName != AnimName) isSetted = false;
+			else isSetted = true;
+			return !CurrAnimIsStop && !CurrAnimIsPause;
+		}
+	};
+
 	struct aiAnimClip
 	{
 		std::string mName;
@@ -48,45 +105,23 @@ namespace aiModelData
 		float mDuration = 0.0f;
 		float mTickPerSecond = 0.0f;
 
-		float mTimePos = 0.0f;
-
-		bool mIsLoop = false;
-		bool mIsStop = true;
-		bool mIsPause = false;
-
-		void Loop(bool isLoop) { mIsLoop = isLoop; }
-		void Stop()
+		float CalculateAnimationTime(float& TimePos, float deltaTime, bool IsStop, bool IsPause, bool IsLoop)
 		{
-			mIsStop = true;
-			mIsPause = false;
-			mTimePos = 0.0f;
-		}
-		void Play()
-		{
-			mIsStop = false;
-			mIsPause = false;
-			mTimePos = 0.0f;
-		}
-		void Pause() { mIsStop = false;  mIsPause = true; }
-		void Resume() { mIsStop = false;  mIsPause = false; }
-
-		float CalculateAnimationTime(float deltaTime)
-		{
-			if (mIsStop || mIsPause) return mTimePos;
+			if (IsStop || IsPause) return TimePos;
 
 			float ClipEndTime = mDuration / mTickPerSecond;
 
-			if (mTimePos + deltaTime >= ClipEndTime)
+			if (TimePos + deltaTime >= ClipEndTime)
 			{
-				if (mIsLoop)
-					mTimePos = (mTimePos + deltaTime) - ClipEndTime;
+				if (IsLoop)
+					TimePos = (TimePos + deltaTime) - ClipEndTime;
 				else
-					mTimePos = ClipEndTime;
+					TimePos = ClipEndTime;
 			}
 			else
-				mTimePos += deltaTime;
+				TimePos += deltaTime;
 
-			return mTimePos;
+			return TimePos;
 		}
 
 		int FindKeyIndex(const float animationTime, const std::vector<aiVectorKey>& vectorKeys) const
@@ -159,9 +194,8 @@ namespace aiModelData
 			return ret;
 		}
 
-		void InterpolateKeyFrame(float deltaTime, aiMatrix4x4& pOut)
+		void InterpolateKeyFrame(float animationTime, aiMatrix4x4& pOut)
 		{
-			float animationTime = CalculateAnimationTime(deltaTime);
 			// 주어진 key frame의 정보와 animationTime 정보를 이용해 interpolation을 하고 값을 저장
 			const aiVector3D& scaling = CalcInterpolatedValueFromKey(animationTime, mScalingKeys);
 			const aiQuaternion& rotationQ = CalcInterpolatedValueFromKey(animationTime, mRotationKeys);
@@ -185,51 +219,13 @@ namespace aiModelData
 				mAnimations[AnimName] = newAnimation;
 		}
 
-		bool AnimLoop(const std::string& AnimName, bool isLoop)
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else anim_iter->second.Loop(isLoop); return true;
-		}
-		bool AnimStop(const std::string& AnimName)
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else anim_iter->second.Stop(); return true;
-		}
-		bool AnimPlay(const std::string& AnimName)
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else anim_iter->second.Play(); return true;
-		}
-		bool AnimPause(const std::string& AnimName)
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else anim_iter->second.Pause(); return true;
-		}
-		bool AnimResume(const std::string& AnimName)
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else anim_iter->second.Resume(); return true;
-		}
-
-		bool AnimIsPlaying(const std::string& AnimName) const
-		{
-			auto anim_iter = mAnimations.find(AnimName);
-			if (anim_iter == mAnimations.end()) return false;
-			else return (!anim_iter->second.mIsStop && !anim_iter->second.mIsPause);
-		}
-
-		void EvaluateAnimTransform(const std::string& AnimName, float deltaTime, aiMatrix4x4& pOut)
+		void EvaluateAnimTransform(const std::string& AnimName, float animationTime, aiMatrix4x4& pOut)
 		{
 			auto anim_iter = mAnimations.find(AnimName);
 			if (anim_iter == mAnimations.end())
 				pOut = mLocalTransform;
 			else
-				anim_iter->second.InterpolateKeyFrame(deltaTime, pOut);
+				anim_iter->second.InterpolateKeyFrame(animationTime, pOut);
 		}
 	};
 
@@ -237,11 +233,6 @@ namespace aiModelData
 	{
 		std::string mName;
 		std::vector<aiJoint> mJoints;
-
-		std::string mCurrPlayingAnimName;
-
-		std::vector<aiMatrix4x4> mCurrAnimTransforms;
-		int SkinnedCBIndex = -1;
 
 		int FindJointIndex(const std::string& JointName)
 		{
@@ -258,71 +249,44 @@ namespace aiModelData
 			if (BoneID != -1) mJoints[BoneID].AddAnimation(AnimName, newAnimation);
 		}
 
-		void AnimLoop(const std::string& AnimName, bool isLoop)
+		void UpdateAnimationTransforms(AnimInfo& Anim_info, float deltaTime)
 		{
-			for (auto& joint : mJoints)
-				joint.AnimLoop(AnimName, isLoop);
-		}
-		void AnimStop(const std::string& AnimName)
-		{
-			for (auto& joint : mJoints)
-				joint.AnimStop(AnimName);
-		}
-		void AnimPlay(const std::string& AnimName)
-		{
-			bool isSetted = false;
-			for (auto& joint : mJoints)
-			{
-				if (joint.AnimPlay(AnimName) && !isSetted)
-				{
-					isSetted = true;
-					mCurrPlayingAnimName = AnimName;
-				}
-			}
-		}
-		void AnimPause(const std::string& AnimName)
-		{
-			for (auto& joint : mJoints)
-				joint.AnimPause(AnimName);
-		}
-		void AnimResume(const std::string& AnimName)
-		{
-			for (auto& joint : mJoints)
-				joint.AnimResume(AnimName);
-		}
+			std::string AnimName = Anim_info.CurrPlayingAnimName;
+			bool IsStop = Anim_info.CurrAnimIsStop;
+			bool IsPause = Anim_info.CurrAnimIsPause;
+			bool IsLoop = Anim_info.CurrAnimIsLoop;
+			float& TimePos = Anim_info.CurrAnimTimePos;
+			auto& AnimTransforms = Anim_info.CurrAnimJointTransforms;
 
-		bool AnimIsPlaying(const std::string& AnimName) const
-		{
-			for (auto& joint : mJoints)
-			{
-				if (joint.AnimIsPlaying(AnimName)) return true;
-			}
-			return false;
-		}
+			if (AnimTransforms.size() < mJoints.size()) AnimTransforms.resize(mJoints.size());
 
-		void UpdateAnimationTransforms(const std::string& AnimName, float deltaTime, std::vector<aiMatrix4x4>* pOut = nullptr)
-		{
-			if (mCurrAnimTransforms.size() < mJoints.size()) mCurrAnimTransforms.resize(mJoints.size());
-
+			bool CalculatedAnimationTime = false;
+			float animationTime = TimePos;
 			for (size_t i = 0; i < mJoints.size(); ++i)
-				mJoints[i].EvaluateAnimTransform(AnimName, deltaTime, mCurrAnimTransforms[i]);
+			{
+				if (CalculatedAnimationTime == false)
+				{
+					auto anim_iter = mJoints[i].mAnimations.find(AnimName);
+					if (anim_iter != mJoints[i].mAnimations.end())
+					{
+						auto& anim = anim_iter->second;
+						animationTime = anim.CalculateAnimationTime(TimePos, deltaTime, IsStop, IsPause, IsLoop);
+						CalculatedAnimationTime = true;
+					}
+				}
+				mJoints[i].EvaluateAnimTransform(AnimName, animationTime, AnimTransforms[i]);
+			}
 
-			std::vector<aiMatrix4x4>& GlobalTransforms = mCurrAnimTransforms;
-			std::vector<aiMatrix4x4>& LocalTransforms = mCurrAnimTransforms;
+			auto& GlobalTransforms = AnimTransforms;
+			auto& LocalTransforms = AnimTransforms;
 			for (size_t i = 0; i < mJoints.size(); ++i)
 			{
 				int ParentIndex = mJoints[i].mParentIndex;
 				if (ParentIndex == -1) continue;
-				mCurrAnimTransforms[i] = GlobalTransforms[ParentIndex] * LocalTransforms[i];
+				AnimTransforms[i] = GlobalTransforms[ParentIndex] * LocalTransforms[i];
 			}
 			for (size_t i = 0; i < mJoints.size(); ++i)
-				mCurrAnimTransforms[i] *= mJoints[i].mOffsetTransform;
-
-			if (pOut != nullptr)
-			{
-				for (size_t i = 0; i < mCurrAnimTransforms.size(); ++i)
-					(*pOut)[i] = mCurrAnimTransforms[i];
-			}
+				AnimTransforms[i] *= mJoints[i].mOffsetTransform;
 		}
 	};
 }
