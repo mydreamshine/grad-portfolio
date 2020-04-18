@@ -63,14 +63,8 @@ void PlayGameScene::OnInitProperties()
         }
         else
         {
-            obj->m_Name = "";
-            obj->NumObjectCBDirty = 0;
-            obj->m_WorldTransform = MathHelper::Identity4x4();
-            obj->m_TexTransform = MathHelper::Identity4x4();
-            obj->m_AnimInfo->Init();
-            obj->m_RenderItems.clear();
-            obj->m_Skeleton = nullptr;
-            obj->Activated = false;
+            ObjectManager objManager;
+            objManager.DeActivateObj(obj);
         }
     }
 
