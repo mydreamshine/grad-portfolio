@@ -26,7 +26,7 @@ private:
     void BuildFrameResources();
     
     void PopulateCommandList();
-    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
+    void DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer);
     void DrawSceneToShadowMap();
     void DrawSceneToBackBuffer();
     void DrawSceneToUI();
@@ -78,14 +78,12 @@ private:
     FrameResource* m_CurrFrameResource = nullptr;
     int m_CurrFrameResourceIndex = 0;
 
-    // List of all the render items.
-    std::vector<RenderItem*> m_AllRitems;
-
-    std::unordered_map<std::string, MeshGeometry*> m_Geometries;
-    std::unordered_map<std::string, Material*> m_Materials;
     // Material의 diffuseSrvHeapIndex와 각 Scene에서의 Texture 생성 순서를 매칭하기 위해 m_Texture만 Vector로 정의
     std::vector<Texture*> m_Textures;
-    std::unordered_map<std::string, aiModelData::aiSkeleton*> m_ModelSkeltons;
+
+    UINT m_nSKinnedCB = 0;
+    UINT m_nObjCB = 0;
+    UINT m_nMatCB = 0;
 
 private:
     std::unordered_map<std::string, std::unique_ptr<Scene>> m_Scenes;

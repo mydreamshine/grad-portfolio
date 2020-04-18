@@ -20,7 +20,8 @@ public:
     virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) {}
     virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat);
     virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index);
-    virtual void BuildRenderItems(int& objCB_index, int& skinnedCB_index);
+    virtual void BuildRenderItems();
+    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index);
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);

@@ -41,66 +41,13 @@ void LoginScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandL
     float wnd_left = -wnd_right;
 
     // UI Position relative to DC(Device Coordinate) with origin at screen center.
-    std::unordered_map<std::string, GeometryGenerator::MeshData> Meshs;
-    Meshs["UI_background"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.99f);
-    Meshs["UI_idBox"] = geoGen.CreateQuad(-100.0f, -100, 200.0f, 75.0f, 0.0f);
-    Meshs["UI_passwordBox"] = geoGen.CreateQuad(-100.0f, -205.0f, 200.0f, 75.0f, 0.0f);
+    std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
+    Meshes["UI_background"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.99f);
+    Meshes["UI_idBox"] = geoGen.CreateQuad(-100.0f, -100, 200.0f, 75.0f, 0.0f);
+    Meshes["UI_passwordBox"] = geoGen.CreateQuad(-100.0f, -205.0f, 200.0f, 75.0f, 0.0f);
 
-    std::vector<DXTexturedVertex> total_vertices;
-    std::vector<std::uint16_t> total_indices;
-
-    auto geo = std::make_unique<MeshGeometry>();
-    geo->Name = "LoginSceneUIGeo";
-    UINT VertexOffset = 0;
-    UINT IndexOffset = 0;
-    UINT k = 0;
-    for (auto& mesh_iter : Meshs)
-    {
-        auto& meshData = mesh_iter.second;
-
-        total_vertices.insert(total_vertices.end(), meshData.Vertices.size(), DXTexturedVertex());
-        for (int i = 0; i < meshData.Vertices.size(); ++i, ++k)
-        {
-            total_vertices[k].xmf3Position = meshData.Vertices[i].Position;
-            total_vertices[k].xmf3Normal = meshData.Vertices[i].Normal;
-            total_vertices[k].xmf2TextureUV = meshData.Vertices[i].TexC;
-            total_vertices[k].xmf3Tangent = meshData.Vertices[i].TangentU;
-        }
-        total_indices.insert(total_indices.end(), std::begin(meshData.GetIndices16()), std::end(meshData.GetIndices16()));
-
-
-        SubmeshGeometry Submesh;
-        Submesh.IndexCount = (UINT)meshData.Indices32.size();
-        Submesh.StartIndexLocation = IndexOffset;
-        Submesh.BaseVertexLocation = VertexOffset;
-
-        geo->DrawArgs[mesh_iter.first] = Submesh;
-
-        VertexOffset += (UINT)meshData.Vertices.size();
-        IndexOffset += (UINT)meshData.Indices32.size();
-    }
-
-    const UINT vbByteSize = (UINT)total_vertices.size() * sizeof(DXTexturedVertex);
-    const UINT ibByteSize = (UINT)total_indices.size() * sizeof(std::uint16_t);
-
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-    CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), total_vertices.data(), vbByteSize);
-
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-    CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), total_indices.data(), ibByteSize);
-
-    geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        total_vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-    geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        total_indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-    geo->VertexByteStride = sizeof(DXTexturedVertex);
-    geo->VertexBufferByteSize = vbByteSize;
-    geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-    geo->IndexBufferByteSize = ibByteSize;
-
-    m_Geometries[geo->Name] = std::move(geo);
+    m_Geometries["LoginSceneUIGeo"]
+        = std::move(Scene::BuildMeshGeometry(device, commandList, "LoginSceneUIGeo", Meshes));
 }
 
 void LoginScene::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat)
@@ -189,32 +136,43 @@ void LoginScene::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index)
 
         m_Materials[mat->Name] = std::move(mat);
     }
+    m_nMatCB = (UINT)m_Materials.size();
 }
 
-void LoginScene::BuildRenderItems(int& objCB_index, int& skinnedCB_index)
+void LoginScene::BuildRenderItems()
 {
-    MeshGeometry* Geo = m_Geometries["LoginSceneUIGeo"].get();
-    for (auto& subMesh : Geo->DrawArgs)
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["LoginSceneUIGeo"].get());
+    for (auto& subMesh : m_Geometries["LoginSceneUIGeo"]->DrawArgs)
     {
-        auto Ritem = std::make_unique<RenderItem>();
-        Ritem->NumFramesDirty = gNumFrameResources;
-        Ritem->ObjCBIndex = objCB_index++;
-        Ritem->Geo = m_Geometries["LoginSceneUIGeo"].get();
-        Ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        Ritem->IndexCount = subMesh.second.IndexCount;
-        Ritem->StartIndexLocation = subMesh.second.StartIndexLocation;
-        Ritem->BaseVertexLocation = subMesh.second.BaseVertexLocation;
-
         if (subMesh.first == "UI_background")
-            Ritem->Mat = m_Materials["background_test"].get();
+            m_AllRitems[subMesh.first]->Mat = m_Materials["background_test"].get();
         else if (subMesh.first == "UI_idBox")
-            Ritem->Mat = m_Materials["id_input_box_layout_test"].get();
+            m_AllRitems[subMesh.first]->Mat = m_Materials["id_input_box_layout_test"].get();
         else if (subMesh.first == "UI_passwordBox")
-            Ritem->Mat = m_Materials["password_input_box_layout_test"].get();
-
-        m_RitemLayer[(int)RenderLayer::UIOpaque].push_back(Ritem.get());
-        m_AllRitems.push_back(std::move(Ritem));
+            m_AllRitems[subMesh.first]->Mat = m_Materials["password_input_box_layout_test"].get();
     }
+}
+
+void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
+{
+    for (auto& geo_iter : m_Geometries)
+    {
+        if (geo_iter.first == "LoginSceneUIGeo")
+        {
+            auto newObj = std::make_unique<Object>();
+            newObj->m_Type = ObjectType::UI;
+            newObj->m_Name = geo_iter.first;
+            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
+                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
+            newObj->Activated = true;
+
+            m_ObjRenderLayer[(int)RenderLayer::UIOpaque].push_back(newObj.get());
+            m_UIObjects.push_back(newObj.get());
+            m_AllObjects.push_back(std::move(newObj));
+        }
+    }
+    m_nSKinnedCB = 0;
+    m_nObjCB = 0;
 }
 
 void LoginScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
