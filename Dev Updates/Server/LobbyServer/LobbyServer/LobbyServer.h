@@ -7,6 +7,8 @@
 #include <list>
 #include <map>
 #include <iostream>
+#include <set>
+#include "lobby_protocol.h"
 #include "DBMANAGER.h"
 
 //Commons
@@ -15,8 +17,9 @@
 
 #define BATTLE_OFFLINE
 
+
+
 namespace BattleArena {
-	//DB
 	constexpr auto MAX_BUFFER_SIZE = 200;
 	constexpr auto MAX_USER = 100;
 	constexpr auto BATTLE_KEY = MAX_USER;
@@ -31,6 +34,10 @@ namespace BattleArena {
 		OVER_EX recv_over{};
 		SOCKET socket{ INVALID_SOCKET };
 		CL_STATE state{ ST_IDLE };
+
+		int uid;
+		char id[ID_LENGTH];
+		std::set<int> friendlist; //(ONLY index)
 
 		void set_recv()
 		{
@@ -73,6 +80,7 @@ namespace BattleArena {
 		SOCKET m_battleSocket;
 		
 		CLIENT m_clients[MAX_USER + 1];
+		std::mutex client_table_lock;
 		std::map<int, int> client_table; //connected user table that consist of (user UID, m_clients's INDEX)
 
 		//Match Queue
@@ -93,12 +101,23 @@ namespace BattleArena {
 		void send_packet_default(int client, int TYPE);
 		void send_packet_room_info(int client, int room_id);
 		void send_packet_request_room(char mode);
+		void send_packet_friend_status(int client, int who, int status);
 		void process_packet(DWORD client, void* packet);
 		void process_packet_response_room(void* buffer);
+		void process_packet_login(int client, void* buffer);
+		void process_packet_request_friend(int client, void* buffer);
+		void process_packet_accept_friend(int client, void* buffer);
 
 		void match_enqueue(DWORD client);
 		void match_dequeue(DWORD client);
 		void match_make();
+
+		void disconnect_client(int client);
+		void insert_client_table(int uid, int clinet);
+		void delete_client_table(int uid);
+
+		int isConnect(int uid);
+		int isConnect(const char* id);
 	public:
 		LOBBYSERVER();
 		~LOBBYSERVER();

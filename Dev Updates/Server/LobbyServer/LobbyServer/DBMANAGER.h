@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <sqlext.h>
 #include <iostream>
+#include <vector>
+#include <string>
 
 #define RESULT_NO_ID -1
 
@@ -17,5 +19,7 @@ public:
 	DBMANAGER();
 	~DBMANAGER();
 	void init();
-	int id_check(const char* id);
+	int get_uid(const char* id);
+	std::vector<std::string> get_friendlist(const char* id);
+	void insert_friend(const char* friendA, const char* friendB);
 };

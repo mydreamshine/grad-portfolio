@@ -4,6 +4,8 @@
 #include <thread>
 #include <conio.h>
 #include <string>
+#include <vector>
+#include <sstream>
 #include "../..//LobbyServer/LobbyServer/lobby_protocol.h"
 #include "..//..//BattleServer/BattleServer/battle_protocol.h"
 
@@ -11,6 +13,8 @@
 
 using namespace std;
 bool state = false;
+char last_id[ID_LENGTH];
+
 void battleFunc(int room_id);
 
 int ProcessPacket(void* ptr)
@@ -24,6 +28,22 @@ int ProcessPacket(void* ptr)
 
 	case SC_PACKET_LOGIN_FAIL:
 		return SC_PACKET_LOGIN_FAIL;
+
+	case CS_PACKET_REQUEST_FRIEND: {
+		cs_packet_request_friend* cprf = reinterpret_cast<cs_packet_request_friend*>(ptr);
+		strcpy_s(last_id, cprf->id);
+		printf("%s로부터 친구요청이 왔습니다.\n", cprf->id);
+	}
+		break;
+
+	case SC_PACKET_FRIEND_STATUS: {
+		sc_packet_friend_status* packet = reinterpret_cast<sc_packet_friend_status*>(ptr);
+		if (packet->status == FRIEND_ONLINE)
+			printf("%s가 접속했습니다.\n", packet->id);
+		else
+			printf("%s가 게임을 종료했습니다.\n", packet->id);
+	}
+		break;
 
 	case SC_PACKET_MATCH_ENQUEUE:
 		cout << "[CHANGE STATE - MATCH ENQUEUE]" << endl;
@@ -168,6 +188,34 @@ void send_packet_default(SOCKET socket, int type)
 	cdp.type = type;
 	send(socket, (const char*)(&cdp), cdp.size, 0);
 }
+void send_packet_request_friend(SOCKET socket, const char* id)
+{
+	cs_packet_request_friend packet;
+	packet.cdp.size = sizeof(cs_packet_request_friend);
+	packet.cdp.type = CS_PACKET_REQUEST_FRIEND;
+	strcpy_s(packet.id, 10, id);
+	send(socket, (const char*)(&packet), packet.cdp.size, 0);
+}
+void send_packet_accept_friend(SOCKET socket, const char* id)
+{
+	cs_packet_accept_friend packet;
+	packet.cdp.size = sizeof(cs_packet_accept_friend);
+	packet.cdp.type = CS_PACKET_ACCEPT_FRIEND;
+	strcpy_s(packet.id, 10, id);
+	send(socket, (const char*)(&packet), packet.cdp.size, 0);
+}
+
+vector<string> split(string& str, char delimiter) {
+	vector<string> internal;
+	stringstream ss(str);
+	string temp;
+
+	if (getline(ss, temp, delimiter))
+		internal.push_back(temp);
+	if (getline(ss, temp))
+		internal.push_back(temp);
+	return internal;
+}
 
 int main()
 {
@@ -188,16 +236,23 @@ int main()
 
 	while (true)
 	{
-		string chat, command;
-		cin >> chat;
+		string chat;
+		getline(cin, chat);
 		
 		if (chat[0] == '/')
 		{
-			command = chat.substr(1, 4);
-			if (command == "enq")
+			vector<string> token = split(chat, ' ');
+			if (token[0] == "/enqueue")
 				send_packet_default(serverSocket, CS_PACKET_MATCH_ENQUEUE);
-			else if (command == "deq")
+			else if (token[0] == "/dequeue")
 				send_packet_default(serverSocket, CS_PACKET_MATCH_DEQUEUE);
+			else if (token[0] == "/add") {
+				send_packet_request_friend(serverSocket, token[1].c_str());
+				printf("%s에게 친구 요청을 보냈습니다.\n", token[1]);
+			}
+			else if (token[0] == "/accept") {
+				send_packet_accept_friend(serverSocket, last_id);
+			}
 		}
 	}
 

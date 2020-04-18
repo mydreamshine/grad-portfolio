@@ -1,11 +1,13 @@
 #pragma comment(lib, "ws2_32")
 #include "LobbyServer.h"
-#include "lobby_protocol.h"
 #include "..//..//BattleServer/BattleServer/battle_protocol.h"
 
-thread_local DBMANAGER DBManager{};
+
 
 namespace BattleArena {
+	//DB
+	thread_local DBMANAGER DBManager{};
+
 	void LOBBYSERVER::error_display(const char* msg, int err_no)
 	{
 		WCHAR* lpMsgBuf;
@@ -104,13 +106,12 @@ namespace BattleArena {
 		DWORD ReceivedBytes;
 		ULONGLONG key;
 		OVERLAPPED* over;
-
 		while (true)
 		{
 			GetQueuedCompletionStatus(m_iocp, &ReceivedBytes, &key, &over, INFINITE);
+
 			if (0 == ReceivedBytes) {
-				std::wcout << L"[CLIENT - " << key << L"] Disconnected" << std::endl;
-				closesocket(m_clients[key].socket);
+				disconnect_client(key);
 				continue;
 			}
 
@@ -163,6 +164,21 @@ namespace BattleArena {
 		packet.mode = mode;
 		send_packet(BATTLE_KEY, &packet);
 	}
+	void LOBBYSERVER::send_packet_friend_status(int client, int who, int status)
+	{
+		if (status == FRIEND_ONLINE)
+			m_clients[client].friendlist.emplace(who);
+		else if (status == FRIEND_OFFLINE)
+			m_clients[client].friendlist.erase(who);
+
+		sc_packet_friend_status packet;
+		packet.cdp.type = SC_PACKET_FRIEND_STATUS;
+		packet.cdp.size = sizeof(sc_packet_friend_status);
+		packet.status = status;
+		strcpy_s(packet.id, m_clients[who].id);
+		send_packet(client, &packet);
+	}
+	
 
 	void LOBBYSERVER::process_packet(DWORD client, void* buffer)
 	{
@@ -170,14 +186,15 @@ namespace BattleArena {
 		switch (packet->type)
 		{
 		case CS_PACKET_REQUEST_LOGIN: 
-		{
-			cs_packet_request_login* cprl = reinterpret_cast<cs_packet_request_login*>(buffer);
-			int uid = DBManager.id_check(cprl->id);
-			if (uid != RESULT_NO_ID)
-				send_packet_default(client, SC_PACKET_LOGIN_OK);
-			else
-				send_packet_default(client, SC_PACKET_LOGIN_FAIL);
-		}
+			process_packet_login(client, buffer);
+			break;
+
+		case CS_PACKET_REQUEST_FRIEND:
+			process_packet_request_friend(client, buffer);
+			break;
+
+		case CS_PACKET_ACCEPT_FRIEND:
+			process_packet_accept_friend(client, buffer);
 			break;
 
 		case CS_PACKET_MATCH_ENQUEUE:
@@ -216,6 +233,51 @@ namespace BattleArena {
 		m_waiters.erase(w);
 		waiterLock.unlock();
 	}
+	void LOBBYSERVER::process_packet_login(int client, void* buffer)
+	{
+		cs_packet_request_login* packet = reinterpret_cast<cs_packet_request_login*>(buffer);
+		int uid = DBManager.get_uid(packet->id);
+		if (uid == RESULT_NO_ID) {
+			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
+			return;
+		}
+
+		m_clients[client].uid = uid;
+		strcpy_s(m_clients[client].id, packet->id);
+		insert_client_table(uid, client);
+		send_packet_default(client, SC_PACKET_LOGIN_OK);
+		std::vector<std::string> friendlist = DBManager.get_friendlist(packet->id);
+		for (int i = 0; i < friendlist.size(); ++i) {
+			int friend_index = isConnect(friendlist[i].c_str());
+			if (friend_index != -1) {
+				send_packet_friend_status(friend_index, client, FRIEND_ONLINE);
+				send_packet_friend_status(client, friend_index, FRIEND_ONLINE);
+			}
+		}
+	}
+	void LOBBYSERVER::process_packet_request_friend(int client, void* buffer)
+	{
+		cs_packet_request_friend* packet = reinterpret_cast<cs_packet_request_friend*>(buffer);
+		int uid = DBManager.get_uid(packet->id);
+		if (uid == RESULT_NO_ID)
+			return;
+		int receiver = isConnect(uid);
+		strcpy_s(packet->id, m_clients[client].id);
+		if (receiver != -1)
+			send_packet(receiver, buffer);
+	}
+	void LOBBYSERVER::process_packet_accept_friend(int client, void* buffer)
+	{
+		cs_packet_accept_friend* packet = reinterpret_cast<cs_packet_accept_friend*>(buffer);
+		DBManager.insert_friend(m_clients[client].id, packet->id);
+
+		int friends = isConnect(packet->id);
+		if (friends == -1) return;
+
+		send_packet_friend_status(client, friends, FRIEND_ONLINE);
+		send_packet_friend_status(friends, client, FRIEND_ONLINE);
+	}
+	
 	void LOBBYSERVER::match_enqueue(DWORD client)
 	{
 		queueLock.lock();
@@ -271,5 +333,47 @@ namespace BattleArena {
 			wprintf(L"[MATCH MAKE]\n");
 		}
 		else queueLock.unlock();
+	}
+	void LOBBYSERVER::disconnect_client(int client)
+	{
+		std::wcout << L"[CLIENT - " << m_clients[client].id << L"] Disconnected" << std::endl;
+		delete_client_table(m_clients[client].uid);
+		auto& fl = m_clients[client].friendlist;
+		for (auto i = fl.begin(); i != fl.end(); ++i) {
+			send_packet_friend_status(*i, client, FRIEND_OFFLINE);
+		}
+		m_clients[client].uid = -1;
+		memset(&m_clients[client].id, 0, sizeof(m_clients[client].id));
+		closesocket(m_clients[client].socket);
+		m_clients[client].friendlist.clear();
+		m_clients[client].socket = INVALID_SOCKET;
+	}
+	void LOBBYSERVER::insert_client_table(int uid, int client)
+	{
+		client_table_lock.lock();
+		client_table.emplace(std::make_pair(uid, client));
+		client_table_lock.unlock();
+	}
+	void LOBBYSERVER::delete_client_table(int uid)
+	{
+		client_table_lock.lock();
+		client_table.erase(uid);
+		client_table_lock.unlock();
+	}
+	int LOBBYSERVER::isConnect(int uid)
+	{
+		client_table_lock.lock();
+		std::map<int, int> cpy{ client_table };
+		client_table_lock.unlock();
+		if (cpy.count(uid) != 0)
+			return cpy[uid];
+		return -1;
+	}
+	int LOBBYSERVER::isConnect(const char* id)
+	{
+		int uid = DBManager.get_uid(id);
+		if (uid == RESULT_NO_ID)
+			return -1;
+		return isConnect(uid);
 	}
 }

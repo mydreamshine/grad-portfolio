@@ -1,4 +1,5 @@
 #include "DBMANAGER.h"
+#include <string>
 
 DBMANAGER::DBMANAGER() : 
 	henv(),
@@ -54,11 +55,13 @@ void DBMANAGER::HandleDiagnosticRecord(SQLHANDLE hHandle, SQLSMALLINT hType, RET
 	}
 }
 
-int DBMANAGER::id_check(const char* id)
+int DBMANAGER::get_uid(const char* id)
 {
 	SQLRETURN retcode;
-	SQLWCHAR query[100];
-	wsprintf(query, L"SELECT uid FROM user_table WHERE ID = '%S'", id);
+	SQLWCHAR query[] = { L"{call get_uid(?)}" };
+	SQLLEN idlen = SQL_NTS;
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 11, 0, (void*)id, 11, &idlen);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
@@ -73,4 +76,39 @@ int DBMANAGER::id_check(const char* id)
 		return RESULT_NO_ID;
 
 	return uid;
+}
+
+std::vector<std::string> DBMANAGER::get_friendlist(const char* id)
+{
+	std::vector<std::string> friendlist;
+	SQLRETURN retcode;
+	SQLWCHAR query[] = { L"{call get_friendlist(?)}" };
+	SQLLEN idlen = SQL_NTS;
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 11, 0, (void*)id, 11, &idlen);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	SQLCHAR friends[11];
+	SQLBindCol(hstmt, 1, SQL_CHAR, friends, 11, NULL);
+	while (SQLFetch(hstmt) != SQL_NO_DATA) {
+		friendlist.emplace_back((const char*)friends);
+	}
+	SQLCloseCursor(hstmt);
+
+	return friendlist;
+}
+
+void DBMANAGER::insert_friend(const char* friendA, const char* friendB)
+{
+	//새아이디 추가
+	SQLRETURN retcode;
+	SQLWCHAR query[100];
+	if(strcmp(friendA, friendB) < 0)
+		wsprintf(query, L"INSERT INTO friend_table VALUES ('%S', '%S')", friendA, friendB);
+	else
+		wsprintf(query, L"INSERT INTO friend_table VALUES ('%S', '%S')", friendB, friendA);
+	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+	SQLCloseCursor(hstmt);
 }
