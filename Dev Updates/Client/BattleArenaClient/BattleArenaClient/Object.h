@@ -116,7 +116,7 @@ public:
 		return retObj;
 	}
 
-	bool DeActivateObj(Object* obj)
+	void DeActivateObj(Object* obj)
 	{
 		obj->m_Name = "";
 		obj->NumObjectCBDirty = 0;
