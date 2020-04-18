@@ -495,6 +495,10 @@ void ClientTest::BuildScene()
     int diffuseSrvHeap_index = 0;
     int objCB_index = 0;
     int skinnedCB_index = 0;
+
+    m_nSKinnedCB = 0;
+    m_nObjCB = 0;
+    m_nMatCB = 0;
     for (auto& scene_iter : m_Scenes)
     {
         auto& scene = scene_iter.second;
@@ -502,31 +506,13 @@ void ClientTest::BuildScene()
             m_BackBufferFormat,
             matCB_index, diffuseSrvHeap_index, objCB_index, skinnedCB_index);
 
-        // unique_ptr이라서 copy메소드를 쓸 수가 없다.
-        /*m_AllRitems.insert(m_AllRitems.end(), scene->GetAllRitems().begin(), scene->GetAllRitems().end());
-        m_Geometries.insert(std::begin(scene->GetGeometries()), std::end(scene->GetGeometries()));
-        m_Materials.insert(std::begin(scene->GetMaterials()), std::end(scene->GetMaterials()));
-        m_Textures.insert(std::begin(scene->GetTextures()), std::end(scene->GetTextures()));
-        m_ModelSkeltons.insert(std::begin(scene->GetModelSkeltons()), std::end(scene->GetModelSkeltons()));*/
-        auto& sceneAllRitems = scene->GetAllRitems();
-        for (auto& Ritem : sceneAllRitems)
-            m_AllRitems.push_back(Ritem.get());
-
-        auto& sceneGeometries = scene->GetGeometries();
-        for (auto& Geo_iter : sceneGeometries)
-            m_Geometries.insert(std::make_pair<std::string, MeshGeometry*>(Geo_iter.first.c_str(), Geo_iter.second.get()));
-
-        auto& sceneMaterials = scene->GetMaterials();
-        for (auto& Mat_iter : sceneMaterials)
-            m_Materials.insert(std::make_pair<std::string, Material*>(Mat_iter.first.c_str(), Mat_iter.second.get()));
+        m_nSKinnedCB += scene->m_nSKinnedCB;
+        m_nObjCB += scene->m_nObjCB;
+        m_nMatCB += scene->m_nMatCB;
 
         auto& sceneTextures = scene->GetTextures();
         for (auto& Tex_iter : sceneTextures)
             m_Textures.push_back(Tex_iter.second.get());
-
-        auto& sceneModelSkeletons = scene->GetModelSkeltons();
-        for (auto& ModelSkeleton_iter : sceneModelSkeletons)
-            m_ModelSkeltons.insert(std::make_pair<std::string, aiModelData::aiSkeleton*>(ModelSkeleton_iter.first.c_str(), ModelSkeleton_iter.second.get()));
     }
 
     m_CurrSceneName = "PlayGameScene";
@@ -536,9 +522,9 @@ void ClientTest::BuildScene()
 void ClientTest::BuildFrameResources()
 {
     UINT PassCount = 2; // Common Render Pass + Shadow Render Pass
-    UINT ObjectCount = (UINT)m_AllRitems.size();
-    UINT SkinnedCount = (UINT)m_ModelSkeltons.size();
-    UINT MaterialCount = (UINT)m_Materials.size();
+    UINT ObjectCount = m_nObjCB;
+    UINT SkinnedCount = m_nSKinnedCB;
+    UINT MaterialCount = m_nMatCB;
 
     for (int i = 0; i < gNumFrameResources; ++i)
     {
@@ -570,19 +556,29 @@ void ClientTest::OnUpdate()
     static const std::string sceneNames[2] = { "LoginScene", "PlayGameScene" };
     static int sn = 0;
     static int sub = 0;
+    static int sub2 = 0;
     float totalTime = m_Timer.GetTotalTime();
     int totalTime_i = (int)totalTime;
-    if ((totalTime_i != 0) && (totalTime_i % 3 == 0))
+    if ((totalTime_i != 0) && (totalTime_i % 10 == 0))
     {
-        if (sub < totalTime_i / 3)
+        if (sub2 < totalTime_i / 10)
         {
-            sub = totalTime_i / 3;
+            sub2 = totalTime_i / 10;
             sn = (sn + 1) % 2;
             m_CurrSceneName = sceneNames[sn];
             m_CurrScene = m_Scenes[m_CurrSceneName].get();
             m_CurrScene->OnInitProperties();
         }
     }
+    else if ((totalTime_i != 0) && (totalTime_i % 2 == 0))
+    {
+        if (sub < totalTime_i / 2)
+        {
+            sub = totalTime_i / 2;
+            m_CurrScene->RandomCreateSkinnedObject();
+        }
+    }
+
     m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_Timer);
 }
 
@@ -657,7 +653,7 @@ void ClientTest::PopulateCommandList()
     ThrowIfFailed(m_commandList->Close());
 }
 
-void ClientTest::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)
+void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer)
 {
     UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     UINT skinnedCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(SkinnedConstants));
@@ -667,31 +663,45 @@ void ClientTest::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::
     auto skinnedCB = m_CurrFrameResource->SkinnedCB->Resource();
     auto matCB = m_CurrFrameResource->MaterialCB->Resource();
 
-    for (auto& e : ritems)
+    for (auto& obj : ObjLayer)
     {
-        m_commandList->IASetVertexBuffers(0, 1, &e->Geo->VertexBufferView());
-        m_commandList->IASetIndexBuffer(&e->Geo->IndexBufferView());
-        m_commandList->IASetPrimitiveTopology(e->PrimitiveType);
-
-        D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress() + e->ObjCBIndex * objCBByteSize;
-        D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + e->Mat->MatCBIndex * matCBByteSize;
-
-        m_commandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-        if (e->Skeleton != nullptr)
+        if (obj->Activated == false) continue;
+        for (auto& ritem_iter : obj->m_RenderItems)
         {
-            D3D12_GPU_VIRTUAL_ADDRESS skinnedCBAddress = skinnedCB->GetGPUVirtualAddress() + e->SkinCBIndex * skinnedCBByteSize;
+            auto ritem = ritem_iter.second;
+
+            m_commandList->IASetVertexBuffers(0, 1, &ritem->Geo->VertexBufferView());
+            m_commandList->IASetIndexBuffer(&ritem->Geo->IndexBufferView());
+            m_commandList->IASetPrimitiveTopology(ritem->PrimitiveType);
+
+            D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+            if (obj->ObjCBIndex != -1) objCBAddress += obj->ObjCBIndex * objCBByteSize;
+            m_commandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+
+            D3D12_GPU_VIRTUAL_ADDRESS skinnedCBAddress = skinnedCB->GetGPUVirtualAddress();
+            if (obj->SkinCBIndex != -1) skinnedCBAddress += obj->SkinCBIndex * skinnedCBByteSize;
             m_commandList->SetGraphicsRootConstantBufferView(1, skinnedCBAddress);
+
+            if (ritem->Mat != nullptr)
+            {
+                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ritem->Mat->MatCBIndex * matCBByteSize;
+                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+
+                int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + ritem->Mat->DiffuseSrvHeapIndex;
+                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+                TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
+                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+            }
+            else
+            {
+                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
+                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+            }
+
+            m_commandList->DrawIndexedInstanced(ritem->IndexCount, 1, ritem->StartIndexLocation, ritem->BaseVertexLocation, 0);
         }
-        else
-            m_commandList->SetGraphicsRootConstantBufferView(1, 0);
-        m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
-
-        int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + e->Mat->DiffuseSrvHeapIndex;
-        auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-        TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
-        m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
-
-        m_commandList->DrawIndexedInstanced(e->IndexCount, 1, e->StartIndexLocation, e->BaseVertexLocation, 0);
     }
 }
 
@@ -720,12 +730,12 @@ void ClientTest::DrawSceneToShadowMap()
     m_commandList->SetGraphicsRootConstantBufferView(3, passCBAddress);
 
     m_commandList->SetPipelineState(m_PSOs["shadow_opaque"].Get());
-    auto& OpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::Opaque);
-    DrawRenderItems(m_commandList.Get(), OpaqueRitemLayer);
+    auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
+    DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedShadow_opaque"].Get());
-    auto& SkinnedOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::SkinnedOpaque);
-    DrawRenderItems(m_commandList.Get(), SkinnedOpaqueRitemLayer);
+    auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
+    DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
 
     // Change back to GENERIC_READ so we can read the texture in a shader.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
@@ -746,12 +756,12 @@ void ClientTest::DrawSceneToBackBuffer()
     m_commandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
-    auto& OpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::Opaque);
-    DrawRenderItems(m_commandList.Get(), OpaqueRitemLayer);
+    auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
+    DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
-    auto& SkinnedOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::SkinnedOpaque);
-    DrawRenderItems(m_commandList.Get(), SkinnedOpaqueRitemLayer);
+    auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
+    DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
 
     // UI render.
     DrawSceneToUI();
@@ -763,8 +773,8 @@ void ClientTest::DrawSceneToUI()
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->SetPipelineState(m_PSOs["UI_opaque"].Get());
-    auto& UIOpaqueRitemLayer = m_CurrScene->GetRitemLayer(RenderLayer::UIOpaque);
-    DrawRenderItems(m_commandList.Get(), UIOpaqueRitemLayer);
+    auto& UIOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UIOpaque);
+    DrawObjRenderLayer(m_commandList.Get(), UIOpaqueObjRenderLayer);
 }
 
 void ClientTest::DrawSceneToTexts(HWND hwnd)

@@ -69,24 +69,7 @@ struct DXSkinnedVertex
 
 struct RenderItem
 {
-    DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-
-    DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-
-    // CPU에서 GPU로의 명령 전달에 대한 비용을 최소화하기 위해
-    // 렌더item의 렌더 업데이트가 필요한 경우에만 업데이트를 하게 만든다.
-    // 이를 처리하기 위한 로직으로는
-    // FrameResource별로 해당 렌더 Item을 렌더 업데이트를 하되
-    // NumFramesDirty의 값이 0 초과일 경우에만 하게 한다.
-    // 그리고 해당 렌더 Item의 렌더 업데이트 예약을 완료한 후에
-    // NumFramesDirty을 1 감소시킨다.
-    // 통상적으로 FrameResource마다 동일한 렌더 Item에 대한 업데이트가
-    // 보장되어야 하므로 렌더 업데이트가 필요한 렌더 Item의
-    // NumFramesDirty를 gNumFrameResources으로 한다.
-    int NumFramesDirty = gNumFrameResources;
-
-    // Index into GPU constant buffer corresponding to the ObjectCB for this render item.
-    UINT ObjCBIndex = -1;
+    std::string Name;
 
     Material* Mat = nullptr;
     MeshGeometry* Geo = nullptr;
@@ -98,12 +81,6 @@ struct RenderItem
     UINT IndexCount = 0;
     UINT StartIndexLocation = 0;
     int BaseVertexLocation = 0;
-
-    // Index into GPU constant buffer corresponding to the SkinndCB for this render item.
-    UINT SkinCBIndex = -1;
-
-    // nullptr if this render-item is not animated by skinned mesh.
-    aiModelData::aiSkeleton* Skeleton = nullptr;
 };
 
 enum class RenderLayer : int

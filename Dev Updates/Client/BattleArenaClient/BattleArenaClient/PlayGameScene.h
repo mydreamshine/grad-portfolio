@@ -20,7 +20,10 @@ public:
     virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
     virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat);
     virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index);
-    virtual void BuildRenderItems(int& objCB_index, int& skinnedCB_index);
+    virtual void BuildRenderItems();
+    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index);
+
+    virtual void RandomCreateSkinnedObject();
 
 private:
     std::vector<UINT8> GenerateTextureData();
@@ -38,4 +41,8 @@ public:
 
 public:
     virtual void ProcessInput(CTimer& gt) {}
+
+private:
+    const UINT m_MaxWorldObject = 1000;
+    const UINT m_MaxSkinnedObject = 100;
 };

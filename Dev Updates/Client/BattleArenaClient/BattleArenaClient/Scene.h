@@ -2,6 +2,7 @@
 
 #include "DXSample.h"
 #include "FrameResource.h"
+#include "Object.h"
 #include "Common/Util/d3d12/GeometryGenerator.h"
 #include "Common/Util/d3d12/Camera.h"
 #include "Common/Util/d3d12/ShadowMap.h"
@@ -29,16 +30,26 @@ public:
     virtual void DisposeUploaders();
 
 public:
+    std::unique_ptr<MeshGeometry> BuildMeshGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
+        const std::string& geoName, std::unordered_map<std::string, GeometryGenerator::MeshData>& Meshes);
     virtual void BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) = 0;
+
     virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) = 0;
     void LoadSkinnedModelData( ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         ModelLoader& model_loader,
         const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths);
-    virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat) = 0;
-    //std::vector<UINT8> GenerateTextureData();
-    virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index) = 0;
-    virtual void BuildRenderItems(int& objCB_index, int& skinnedCB_index) = 0;
 
+    virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat) = 0;
+    virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index) = 0;
+
+    // Material에 대한 지정은 이 함수 외부에서 지정해줘야 한다.
+    // (Material의 이름을 기준으로 RenderItem에 매칭시키기 때문.) => 이름으론 Material 매칭 패턴을 찾을 수가 없다.
+    void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems, MeshGeometry* Geo);
+    virtual void BuildRenderItems() = 0;
+
+    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index) = 0;
+
+    virtual void RandomCreateSkinnedObject() {};
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);
@@ -56,9 +67,6 @@ public:
     virtual void ProcessInput(CTimer& gt) = 0;
 
 public:
-    const std::vector<std::unique_ptr<RenderItem>>& GetAllRitems() { return m_AllRitems; }
-    const std::vector<RenderItem*>& GetRitemLayer(RenderLayer layer) { return m_RitemLayer[(int)layer]; }
-
     const PassConstants& GetMainPassCB() { return m_MainPassCB; }
     const PassConstants& GetShadowPassCB() { return m_ShadowPassCB; }
 
@@ -66,6 +74,15 @@ public:
     const std::unordered_map<std::string, std::unique_ptr<Material>>& GetMaterials() { return m_Materials; }
     const std::unordered_map<std::string, std::unique_ptr<Texture>>& GetTextures() { return m_Textures; }
     const std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>& GetModelSkeltons() { return m_ModelSkeltons; }
+
+    const std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GetAllRitems() { return m_AllRitems; }
+    const std::vector<Object*>& GetObjRenderLayer(RenderLayer layer) { return m_ObjRenderLayer[(int)layer]; }
+
+    const std::vector<std::unique_ptr<Object>>& GetAllObjects() { return m_AllObjects; }
+    const std::vector<Object*> GetSkinnedObjects() { return m_SkinnedObjects; }
+    const std::vector<Object*> GetUIObjects() { return m_UIObjects; }
+    const std::vector<Object*> GetWorldObjects() { return m_WorldObjects; }
+
 
 protected:
     UINT m_width, m_height;
@@ -79,11 +96,22 @@ protected:
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
 
     // List of all the render items.
-    std::vector<std::unique_ptr<RenderItem>> m_AllRitems;
+    std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems;
+    // Object divided by PSO.
+    std::vector<Object*> m_ObjRenderLayer[(int)RenderLayer::Count];
 
-    // Render items divided by PSO.
-    std::vector<RenderItem*> m_RitemLayer[(int)RenderLayer::Count];
+    // Object 1 : Geometric 1
+    std::vector<std::unique_ptr<Object>> m_AllObjects;
+    std::vector<Object*> m_SkinnedObjects; // SkinnedCB가 있는 오브젝트
+    std::vector<Object*> m_UIObjects; // MatCB만 있는 오브젝트
+    std::vector<Object*> m_WorldObjects; // ObjCB가 있는 오브젝트
 
+public:
+    UINT m_nSKinnedCB = 0;
+    UINT m_nObjCB = 0;
+    UINT m_nMatCB = 0;
+
+protected:
     Camera m_MainCamera;
 
     /////////////////////////////////////// Shadow Pass Items ////////////////////////////////////
