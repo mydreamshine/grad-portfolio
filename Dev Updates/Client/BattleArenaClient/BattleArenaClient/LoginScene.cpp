@@ -163,14 +163,11 @@ void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
         auto Ritem = Ritem_iter.second.get();
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.FindDeactiveUIObject(m_AllObjects, m_UIObjects, maxUIObject);            
-            newObj->m_Name = Ritem_iter.first;
-            newObj->m_RenderItem = Ritem;
-            newObj->m_ObjectInfo = std::make_unique<ObjectInfo>();
-            newObj->m_ObjectInfo->ObjCBIndex = objCB_index++;
-            newObj->m_ObjectInfo->m_Bound = Ritem->Geo->DrawArgs[Ritem_iter.first].Bounds;
-
+            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
             m_ObjRenderLayer[(int)RenderLayer::UI].push_back(newObj);
+
+            std::string objName = Ritem_iter.first;
+            objManager.SetObjectComponent(newObj, objName, Ritem);
         }
     }
     m_nObjCB = (UINT)m_UIObjects.size();
