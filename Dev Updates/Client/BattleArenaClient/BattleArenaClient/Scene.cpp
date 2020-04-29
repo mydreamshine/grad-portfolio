@@ -21,13 +21,6 @@ void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     BuildMaterials(matCB_index, diffuseSrvHeap_Index);
     BuildRenderItems();
     BuildObjects(objCB_index, skinnedCB_index);
-
-    // Estimate the scene bounding sphere manually since we know how the scene was constructed.
-    // The grid is the "widest object" with a width of 1 and depth of 1.0f, and centered at
-    // the world space origin.  In general, you need to loop over every world space vertex
-    // position and compute the bounding sphere.
-    m_SceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
-    m_SceneBounds.Radius = sqrtf(0.5f * 0.5f + 0.5f * 0.5f);
 }
 
 
@@ -73,20 +66,37 @@ std::unique_ptr<MeshGeometry> Scene::BuildMeshGeometry(ID3D12Device* device, ID3
         auto& meshData = mesh_iter.second;
 
         total_vertices.insert(total_vertices.end(), meshData.Vertices.size(), DXTexturedVertex());
+        DirectX::XMFLOAT3 minPosition = { FLT_MAX, FLT_MAX, FLT_MAX };
+        DirectX::XMFLOAT3 maxPosition = meshData.Vertices[0].Position;
+
         for (int i = 0; i < meshData.Vertices.size(); ++i, ++k)
         {
             total_vertices[k].xmf3Position = meshData.Vertices[i].Position;
             total_vertices[k].xmf3Normal = meshData.Vertices[i].Normal;
             total_vertices[k].xmf2TextureUV = meshData.Vertices[i].TexC;
             total_vertices[k].xmf3Tangent = meshData.Vertices[i].TangentU;
+
+            minPosition.x = min(minPosition.x, total_vertices[k].xmf3Position.x);
+            minPosition.y = min(minPosition.y, total_vertices[k].xmf3Position.y);
+            minPosition.z = min(minPosition.z, total_vertices[k].xmf3Position.z);
+            maxPosition.x = max(maxPosition.x, total_vertices[k].xmf3Position.x);
+            maxPosition.y = max(maxPosition.y, total_vertices[k].xmf3Position.y);
+            maxPosition.z = max(maxPosition.z, total_vertices[k].xmf3Position.z);
         }
         total_indices.insert(total_indices.end(), std::begin(meshData.GetIndices16()), std::end(meshData.GetIndices16()));
-
 
         SubmeshGeometry Submesh;
         Submesh.IndexCount = (UINT)meshData.Indices32.size();
         Submesh.StartIndexLocation = IndexOffset;
         Submesh.BaseVertexLocation = VertexOffset;
+        Submesh.Bounds.Center = {
+                (maxPosition.x + minPosition.x) * 0.5f,
+                (maxPosition.y + minPosition.y) * 0.5f,
+                (maxPosition.z + minPosition.z) * 0.5f };
+        Submesh.Bounds.Extents = {
+            (maxPosition.x - minPosition.x) * 0.5f,
+            (maxPosition.y - minPosition.y) * 0.5f,
+            (maxPosition.z - minPosition.z) * 0.5f };
 
         geo->DrawArgs[mesh_iter.first] = Submesh;
 
@@ -119,15 +129,15 @@ std::unique_ptr<MeshGeometry> Scene::BuildMeshGeometry(ID3D12Device* device, ID3
 void Scene::LoadSkinnedModelData(
     ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     ModelLoader& model_loader,
-    const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths)
+    const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths,
+    std::vector<std::string>* execpt_nodes)
 {
-    model_loader.loadMeshAndSkeleton(mesh_filepath);
+    model_loader.loadMeshAndSkeleton(mesh_filepath, execpt_nodes);
     for (auto& anim_path : anim_filepaths)
         model_loader.loadAnimation(anim_path);
 
-    std::string ModelName, Anim0_Name;
+    std::string ModelName;
     getFileName(mesh_filepath.c_str(), ModelName);
-    getFileName(anim_filepaths[0].c_str(), Anim0_Name);
 
     // aiSkeleton data move
     if (model_loader.mSkeleton != nullptr)
@@ -172,6 +182,16 @@ void Scene::LoadSkinnedModelData(
             submesh.IndexCount = (UINT)dxIndices.size();
             submesh.StartIndexLocation = (UINT)(indices.size() - dxIndices.size());
             submesh.BaseVertexLocation = (INT)(vertices.size() - dxVertieces.size());
+            auto& aabb = model_loader.mMeshes[m].mAABB;
+            submesh.Bounds.Center = {
+                (aabb.mMax.x + aabb.mMin.x) * 0.5f,
+                (aabb.mMax.y + aabb.mMin.y) * 0.5f,
+                (aabb.mMax.z + aabb.mMin.z) * 0.5f };
+            submesh.Bounds.Extents = {
+                (aabb.mMax.x - aabb.mMin.x) * 0.5f,
+                (aabb.mMax.y - aabb.mMin.y) * 0.5f,
+                (aabb.mMax.z - aabb.mMin.z) * 0.5f };
+            submesh.ParentBoneID = model_loader.mMeshes[m].mParentBoneIndex;
 
             std::string& meshName = model_loader.mMeshes[m].mName;
             if (meshGeo->DrawArgs.find(meshName) != meshGeo->DrawArgs.end())
@@ -201,25 +221,19 @@ void Scene::LoadSkinnedModelData(
     }
 }
 
-void Scene::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems, MeshGeometry* Geo)
+void Scene::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)
 {
     for (auto& subMesh_iter : Geo->DrawArgs)
     {
         auto& subMesh = subMesh_iter.second;
         auto Ritem = std::make_unique<RenderItem>();
+        Ritem->Name = subMesh_iter.first;
         Ritem->Geo = Geo;
         Ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        /*auto mat_iter = Mats.find(subMesh_iter.first);
-        if (mat_iter == Mats.end())
-            mat_iter = Mats.find(Geo->Name);
-        if (mat_iter == Mats.end())
-            mat_iter = Mats.find("checkerboard");
-        if (mat_iter != Mats.end())
-            Ritem->Mat = mat_iter->second;*/
         Ritem->IndexCount = subMesh.IndexCount;
         Ritem->StartIndexLocation = subMesh.StartIndexLocation;
         Ritem->BaseVertexLocation = subMesh.BaseVertexLocation;
-        AllRitems[subMesh_iter.first] = std::move(Ritem);
+        GenDestList[subMesh_iter.first] = std::move(Ritem);
     }
 }
 
@@ -227,25 +241,58 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 {
     for (auto& obj : m_WorldObjects)
     {
-        if (obj->Activated == false) continue;
-        if (obj->NumObjectCBDirty > 0)
+        auto objInfo = obj->m_ObjectInfo.get();
+        if (objInfo->NumObjectCBDirty > 0)
         {
-            XMMATRIX worldTransform = XMLoadFloat4x4(&obj->m_WorldTransform);
-            XMMATRIX texTransform = XMLoadFloat4x4(&obj->m_TexTransform);
+            XMFLOAT4X4 WorldTransform, LocalTransform;
+            WorldTransform = objInfo->GetWorldTransform();
+            LocalTransform = objInfo->GetLocalTransform();
+
+            XMMATRIX WorldM = XMLoadFloat4x4(&WorldTransform);
+            XMMATRIX LocalM = XMLoadFloat4x4(&LocalTransform);
+            XMMATRIX TexM = XMLoadFloat4x4(&objInfo->m_TexTransform);
 
             ObjectConstants objConstants;
-            XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(worldTransform));
-            XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
+            XMStoreFloat4x4(&objConstants.Local, XMMatrixTranspose(LocalM));
+            XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(WorldM));
+            XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(TexM));
+            objConstants.TexAlpha = objInfo->m_TexAlpha;
 
-            objCB->CopyData(obj->ObjCBIndex, objConstants);
+            objCB->CopyData(objInfo->ObjCBIndex, objConstants);
 
             // Next FrameResource need to be updated too.
-            obj->NumObjectCBDirty--;
+            objInfo->NumObjectCBDirty--;
+        }
+    }
+
+    for (auto& obj : m_UIObjects)
+    {
+        auto objInfo = obj->m_ObjectInfo.get();
+        if (objInfo->NumObjectCBDirty > 0)
+        {
+            XMFLOAT4X4 WorldTransform, LocalTransform;
+            WorldTransform = objInfo->GetWorldTransform();
+            LocalTransform = objInfo->GetLocalTransform();
+
+            XMMATRIX WorldM = XMLoadFloat4x4(&WorldTransform);
+            XMMATRIX LocalM = XMLoadFloat4x4(&LocalTransform);
+            XMMATRIX TexM = XMLoadFloat4x4(&objInfo->m_TexTransform);
+
+            ObjectConstants objConstants;
+            XMStoreFloat4x4(&objConstants.Local, XMMatrixTranspose(LocalM));
+            XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(WorldM));
+            XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(TexM));
+            objConstants.TexAlpha = objInfo->m_TexAlpha;
+
+            objCB->CopyData(objInfo->ObjCBIndex, objConstants);
+
+            // Next FrameResource need to be updated too.
+            objInfo->NumObjectCBDirty--;
         }
     }
 }
 
-void Scene::aiM2dxM(XMFLOAT4X4& dest, aiMatrix4x4& source)
+void Scene::aiM2dxM(XMFLOAT4X4& dest, const aiMatrix4x4& source)
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -256,35 +303,36 @@ void Scene::aiM2dxM(XMFLOAT4X4& dest, aiMatrix4x4& source)
 
 void Scene::UpdateSkinnedCBs(UploadBuffer<SkinnedConstants>* skinnedCB, CTimer& gt)
 {
-    for (auto& obj : m_SkinnedObjects)
+    for (auto& obj : m_CharacterObjects)
     {
-        if (obj->Activated == false) continue;
+        auto SkeletonInfo = obj->m_SkeletonInfo.get();
 
-        std::string& AnimName = obj->m_AnimInfo->CurrPlayingAnimName;
+        std::string& AnimName = SkeletonInfo->m_AnimInfo->CurrPlayingAnimName;
         bool isSetted = false;
 
-        if (obj->m_AnimInfo->AnimIsPlaying(AnimName, isSetted))
+        if (SkeletonInfo->m_AnimInfo->AnimIsPlaying(AnimName, isSetted))
         {
             if (isSetted == false) continue;
 
-            SkinnedConstants SkinnedInfo;
-            auto& animTransforms = obj->m_AnimInfo->CurrAnimJointTransforms;
+            SkinnedConstants skinConstants;
+            auto& animTransforms = SkeletonInfo->m_AnimInfo->CurrAnimJointTransforms;
+            auto& offsetTransforms = SkeletonInfo->m_AnimInfo->OffsetJointTransforms;
 
             for (size_t i = 0; i < animTransforms.size(); ++i)
-                aiM2dxM(SkinnedInfo.BoneTransform[i], animTransforms[i]);
+                aiM2dxM(skinConstants.BoneTransform[i], animTransforms[i]* offsetTransforms[i]);
 
-            skinnedCB->CopyData(obj->SkinCBIndex, SkinnedInfo);
+            skinnedCB->CopyData(SkeletonInfo->SkinCBIndex, skinConstants);
         }
     }
 }
 
 void Scene::UpdateMaterialCBs(UploadBuffer<MaterialConstants>* matCB, CTimer& gt)
 {
-    for (auto& e : m_Materials)
+    for (auto& mat_iter : m_Materials)
     {
         // Only update the cbuffer data if the constants have changed.  If the cbuffer
         // data changes, it needs to be updated for each FrameResource.
-        Material* mat = e.second.get();
+        Material* mat = mat_iter.second.get();
         if (mat->NumFramesDirty > 0)
         {
             XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
@@ -335,7 +383,7 @@ void Scene::UpdateMainPassCB(UploadBuffer<PassConstants>* passCB, CTimer& gt)
     m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_width, (float)m_height);
     m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_width, 1.0f / m_height);
     m_MainPassCB.NearZ = 1.0f;
-    m_MainPassCB.FarZ = 1000.0f;
+    m_MainPassCB.FarZ = 10000.0f;
     m_MainPassCB.TotalTime = gt.GetTotalTime();
     m_MainPassCB.DeltaTime = gt.GetTimeElapsed();
     m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };

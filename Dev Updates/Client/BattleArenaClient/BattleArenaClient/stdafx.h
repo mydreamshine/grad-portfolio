@@ -24,8 +24,12 @@
 
 #ifdef _DEBUG
 #pragma comment(lib, "Common/Util/assimp/build/x64/Debug/assimp-vc142-mtd.lib")
+#pragma comment(lib, "Common/Util/libpng/lib/x64/Debug/libpng16.lib")
+#pragma comment(lib, "Common/Util/DirectXTK/lib/x64/Debug/DirectXTK12.lib")
 #else
 #pragma comment(lib, "Common/Util/assimp/build/x64/Release/assimp-vc142-mt.lib")
+#pragma comment(lib, "Common/Util/libpng/lib/x64/Release/libpng16.lib")
+#pragma comment(lib, "Common/Util/DirectXTK/lib/x64/Release/DirectXTK12.lib")
 #endif
 
 inline void getFileName(const char* str, std::string& pFileName)

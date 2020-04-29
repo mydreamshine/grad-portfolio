@@ -193,7 +193,7 @@ void ClientTest::LoadAssets()
     BuildShadersAndInputLayout();
     BuildPSOs();
 
-    m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
+    m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), SIZE_ShadowMap, SIZE_ShadowMap);
 
     BuildScene();
 
@@ -350,16 +350,23 @@ void ClientTest::BuildShadersAndInputLayout()
         NULL, NULL
     };
 
+    const D3D_SHADER_MACRO alphaTestDefines[] =
+    {
+        "ALPHA_TEST", "1",
+        NULL, NULL
+    };
+
     m_Shaders["standardVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "VS", "vs_5_1");
     m_Shaders["skinnedVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", skinnedDefines, "VS", "vs_5_1");
     m_Shaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "PS", "ps_5_1");
+    m_Shaders["TransparentPS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
     m_Shaders["shadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "VS", "vs_5_1");
     m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
     m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
 
-    m_Shaders["UIOpaqueVS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "VS", "vs_5_1");
-    m_Shaders["UIOpaquePS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "PS", "ps_5_1");
+    m_Shaders["UI_VS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["UI_PS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
     m_InputLayout =
     {
@@ -414,7 +421,7 @@ void ClientTest::BuildPSOs()
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PSOs["opaque"])));
 
     //
-    // PSO for skinned pass.
+    // PSO for skinned objects.
     //
     D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedOpaquePsoDesc = opaquePsoDesc;
     skinnedOpaquePsoDesc.InputLayout = { m_SkinnedInputLayout.data(), (UINT)m_SkinnedInputLayout.size() };
@@ -429,6 +436,45 @@ void ClientTest::BuildPSOs()
         m_Shaders["opaquePS"]->GetBufferSize()
     };
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedOpaque"])));
+
+    D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
+    transparencyBlendDesc.BlendEnable = true;
+    transparencyBlendDesc.LogicOpEnable = false;
+    transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+    transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+    transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+    transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+    transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+    //
+    // PSO for transparent objects
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentPsoDesc = opaquePsoDesc;
+    transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+    transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&m_PSOs["transparent"])));
+
+    //
+    // PSO for skinned transparent objects
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC SkinnedTransparentPsoDesc = opaquePsoDesc;
+    SkinnedTransparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+    SkinnedTransparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    SkinnedTransparentPsoDesc.InputLayout = { m_SkinnedInputLayout.data(), (UINT)m_SkinnedInputLayout.size() };
+    SkinnedTransparentPsoDesc.VS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["skinnedVS"]->GetBufferPointer()),
+        m_Shaders["skinnedVS"]->GetBufferSize()
+    };
+    SkinnedTransparentPsoDesc.PS =
+    {
+        reinterpret_cast<BYTE*>(m_Shaders["TransparentPS"]->GetBufferPointer()),
+        m_Shaders["TransparentPS"]->GetBufferSize()
+    };
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&SkinnedTransparentPsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedTransparent"])));
 
     //
     // PSO for shadow map pass.
@@ -471,19 +517,21 @@ void ClientTest::BuildPSOs()
     //
     // PSO for UI pass.
     //
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC UIOpaquePsoDesc = opaquePsoDesc;
-    UIOpaquePsoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
-    UIOpaquePsoDesc.VS =
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC UIPsoDesc = opaquePsoDesc;
+    UIPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+    UIPsoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
+    UIPsoDesc.VS =
     {
-        reinterpret_cast<BYTE*>(m_Shaders["UIOpaqueVS"]->GetBufferPointer()),
-        m_Shaders["UIOpaqueVS"]->GetBufferSize()
+        reinterpret_cast<BYTE*>(m_Shaders["UI_VS"]->GetBufferPointer()),
+        m_Shaders["UI_VS"]->GetBufferSize()
     };
-    UIOpaquePsoDesc.PS =
+    UIPsoDesc.PS =
     {
-        reinterpret_cast<BYTE*>(m_Shaders["UIOpaquePS"]->GetBufferPointer()),
-        m_Shaders["UIOpaquePS"]->GetBufferSize()
+        reinterpret_cast<BYTE*>(m_Shaders["UI_PS"]->GetBufferPointer()),
+        m_Shaders["UI_PS"]->GetBufferSize()
     };
-    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["UI_opaque"])));
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIPsoDesc, IID_PPV_ARGS(&m_PSOs["UI"])));
 }
 
 void ClientTest::BuildScene()
@@ -530,19 +578,6 @@ void ClientTest::BuildFrameResources()
     {
         m_FrameResources.push_back(std::make_unique<FrameResource>(m_device.Get(), PassCount, ObjectCount, SkinnedCount, MaterialCount));
         FrameResource* frame_resource = m_FrameResources.back().get();
-
-        ObjectConstants ObjectData;
-        ObjectData.World = MathHelper::Identity4x4();
-        XMStoreFloat4x4(&ObjectData.World, XMMatrixTranspose(XMLoadFloat4x4(&ObjectData.World)));
-
-        SkinnedConstants SkinnedData;
-        for (auto& skinnedTransform : SkinnedData.BoneTransform)
-            XMStoreFloat4x4(&skinnedTransform, XMMatrixIdentity());
-
-        for (UINT j = 0; j < ObjectCount; ++j)
-            frame_resource->ObjectCB->CopyData(j, ObjectData);
-        for (UINT j = 0; j < SkinnedCount; ++j)
-            frame_resource->SkinnedCB->CopyData(j, SkinnedData);
     }
 
     m_CurrFrameResource = m_FrameResources[m_CurrFrameResourceIndex].get();
@@ -575,7 +610,7 @@ void ClientTest::OnUpdate()
         if (sub < totalTime_i / 2)
         {
             sub = totalTime_i / 2;
-            m_CurrScene->RandomCreateSkinnedObject();
+            m_CurrScene->RandomCreateCharacterObject();
         }
     }
 
@@ -666,42 +701,44 @@ void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const st
     for (auto& obj : ObjLayer)
     {
         if (obj->Activated == false) continue;
-        for (auto& ritem_iter : obj->m_RenderItems)
+        if (obj->m_Name == "ground_grid") continue;
+        auto Ritem = obj->m_RenderItem;
+        UINT ObjCBIndex = obj->m_ObjectInfo->ObjCBIndex;
+        UINT SkinCBIndex = -1;
+        if (obj->m_SkeletonInfo != nullptr)
+            SkinCBIndex = obj->m_SkeletonInfo->SkinCBIndex;
+
+        m_commandList->IASetVertexBuffers(0, 1, &Ritem->Geo->VertexBufferView());
+        m_commandList->IASetIndexBuffer(&Ritem->Geo->IndexBufferView());
+        m_commandList->IASetPrimitiveTopology(Ritem->PrimitiveType);
+
+        D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+        if (ObjCBIndex != -1) objCBAddress += ObjCBIndex * objCBByteSize;
+        m_commandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+
+        D3D12_GPU_VIRTUAL_ADDRESS skinnedCBAddress = skinnedCB->GetGPUVirtualAddress();
+        if (SkinCBIndex != -1) skinnedCBAddress += SkinCBIndex * skinnedCBByteSize;
+        m_commandList->SetGraphicsRootConstantBufferView(1, skinnedCBAddress);
+
+        if (Ritem->Mat != nullptr)
         {
-            auto ritem = ritem_iter.second;
+            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + Ritem->Mat->MatCBIndex * matCBByteSize;
+            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
 
-            m_commandList->IASetVertexBuffers(0, 1, &ritem->Geo->VertexBufferView());
-            m_commandList->IASetIndexBuffer(&ritem->Geo->IndexBufferView());
-            m_commandList->IASetPrimitiveTopology(ritem->PrimitiveType);
-
-            D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
-            if (obj->ObjCBIndex != -1) objCBAddress += obj->ObjCBIndex * objCBByteSize;
-            m_commandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-
-            D3D12_GPU_VIRTUAL_ADDRESS skinnedCBAddress = skinnedCB->GetGPUVirtualAddress();
-            if (obj->SkinCBIndex != -1) skinnedCBAddress += obj->SkinCBIndex * skinnedCBByteSize;
-            m_commandList->SetGraphicsRootConstantBufferView(1, skinnedCBAddress);
-
-            if (ritem->Mat != nullptr)
-            {
-                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ritem->Mat->MatCBIndex * matCBByteSize;
-                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
-
-                int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + ritem->Mat->DiffuseSrvHeapIndex;
-                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-                TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
-                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
-            }
-            else
-            {
-                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
-                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
-                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
-            }
-
-            m_commandList->DrawIndexedInstanced(ritem->IndexCount, 1, ritem->StartIndexLocation, ritem->BaseVertexLocation, 0);
+            int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + Ritem->Mat->DiffuseSrvHeapIndex;
+            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+            TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
+            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
         }
+        else
+        {
+            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
+            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+        }
+
+        m_commandList->DrawIndexedInstanced(Ritem->IndexCount, 1, Ritem->StartIndexLocation, Ritem->BaseVertexLocation, 0);
     }
 }
 
@@ -763,6 +800,14 @@ void ClientTest::DrawSceneToBackBuffer()
     auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
     DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
 
+    m_commandList->SetPipelineState(m_PSOs["transparent"].Get());
+    auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);
+    DrawObjRenderLayer(m_commandList.Get(), TransparencyObjRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["skinnedTransparent"].Get());
+    auto& SkinnedTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedTransparent);
+    DrawObjRenderLayer(m_commandList.Get(), SkinnedTransparencyObjRenderLayer);
+
     // UI render.
     DrawSceneToUI();
 }
@@ -772,9 +817,9 @@ void ClientTest::DrawSceneToUI()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-    m_commandList->SetPipelineState(m_PSOs["UI_opaque"].Get());
-    auto& UIOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UIOpaque);
-    DrawObjRenderLayer(m_commandList.Get(), UIOpaqueObjRenderLayer);
+    m_commandList->SetPipelineState(m_PSOs["UI"].Get());
+    auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UI);
+    DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
 }
 
 void ClientTest::DrawSceneToTexts(HWND hwnd)

@@ -34,23 +34,28 @@ struct PSInput
     float2 uv : TEXCOORD;
 };
 
-
+// Matrix multiply order for mesh transform:
+// LocalM * AnimM(BoneM) * WorldM (* ViewM * ProjM)
 PSInput VS(VSInput vin)
 {
     PSInput vout;
 
     float4 PosW = float4(vin.position, 1.0f);
     float3 NormalW = vin.normal;
+
+    PosW = mul(PosW, gLocal);
+    NormalW = mul(NormalW, (float3x3)gLocal);
+
 #ifdef SKINNED
     if (vin.boneids[0] >= 0)
     {
-        float4x4 boneTransform;
-        if (vin.boneids[0] >= 0) boneTransform  = vin.bone_weights[0] * gBoneTransform[vin.boneids[0]];
-        if (vin.boneids[1] >= 0) boneTransform += vin.bone_weights[1] * gBoneTransform[vin.boneids[1]];
-        if (vin.boneids[2] >= 0) boneTransform += vin.bone_weights[2] * gBoneTransform[vin.boneids[2]];
-        if (vin.boneids[3] >= 0) boneTransform += vin.bone_weights[3] * gBoneTransform[vin.boneids[3]];
-        PosW = mul(float4(vin.position, 1.0f), boneTransform);
-        NormalW = mul(NormalW, (float3x3)boneTransform);
+        float4x4 animTransform;
+        if (vin.boneids[0] >= 0) animTransform = vin.bone_weights[0] * gBoneTransform[vin.boneids[0]];
+        if (vin.boneids[1] >= 0) animTransform += vin.bone_weights[1] * gBoneTransform[vin.boneids[1]];
+        if (vin.boneids[2] >= 0) animTransform += vin.bone_weights[2] * gBoneTransform[vin.boneids[2]];
+        if (vin.boneids[3] >= 0) animTransform += vin.bone_weights[3] * gBoneTransform[vin.boneids[3]];
+        PosW = mul(float4(vin.position, 1.0f), animTransform);
+        NormalW = mul(NormalW, (float3x3)animTransform);
     }
 #endif
 
@@ -79,6 +84,14 @@ PSInput VS(VSInput vin)
 float4 PS(PSInput pin) : SV_TARGET
 {
     float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.uv) * gDiffuseAlbedo;
+    diffuseAlbedo.a = diffuseAlbedo.a * gTexAlpha;
+
+#ifdef ALPHA_TEST
+    // 텍스처 알파가 0.1보다 작으면 픽셀을 폐기한다.
+    // 이 판정을 최대한 일찍 수행하는 것이 바람직하다. 그러면 폐기 시
+    // 셰이더의 나머지 코드의 실행을 생략할 수 있으므로 효율적이다.
+    clip(diffuseAlbedo.a - 0.01f);
+#endif
 
     // 법선을 보간하면 단위 길이가 아니게 될 수 있으므로 다시 정규화한다.
     pin.NormalW = normalize(pin.NormalW);

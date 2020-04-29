@@ -136,6 +136,7 @@ void LoginScene::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index)
 
         m_Materials[mat->Name] = std::move(mat);
     }
+
     m_nMatCB = (UINT)m_Materials.size();
 }
 
@@ -155,24 +156,25 @@ void LoginScene::BuildRenderItems()
 
 void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
 {
-    for (auto& geo_iter : m_Geometries)
+    ObjectManager objManager;
+    const UINT maxUIObject = (UINT)m_AllRitems.size();
+    for (auto& Ritem_iter : m_AllRitems)
     {
-        if (geo_iter.first == "LoginSceneUIGeo")
+        auto Ritem = Ritem_iter.second.get();
+        if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = std::make_unique<Object>();
-            newObj->m_Type = ObjectType::UI;
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->Activated = true;
+            auto newObj = objManager.FindDeactiveUIObject(m_AllObjects, m_UIObjects, maxUIObject);            
+            newObj->m_Name = Ritem_iter.first;
+            newObj->m_RenderItem = Ritem;
+            newObj->m_ObjectInfo = std::make_unique<ObjectInfo>();
+            newObj->m_ObjectInfo->ObjCBIndex = objCB_index++;
+            newObj->m_ObjectInfo->m_Bound = Ritem->Geo->DrawArgs[Ritem_iter.first].Bounds;
 
-            m_ObjRenderLayer[(int)RenderLayer::UIOpaque].push_back(newObj.get());
-            m_UIObjects.push_back(newObj.get());
-            m_AllObjects.push_back(std::move(newObj));
+            m_ObjRenderLayer[(int)RenderLayer::UI].push_back(newObj);
         }
     }
+    m_nObjCB = (UINT)m_UIObjects.size();
     m_nSKinnedCB = 0;
-    m_nObjCB = 0;
 }
 
 void LoginScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)

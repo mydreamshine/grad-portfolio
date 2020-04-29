@@ -149,6 +149,7 @@ struct SubmeshGeometry
     // Bounding box of the geometry defined by this submesh. 
     // This is used in later chapters of the book.
 	DirectX::BoundingBox Bounds;
+    int ParentBoneID = -1;
 };
 
 struct MeshGeometry

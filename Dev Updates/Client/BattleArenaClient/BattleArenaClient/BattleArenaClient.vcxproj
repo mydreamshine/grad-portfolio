@@ -183,6 +183,7 @@
     <ClCompile Include="Main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Object.cpp" />
     <ClCompile Include="PlayGameScene.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -196,6 +197,8 @@
     <ClInclude Include="ClientTest.h" />
     <ClInclude Include="Common\FileLoader\DDSLoader.h" />
     <ClInclude Include="Common\FileLoader\ModelLoader.h" />
+    <ClInclude Include="Common\FileLoader\PngLoader.h" />
+    <ClInclude Include="Common\FileLoader\SpriteFontLoader.h" />
     <ClInclude Include="Common\FileLoader\TextureLoader.h" />
     <ClInclude Include="Common\FileLoader\TgaLoader.h" />
     <ClInclude Include="Common\Timer\Timer.h" />

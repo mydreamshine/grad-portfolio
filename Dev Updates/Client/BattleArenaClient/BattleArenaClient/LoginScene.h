@@ -32,7 +32,7 @@ public:
     virtual void UpdateShadowTransform(CTimer& gt);
     virtual void AnimateLights(CTimer& gt) {}
     virtual void AnimateSkeletons(CTimer& gt) {}
-    virtual void AnimateCameras(CTimer& gt) {};
+    virtual void AnimateCameras(CTimer& gt) {}
 
 public:
     virtual void ProcessInput(CTimer& gt) {}

@@ -4,6 +4,7 @@
 #include <vector>
 #include "../FileLoader/TgaLoader.h"
 #include "../FileLoader/DDSLoader.h"
+#include "../FileLoader/PngLoader.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // texture 파일 경로가 절대경로여서 texture 파일은 따로 불러와야 한다.
@@ -69,11 +70,15 @@ public:
             mTextureData.BytesPerPixel = 4;
             return true;
         }
-        //else if (wcscmp(_Ext, L".png") == 0)
-        //{
-        //    // process png
-        //}
-        //else if (wcscmp(_Ext, L".bmp") == 0)
+        else if (strcmp(_Ext, ".png") == 0)
+        {
+            PNG pngLoader(filepath);
+            pngLoader.MovePixels(mTextureData.Pixels);
+            mTextureData.Width = pngLoader.GetWidth();
+            mTextureData.Height = pngLoader.GetHeight();
+            mTextureData.BytesPerPixel = 4;
+        }
+        //else if (strcmp(_Ext, ".bmp") == 0)
         //{
         //    // process bmp
         //}

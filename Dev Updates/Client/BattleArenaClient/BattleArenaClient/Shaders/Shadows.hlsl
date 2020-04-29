@@ -21,15 +21,18 @@ PSInput VS(VSInput vin)
     PSInput vout = (PSInput)0.0f;
 
     float4 PosW = float4(vin.position, 1.0f);
+
+    PosW = mul(PosW, gLocal);
+
 #ifdef SKINNED
     if (vin.boneids[0] >= 0)
     {
-        float4x4 boneTransform;
-        if (vin.boneids[0] >= 0) boneTransform = vin.bone_weights[0] * gBoneTransform[vin.boneids[0]];
-        if (vin.boneids[1] >= 0) boneTransform += vin.bone_weights[1] * gBoneTransform[vin.boneids[1]];
-        if (vin.boneids[2] >= 0) boneTransform += vin.bone_weights[2] * gBoneTransform[vin.boneids[2]];
-        if (vin.boneids[3] >= 0) boneTransform += vin.bone_weights[3] * gBoneTransform[vin.boneids[3]];
-        PosW = mul(float4(vin.position, 1.0f), boneTransform);
+        float4x4 animTransform;
+        if (vin.boneids[0] >= 0) animTransform = vin.bone_weights[0] * gBoneTransform[vin.boneids[0]];
+        if (vin.boneids[1] >= 0) animTransform += vin.bone_weights[1] * gBoneTransform[vin.boneids[1]];
+        if (vin.boneids[2] >= 0) animTransform += vin.bone_weights[2] * gBoneTransform[vin.boneids[2]];
+        if (vin.boneids[3] >= 0) animTransform += vin.bone_weights[3] * gBoneTransform[vin.boneids[3]];
+        PosW = mul(float4(vin.position, 1.0f), animTransform);
     }
 #endif
 

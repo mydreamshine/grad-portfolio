@@ -30,12 +30,21 @@ namespace aiModelData
 		std::string mName;
 		std::vector<aiVertex> mVertices;
 		std::vector<std::uint32_t> mIndices;
+		aiAABB mAABB;
+		int mParentBoneIndex = -1;
+
 		aiModelData::aiMesh() = default;
-		aiModelData::aiMesh(const std::string& Name, const std::vector<aiVertex>& Vertices, const std::vector<std::uint32_t>& Indices)
+		aiModelData::aiMesh(
+			const std::string& Name,
+			const std::vector<aiVertex>& Vertices, const std::vector<std::uint32_t>& Indices,
+			const aiAABB& AABB,
+			const int& ParentBoneIndex)
 		{
 			mName = Name;
 			mVertices = Vertices;
 			mIndices = Indices;
+			mAABB = AABB;
+			mParentBoneIndex = ParentBoneIndex;
 		}
 	};
 
@@ -43,6 +52,7 @@ namespace aiModelData
 	{
 		std::string CurrPlayingAnimName;
 		std::vector<aiMatrix4x4> CurrAnimJointTransforms;
+		std::vector<aiMatrix4x4> OffsetJointTransforms;
 		float CurrAnimTimePos = 0.0f;
 		bool CurrAnimIsLoop = false;
 		bool CurrAnimIsStop = true;
@@ -52,6 +62,7 @@ namespace aiModelData
 		{
 			CurrPlayingAnimName.clear();
 			CurrAnimJointTransforms.clear();
+			OffsetJointTransforms.clear();
 			CurrAnimTimePos = 0.0f;
 			CurrAnimIsLoop = false;
 			CurrAnimIsStop = true;
@@ -257,8 +268,10 @@ namespace aiModelData
 			bool IsLoop = Anim_info.CurrAnimIsLoop;
 			float& TimePos = Anim_info.CurrAnimTimePos;
 			auto& AnimTransforms = Anim_info.CurrAnimJointTransforms;
+			auto& OffsetTransforms = Anim_info.OffsetJointTransforms;
 
 			if (AnimTransforms.size() < mJoints.size()) AnimTransforms.resize(mJoints.size());
+			if (OffsetTransforms.size() < mJoints.size()) OffsetTransforms.resize(mJoints.size());
 
 			bool CalculatedAnimationTime = false;
 			float animationTime = TimePos;
@@ -285,33 +298,65 @@ namespace aiModelData
 				if (ParentIndex == -1) continue;
 				AnimTransforms[i] = GlobalTransforms[ParentIndex] * LocalTransforms[i];
 			}
+			// Offset 적용은 AnimInfo외부에서 따로 해준다.
 			for (size_t i = 0; i < mJoints.size(); ++i)
-				AnimTransforms[i] *= mJoints[i].mOffsetTransform;
+				OffsetTransforms[i] = mJoints[i].mOffsetTransform;
 		}
 	};
+}
+
+// 1m 기준 비례 단위
+// ModelLoader에 Import할 때
+// FileUnit에 따라 컨버팅을 하려 했으나
+// 단순히 Vertex의 Position만 유닛변환을 하면
+// 회전이 변환된 Vertex에 제대로 적용이 안된다.
+// Quarternion에서의 유닛변환도 해줘야 하는 것으로 추측.
+// Quarternion의 유닛변환은 구현하기가 어려우므로
+// 단순히 해당 메쉬를 취하는 오브젝트의 트랜스폼 스케일값을 변경하기로 결정.
+namespace ModelFineUnit
+{
+	constexpr float meter = 1.0f;
+	constexpr float centimeter = 0.01f;
+	constexpr float inch = 0.0254f;
 }
 
 class ModelLoader
 {
 private:
 	Assimp::Importer mImporter;
+	float mImportUnit = 1.0f;
+
 	const aiScene* loadScene(std::string filepath);
+
 public:
 	std::vector<aiModelData::aiMesh> mMeshes;
 	std::unique_ptr<aiModelData::aiSkeleton> mSkeleton = nullptr;
 
 public:
-	bool loadMeshAndSkeleton(std::string filepath);
+	bool loadMeshAndSkeleton(std::string filepath, std::vector<std::string>* execpt_nodes = nullptr);
 	bool loadAnimation(std::string filepath);
 
 private:
-	void processNode(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix);
+	void processNode(
+		aiNode* node, const aiScene* scene,
+		aiMatrix4x4 matrix,
+		std::vector<std::string>* execpt_nodes = nullptr);
 	aiModelData::aiMesh processMesh(aiMesh* mesh, const aiScene* scene, aiMatrix4x4 matrix, aiNode* parentNode = nullptr);
-	void processBoneWeights(std::vector<aiModelData::aiVertex>& pOut, aiBone** Bones_intoMesh, unsigned int numBone, aiMatrix4x4 BindPose);
+	void processBoneWeights(
+		std::vector<aiModelData::aiVertex>& pOut,
+		aiBone** Bones_intoMesh, unsigned int numBone,
+		aiMatrix4x4 BindPose);
 
 private:
-	void generateSkeleton(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, const std::string& name);
+	void generateSkeleton(
+		aiNode* node, const aiScene* scene,
+		aiMatrix4x4 matrix,
+		const std::string& name,
+		std::vector<std::string>* execpt_nodes = nullptr);
 	void getAnimation_0(const aiScene* scene, const std::string& anim_name);
+
+private:
+	bool execptNodeProcessing(aiNode* node, const std::vector<std::string>& execpt_nodes);
 
 };
 

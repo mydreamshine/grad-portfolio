@@ -13,60 +13,45 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
         BackBufferFormat,
         matCB_index, diffuseSrvHeap_Index, objCB_index, skinnedCB_index);
 
-    // Estimate the scene bounding sphere manually since we know how the scene was constructed.
-    // The grid is the "widest object" with a width of 500 and depth of 500.0f, and centered at
-    // the world space origin.  In general, you need to loop over every world space vertex
-    // position and compute the bounding sphere.
-    m_SceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
-    m_SceneBounds.Radius = sqrtf(250.0f * 250.0f + 250.0f * 250.0f);
+    m_SpawnBound.Center = m_WorldCenter;
+    m_SpawnBound.Extents.x = 1355.4405f;
+    m_SpawnBound.Extents.z = 1243.2412f;
 }
 
 void PlayGameScene::OnInitProperties()
 {
-    for (auto& obj : m_SkinnedObjects)
+    for (auto& obj : m_CharacterObjects)
     {
         if (obj->m_Name == "Meshtint Free Knight")
         {
-            obj->NumObjectCBDirty = gNumFrameResources;
+            auto objInfo = obj->m_ObjectInfo.get();
+            objInfo->NumObjectCBDirty = gNumFrameResources;
             XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
-            obj->m_TexTransform = MathHelper::Identity4x4();
-            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
-            obj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-        }
-        else if (obj->m_Name == "TT_RTS_Demo_Character")
-        {
-            obj->NumObjectCBDirty = gNumFrameResources;
-            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
-            obj->m_TexTransform = MathHelper::Identity4x4();
-            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
-            obj->m_AnimInfo->AnimPlay("infantry_01_idle");
-        }
-        else if (obj->m_Name == "claire@Dancing")
-        {
-            obj->NumObjectCBDirty = gNumFrameResources;
-            XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
-            obj->m_TexTransform = MathHelper::Identity4x4();
-            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
-            obj->m_AnimInfo->AnimPlay("claire@Dancing");
-        }
-        else if (obj->m_Name == "Soldier_demo")
-        {
-            obj->NumObjectCBDirty = gNumFrameResources;
-            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(obj->m_WorldTransform), PosM);
-            obj->m_TexTransform = MathHelper::Identity4x4();
-            obj->m_AnimInfo->AnimStop(obj->m_AnimInfo->CurrPlayingAnimName);
-            obj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
+            XMStoreFloat4x4(&(objInfo->m_WorldTransform), PosM);
+            objInfo->m_TexTransform = MathHelper::Identity4x4();
+
+            auto skeletonInfo = obj->m_SkeletonInfo.get();
+            skeletonInfo->m_AnimInfo->AnimStop(skeletonInfo->m_AnimInfo->CurrPlayingAnimName);
+            skeletonInfo->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
         }
         else
         {
             ObjectManager objManager;
+            if (obj->m_Name.find("Instancing") != std::string::npos)
+            {
+                for (auto& attachedObj : obj->m_Childs)
+                    objManager.DeActivateObj(attachedObj);
+            }
             objManager.DeActivateObj(obj);
         }
     }
+
+    ///////////// alphaTest /////////////
+    {
+        for (auto& obj : m_UIObjects)
+            obj->m_ObjectInfo->m_TexAlpha = 1.0f;
+    }
+    /////////////////////////////////////
 
     XMFLOAT3 EyePosition = { 0.0f, 300.0f, -500.0f };
     XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
@@ -113,9 +98,8 @@ void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsComma
     m_Geometries["PlayGameSceneUIGeo"]
         = std::move(Scene::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UI_Meshes));
 
-
     std::unordered_map<std::string, GeometryGenerator::MeshData> Geo_Meshs;
-    Geo_Meshs["ground_grid"] = geoGen.CreateGrid(500.0f, 500.0f, 50, 50);
+    Geo_Meshs["ground_grid"] = geoGen.CreateGrid(10000.0f, 10000.0f, 100, 100);
 
     m_Geometries["GamePlayGround"]
         = std::move(Scene::BuildMeshGeometry(device, commandList, "GamePlayGround", Geo_Meshs));
@@ -124,32 +108,34 @@ void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsComma
 void PlayGameScene::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 {
     ModelLoader model_loader;
-    std::string mesh_path = "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
-    std::vector<std::string> anim_paths = { "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx" };
+
+    std::string mesh_path = "Models/Environment/Environment.fbx";
+    std::vector<std::string> anim_paths;
+    std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
+    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
+
+    mesh_path = "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
+    anim_paths = { "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx" };
     LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
 
-    mesh_path = "Models/ToonyTinyPeople/TT_RTS_Demo_Character.fbx";
-    anim_paths = { "Models/ToonyTinyPeople/Animations/infantry_01_idle.fbx" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    mesh_path = "Models/Meshtint Free Knight/Meshes/Shield.fbx";
+    anim_paths.clear();
+    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
+    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
 
-    mesh_path = "Models/claire@Dancing.fbx";
-    anim_paths = { "Models/claire@Dancing.fbx" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-
-    mesh_path = "Models/Soldier_demo/Soldier_demo.fbx";
-    anim_paths = { "Models/Soldier_demo/Animations/demo_mixamo_idle.fbx" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    mesh_path = "Models/Meshtint Free Knight/Meshes/Sword.fbx";
+    anim_paths.clear();
+    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
+    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
 }
 
 void PlayGameScene::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat)
 {
     std::vector<std::string> material_filepaths =
     {
+        "Models/Environment/Materials/TextureWorld.png",
         "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga",
-        "Models/ToonyTinyPeople/Materials/TT_RTS_Units_blue.tga",
-        "Models/Soldier_demo/Materials/demo_soldier_512.tga",
-        "Models/Soldier_demo/Materials/demo_weapon.tga",
-        "UI/ui_test.tga"
+        "UI/ui_test.png"
     };
 
     for (auto& texture_path : material_filepaths)
@@ -283,30 +269,25 @@ void PlayGameScene::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index)
 
 void PlayGameScene::BuildRenderItems()
 {
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["GamePlayGround"].get());
+    for (auto& subMesh : m_Geometries["GamePlayGround"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
+
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Environment"].get());
+    for (auto& subMesh : m_Geometries["Environment"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["TextureWorld"].get();
+
     Scene::BuildRenderItem(m_AllRitems, m_Geometries["Meshtint Free Knight"].get());
     for (auto& subMesh : m_Geometries["Meshtint Free Knight"]->DrawArgs)
         m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
 
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["TT_RTS_Demo_Character"].get());
-    for (auto& subMesh : m_Geometries["TT_RTS_Demo_Character"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["TT_RTS_Units_blue"].get();
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Shield"].get());
+    for (auto& subMesh : m_Geometries["Shield"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
 
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["claire@Dancing"].get());
-    for (auto& subMesh : m_Geometries["claire@Dancing"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Soldier_demo"].get());
-    for (auto& subMesh : m_Geometries["Soldier_demo"]->DrawArgs)
-    {
-        if (subMesh.first == "Soldier_mesh_0")
-            m_AllRitems[subMesh.first]->Mat = m_Materials["demo_weapon"].get();
-        else
-            m_AllRitems[subMesh.first]->Mat = m_Materials["demo_soldier_512"].get();
-    }
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["GamePlayGround"].get());
-    for(auto& subMesh : m_Geometries["GamePlayGround"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
+    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Sword"].get());
+    for (auto& subMesh : m_Geometries["Sword"]->DrawArgs)
+        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
 
     Scene::BuildRenderItem(m_AllRitems, m_Geometries["PlayGameSceneUIGeo"].get());
     for (auto& subMesh : m_Geometries["PlayGameSceneUIGeo"]->DrawArgs)
@@ -317,217 +298,226 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
 {
     ObjectManager objManager;
 
-    for (auto& geo_iter : m_Geometries)
+    for (auto& Ritem_iter : m_AllRitems)
     {
-        if (geo_iter.first == "Meshtint Free Knight")
+        auto Ritem = Ritem_iter.second.get();
+        if (Ritem_iter.first == "Meshtint Free Knight")
         {
-            auto newObj = objManager.GenerateSkinnedObject(
-                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-                m_MaxSkinnedObject, m_MaxWorldObject);
+            auto newObj = objManager.CreateCharacterObject(
+                objCB_index++, skinnedCB_index++,
+                m_AllObjects,
+                m_CharacterObjects, m_MaxCharacterObject,
+                m_WorldObjects, m_MaxWorldObject);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
 
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->NumObjectCBDirty = gNumFrameResources;
+            std::string objName = Ritem_iter.first;
 
-            newObj->m_Type = ObjectType::CharacterGeo;
-            XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
-            newObj->ObjCBIndex = objCB_index++;
-            newObj->m_Skeleton = m_ModelSkeltons["Meshtint Free Knight"].get();
-            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
-            newObj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            newObj->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
-            newObj->SkinCBIndex = skinnedCB_index++;
+            // 스케일을 2로 늘려줘야 거시적으로
+            // 주변 사물과의 크기 비례가 어색하지 않게 된다.
+            float ConvertModelUnit = /*ModelFineUnit::centimeter * 2.0f*/ 2.0f;
+            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+            XMFLOAT3 WorldPosition = { 17.86f, 0.0f, 0.0f };
+            objManager.SetObjectComponent(newObj, objName, Ritem,
+                m_ModelSkeltons["Meshtint Free Knight"].get(),
+                nullptr, nullptr, nullptr,
+                &WorldScale, &WorldRotationEuler, &WorldPosition);
+            newObj->m_SkeletonInfo->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
+            newObj->m_SkeletonInfo->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
 
+            m_MainPlayerObj = newObj;
+        }
+        else if(Ritem_iter.first.find("UI") != std::string::npos)
+        {
+            const UINT maxUIObject = (UINT)m_Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
+            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
+            m_ObjRenderLayer[(int)RenderLayer::UI].push_back(newObj);
+
+            // UI 오브젝트 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
+            // 이미 버텍스 자체가 스크린좌표계 기준으로 지정되어 있기 때문에
+            // UI 오브젝트의 Transform에 대해선 따로 지정하지 않아도 된다.
+            std::string objName = Ritem_iter.first;
+            objManager.SetObjectComponent(newObj, objName, Ritem);
+        }
+        else // Environment Objects + Equipment Object
+        {
+            auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+            m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
+
+            std::string objName = Ritem_iter.first;
+
+            // 장비 아이템은 어차피 캐릭터 오브젝트에
+            // Attaching 할 거라 WorldTransform을 지정하지 않아도 된다.
+            if (objName == "Sword" || objName == "Shield")
+            {
+                XMFLOAT3 ModelLocalScale = { 1.0f, 1.0f, 1.0f };
+                if (objName == "Sword")
+                {
+                    XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
+                    XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
+                    objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
+                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+                    objManager.SetAttaching(newObj, m_MainPlayerObj, "RigRPalm");
+                }
+                else if (objName == "Shield")
+                {
+                    XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
+                    XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
+                    objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
+                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+                    objManager.SetAttaching(newObj, m_MainPlayerObj, "RigLPalm");
+                }
+            }
+            else if (objName == "ground_grid")
+            {
+                XMFLOAT3 WorldPosition = { 0.0f, 3.0f, 0.0f };
+                objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
+                    nullptr, nullptr, nullptr,
+                    nullptr, nullptr, &WorldPosition);
+            }
+            else // Environment Object
+            {
+                // 환경 사물 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
+                // 이미 파일 자체에서 메쉬가 배치되어 있는 상태라서
+                // 환경 사물의 Transform에 대해선 따로 지정하지 않아도 된다.
+                objManager.SetObjectComponent(newObj, objName, Ritem);
+
+                if(objName == "Floor1")
+                {
+                    auto& FloorBound = newObj->m_ObjectInfo->m_Bound;
+                    float width = FloorBound.Extents.x;
+                    float depth = FloorBound.Extents.z;
+
+                    m_SceneBounds.Center = m_WorldCenter = FloorBound.Center;
+                    // m_SceneBounds.Radius에 비례해서 ShadowMap이 맵핑되다보니
+                    // ShadowMap의 해상도보다 m_SceneBounds.Radius가 크면
+                    // BackBuffer에 맵핑되는 그림자의 해상도가 상대적으로 떨어지게 된다.
+                    m_SceneBounds.Radius = (float)SIZE_ShadowMap*2;
+                }
+            }
+        }
+    }
+
+    // Create DeActive Objects
+    {
+        // SkinnedCB를 지닌(Skeleton이 있는) 오브젝트를 생성하면
+        // SkinnedCB뿐만 아니라 ObjCB도(WorldObject도) 잡히기 때문에
+        // WorldObject보다 적은 SkinnedObject를 먼저 생성해준다.
+        const UINT nDeAcativateCharacterObj = m_MaxCharacterObject - (UINT)m_CharacterObjects.size();
+        for (UINT i = 0; i < nDeAcativateCharacterObj; ++i)
+        {
+            auto newObj = objManager.CreateCharacterObject(
+                objCB_index++, skinnedCB_index++,
+                m_AllObjects,
+                m_CharacterObjects, m_MaxCharacterObject,
+                m_WorldObjects, m_MaxWorldObject);
+            // CreateCharacterObject내부적으로 FindDeactiveCharacterObject()를 통해
+            // 새로운 오브젝트를 만들게 되는데
+            // 이때 FindDeactiveCharacterObject()는
+            // 현재 오브젝트 리스트 중에서 Active가 false인 오브젝트를 먼저 찾아서 반환하기 때문에
+            // 이처럼 한꺼번에 많은 오브젝트를 만들 경우에는
+            // 각 오브젝트의 Activate 여부를 오브젝트들을 다 만들고 나서 결정해줘야 한다.
+            //newObj->Activated = false;
             m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
         }
-        else if (geo_iter.first == "TT_RTS_Demo_Character")
+
+        const UINT nDeAcativateWorldObj = m_MaxWorldObject - (UINT)m_WorldObjects.size();
+        for (UINT i = 0; i < nDeAcativateWorldObj; ++i)
         {
-            auto newObj = objManager.GenerateSkinnedObject(
-                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-                m_MaxSkinnedObject, m_MaxWorldObject);
-
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->NumObjectCBDirty = gNumFrameResources;
-
-            newObj->m_Type = ObjectType::CharacterGeo;
-            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, -100.0f);
-            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
-            newObj->ObjCBIndex = objCB_index++;
-            newObj->m_Skeleton = m_ModelSkeltons["TT_RTS_Demo_Character"].get();
-            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
-            newObj->m_AnimInfo->AnimPlay("infantry_01_idle");
-            newObj->m_AnimInfo->AnimLoop("infantry_01_idle");
-            newObj->SkinCBIndex = skinnedCB_index++;
-
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
-        }
-        else if (geo_iter.first == "claire@Dancing")
-        {
-            auto newObj = objManager.GenerateSkinnedObject(
-                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-                m_MaxSkinnedObject, m_MaxWorldObject);
-
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->NumObjectCBDirty = gNumFrameResources;
-
-            newObj->m_Type = ObjectType::CharacterGeo;
-            XMMATRIX PosM = XMMatrixTranslation(-100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
-            newObj->ObjCBIndex = objCB_index++;
-            newObj->m_Skeleton = m_ModelSkeltons["claire@Dancing"].get();
-            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
-            newObj->m_AnimInfo->AnimPlay("claire@Dancing");
-            newObj->m_AnimInfo->AnimLoop("claire@Dancing");
-            newObj->SkinCBIndex = skinnedCB_index++;
-
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
-        }
-        else if (geo_iter.first == "Soldier_demo")
-        {
-            auto newObj = objManager.GenerateSkinnedObject(
-                m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-                m_MaxSkinnedObject, m_MaxWorldObject);
-
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->NumObjectCBDirty = gNumFrameResources;
-
-            newObj->m_Type = ObjectType::CharacterGeo;
-            XMMATRIX PosM = XMMatrixTranslation(100.0f, 0.0f, 100.0f);
-            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
-            newObj->ObjCBIndex = objCB_index++;
-            newObj->m_Skeleton = m_ModelSkeltons["Soldier_demo"].get();
-            newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
-            newObj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
-            newObj->m_AnimInfo->AnimLoop("demo_mixamo_idle");
-            newObj->SkinCBIndex = skinnedCB_index++;
-
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
-        }
-        else if (geo_iter.first == "GamePlayGround")
-        {
-            auto newObj = objManager.GenerateWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->NumObjectCBDirty = gNumFrameResources;
-
-            newObj->m_Type = ObjectType::LandGeo;
-            XMMATRIX PosM = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-            XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
-            newObj->ObjCBIndex = objCB_index++;
-
+            auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
             m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
         }
-        else if (geo_iter.first == "PlayGameSceneUIGeo")
-        {
-            auto newObj = std::make_unique<Object>();
-            newObj->m_Type = ObjectType::UI;
-            newObj->m_Name = geo_iter.first;
-            for (auto& subMesh_iter : geo_iter.second->DrawArgs)
-                newObj->m_RenderItems[subMesh_iter.first] = m_AllRitems[subMesh_iter.first].get();
-            newObj->Activated = true;
 
-            m_ObjRenderLayer[(int)RenderLayer::UIOpaque].push_back(newObj.get());
-            m_UIObjects.push_back(newObj.get());
-            m_AllObjects.push_back(std::move(newObj));
-        }
+        for (UINT i = m_MaxCharacterObject - nDeAcativateCharacterObj; i < m_MaxCharacterObject; ++i)
+            m_CharacterObjects[i]->Activated = false;
+        for (UINT i = m_MaxWorldObject - nDeAcativateWorldObj; i < m_MaxWorldObject; ++i)
+            m_WorldObjects[i]->Activated = false;
     }
 
-    const UINT nDeAcativateSkinnedCB = m_MaxSkinnedObject - (UINT)m_SkinnedObjects.size();
-    // SkinnedCB를 지닌(Skeleton이 있는) 오브젝트를 생성하면
-    // SkinnedCB뿐만 아니라 ObjCB도(WorldObject도) 잡히기 때문에
-    // WorldObject보다 적은 SkinnedObject를 먼저 생성해준다.
-    for (UINT i = 0; i < nDeAcativateSkinnedCB; ++i)
-    {
-        auto newObj = objManager.GenerateSkinnedObject(
-            m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-            m_MaxSkinnedObject, m_MaxWorldObject);
-
-        newObj->NumObjectCBDirty = 0;
-        newObj->m_Type = ObjectType::CharacterGeo;
-        newObj->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
-        newObj->ObjCBIndex = objCB_index++;
-        newObj->SkinCBIndex = skinnedCB_index++;
-
-        m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
-    }
-
-    const UINT nDeActivateObjCB = m_MaxWorldObject - (UINT)m_WorldObjects.size();
-    for (UINT i = 0; i < nDeActivateObjCB; ++i)
-    {
-        auto newObj = objManager.GenerateWorldObject(
-            m_AllObjects, m_WorldObjects,
-            m_MaxWorldObject);
-
-        newObj->NumObjectCBDirty = 0;
-        newObj->ObjCBIndex = objCB_index++;
-
-        m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
-    }
-
-    for (UINT i = m_MaxSkinnedObject - nDeAcativateSkinnedCB; i < m_MaxSkinnedObject; ++i)
-        m_SkinnedObjects[i]->Activated = false;
-    for (UINT i = m_MaxWorldObject - nDeActivateObjCB; i < m_MaxWorldObject; ++i)
-        m_WorldObjects[i]->Activated = false;
-
-    m_nObjCB = (UINT)m_WorldObjects.size();
-    m_nSKinnedCB = (UINT)m_SkinnedObjects.size();
+    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
+    m_nSKinnedCB = (UINT)m_CharacterObjects.size();
 }
 
-void PlayGameScene::RandomCreateSkinnedObject()
+// character & equipment object generate test
+void PlayGameScene::RandomCreateCharacterObject()
 {
     ObjectManager objManager;
-    auto newObj = objManager.GenerateSkinnedObject(
-        m_AllObjects, m_SkinnedObjects, m_WorldObjects,
-        m_MaxSkinnedObject, m_MaxWorldObject);
-
-    if (newObj == nullptr) return;
-
-    int rand_i = MathHelper::Rand(0, 3);
-    static int CreateNum = 0;
-
-    std::string objName = m_SkinnedObjects[rand_i]->m_Name;
-    newObj->m_Name = objName + std::to_string(++CreateNum);
-    newObj->m_RenderItems = m_SkinnedObjects[rand_i]->m_RenderItems;
-    newObj->NumObjectCBDirty = gNumFrameResources;
-    newObj->m_Skeleton = m_SkinnedObjects[rand_i]->m_Skeleton;
-    if (objName.find("Meshtint Free Knight") != std::string::npos)
+    Object* newCharacterObj = nullptr;
+    static int CharacterCreatingNum = 1;
+    // character gen test
     {
-        newObj->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-        newObj->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
-    }
-    else if (objName.find("TT_RTS_Demo_Character") != std::string::npos)
-    {
-        newObj->m_AnimInfo->AnimPlay("infantry_01_idle");
-        newObj->m_AnimInfo->AnimLoop("infantry_01_idle");
-    }
-    else if (objName.find("claire@Dancing") != std::string::npos)
-    {
-        newObj->m_AnimInfo->AnimPlay("claire@Dancing");
-        newObj->m_AnimInfo->AnimLoop("claire@Dancing");
-    }
-    else if (objName.find("Soldier_demo") != std::string::npos)
-    {
-        newObj->m_AnimInfo->AnimPlay("demo_mixamo_idle");
-        newObj->m_AnimInfo->AnimLoop("demo_mixamo_idle");
+        newCharacterObj = objManager.FindDeactiveCharacterObject(
+            m_AllObjects,
+            m_CharacterObjects, m_MaxCharacterObject,
+            m_WorldObjects, m_MaxWorldObject);
+
+        if (newCharacterObj == nullptr)
+        {
+            MessageBox(NULL, L"No characters available in the character list.", L"Object Generate Warning", MB_OK);
+            return;
+        }
+
+        // 스케일을 2로 늘려줘야 거시적으로
+        // 주변 사물과의 크기 비례가 어색하지 않게 된다.
+        float ConvertModelUnit = /*ModelFineUnit::centimeter * 2.0f*/ 2.0f;
+        XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+        XMFLOAT3 WorldRotationEuler = { 0.0f, MathHelper::RandF(0.0f, 360.0f), 0.0f };
+        XMFLOAT3 WorldPosition =
+        {
+            MathHelper::RandF(-m_SpawnBound.Extents.x, m_SpawnBound.Extents.x),
+            0.0f,
+            MathHelper::RandF(-m_SpawnBound.Extents.z, m_SpawnBound.Extents.z),
+        };
+        std::string objName = "Meshtint Free Knight - Instancing" + std::to_string(CharacterCreatingNum++);
+        objManager.SetObjectComponent(newCharacterObj, objName,
+            m_AllRitems["Meshtint Free Knight"].get(),
+            m_ModelSkeltons["Meshtint Free Knight"].get(),
+            nullptr, nullptr, nullptr,
+            &WorldScale, &WorldRotationEuler, &WorldPosition);
+        newCharacterObj->m_SkeletonInfo->m_AnimInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
+        newCharacterObj->m_SkeletonInfo->m_AnimInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
     }
 
-    float x, y, z;
-    x = -200.0f + MathHelper::RandF() * 400.0f;
-    y = 0;
-    z = -200.0f + MathHelper::RandF() * 400.0f;
+    // equipment gen test
+    {
+        static int EquipmentCreatingNum = 1;
+        XMFLOAT3 ModelLocalScale = { 1.0f, 1.0f, 1.0f };
+        // Attaching Sword
+        {
+            auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+            if (newEquipmentObj == nullptr)
+            {
+                MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+                return;
+            }
 
-    XMMATRIX PosM = XMMatrixTranslation(x, y, z);
-    XMStoreFloat4x4(&(newObj->m_WorldTransform), PosM);
+            XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
+            XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
+            std::string objName = "Sword - Instancing" + std::to_string(EquipmentCreatingNum);
+            objManager.SetObjectComponent(newEquipmentObj, objName,
+                m_AllRitems["Sword"].get(), nullptr,
+                &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+            objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigRPalm");
+        }
+
+        // Attaching Shield
+        {
+            auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+            if (newEquipmentObj == nullptr)
+            {
+                MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+                return;
+            }
+
+            XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
+            XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
+            std::string objName = "Shield - Instancing" + std::to_string(EquipmentCreatingNum++);
+            objManager.SetObjectComponent(newEquipmentObj, objName,
+                m_AllRitems["Shield"].get(), nullptr,
+                &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+            objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigLPalm");
+        }
+    }
 }
 
 std::vector<UINT8> PlayGameScene::GenerateTextureData()
@@ -568,6 +558,17 @@ std::vector<UINT8> PlayGameScene::GenerateTextureData()
 
 void PlayGameScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 {
+    /////////////////////////////////////////////// alphaTest ///////////////////////////////////////////////
+    static float sign = -1.0f;
+    for (auto& obj : m_UIObjects)
+    {
+        obj->m_ObjectInfo->NumObjectCBDirty = gNumFrameResources;
+        float& TexAlpha = obj->m_ObjectInfo->m_TexAlpha;
+        TexAlpha += 0.01f * sign;
+        sign = (TexAlpha < 0.0f || TexAlpha > 1.0f) ? sign * -1.0f : sign;
+        TexAlpha = (TexAlpha < 0.0f ? 0.0f : (TexAlpha > 1.0f ? 1.0f : TexAlpha));
+    }
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     Scene::UpdateObjectCBs(objCB, gt);
 }
 
@@ -598,7 +599,8 @@ void PlayGameScene::UpdateShadowTransform(CTimer& gt)
 
 void PlayGameScene::AnimateLights(CTimer& gt)
 {
-    m_LightRotationAngle += 1.0f * gt.GetTimeElapsed();
+    float deg2rad = MathHelper::Pi / 180.0f;
+    m_LightRotationAngle += (10.0f * deg2rad) * gt.GetTimeElapsed();
 
     XMMATRIX R = XMMatrixRotationY(m_LightRotationAngle);
     for (int i = 0; i < 3; ++i)
@@ -611,26 +613,84 @@ void PlayGameScene::AnimateLights(CTimer& gt)
 
 void PlayGameScene::AnimateSkeletons(CTimer& gt)
 {
-    for (auto& obj : m_SkinnedObjects)
+    for (auto& obj : m_CharacterObjects)
     {
-        std::string& AnimName = obj->m_AnimInfo->CurrPlayingAnimName;
+        auto SkeletonInfo = obj->m_SkeletonInfo.get();
+        auto AnimInfo = SkeletonInfo->m_AnimInfo.get();
+        std::string& AnimName = AnimInfo->CurrPlayingAnimName;
         bool isSetted = false;
-        if (obj->m_AnimInfo->AnimIsPlaying(AnimName, isSetted) == true)
+        if (AnimInfo->AnimIsPlaying(AnimName, isSetted) == true)
         {
             if (isSetted == false) continue;
-            obj->m_Skeleton->UpdateAnimationTransforms(*(obj->m_AnimInfo), gt.GetTimeElapsed());
+            SkeletonInfo->m_Skeleton->UpdateAnimationTransforms(*(AnimInfo), gt.GetTimeElapsed());
+
+            if (obj->m_Childs.empty() != true)
+            {
+                for (auto& child_obj : obj->m_Childs)
+                {
+                    auto parentObjInfo = obj->m_ObjectInfo.get();
+                    auto childObjInfo = child_obj->m_ObjectInfo.get();
+                    // child 오브젝트의 AttachingTargetBoneID를 기준으로 AnimatedTransform을 가져와
+                    // child 오브젝트의 월드 트랜스폼을 대체한다.
+                    int AttachedBoneID = childObjInfo->m_AttachingTargetBoneID;
+                    if (AttachedBoneID != -1)
+                    {
+                        XMFLOAT4X4 AnimTransform = MathHelper::Identity4x4();
+                        Scene::aiM2dxM(AnimTransform, AnimInfo->CurrAnimJointTransforms[AttachedBoneID]);
+
+                        // UpdateSkinnedCBs()에서 skinConstants.BoneTransform에 대입되는
+                        // AnimTransform은 전치되지 않은 본래의 Transform이다.
+                        // 하지만 UpdateObjectCBs()에서 현재 AnimTransform이 적용된
+                        // WorldTransform이 전치되어버리고 만다.
+                        // 이를 미연의 방지하기 위해(AnimTransform의 전치를 상쇄하기 위해)
+                        // Attaching을 통한 오브젝트의 WorldTransform을 지정할 때에는
+                        // AnimTransform을 미리 전치시킨다.
+                        XMStoreFloat4x4(&AnimTransform, XMMatrixTranspose(XMLoadFloat4x4(&AnimTransform)));
+                        XMMATRIX AnimM = XMLoadFloat4x4(&AnimTransform);
+
+                        // 오브젝트 메쉬 트랜스폼을 위한 행렬 곱 순서
+                        // LocalTransform * AnimTransform * WorldTransform
+                        // Attaching을 한 오브젝트는
+                        // 해당 오브젝트가 Skeleton을 지니고 있는 것이 아니기 때문에
+                        // VS쉐이더 단계에서 animTransform을 계산하는 과정이 생략된다
+                        // 고로, Attaching 오브젝트의 애니메이션을 위해선
+                        // Attaching 오브젝트의 WorldTransform이
+                        // AnimTransform과 WorldTransform을 포함한 행렬이어야 한다.
+                        // 이때 WorldTransform은 해당 오브젝트의 WorldTransform이 아닌
+                        // Attaching을 당한 오브젝트(장비 오브젝트 기준으론 캐릭터 오브젝트)
+                        // 의 WorldTransform을 취해준다.
+                        XMFLOAT4X4 WorldTransform = parentObjInfo->GetWorldTransform();
+                        XMMATRIX WorldM = XMLoadFloat4x4(&WorldTransform);
+                        XMMATRIX AnimWorldM = AnimM * WorldM;
+
+                        XMStoreFloat4x4(&WorldTransform, AnimWorldM);
+                        childObjInfo->SetWorldTransform(WorldTransform);
+                    }
+                }
+            }
         }
     }
 }
 
 void PlayGameScene::AnimateCameras(CTimer& gt)
 {
-    XMFLOAT3 EyePosition = { 0.0f, 300.0f, -500.0f };
-    XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
+    float deg2rad = MathHelper::Pi / 180.0f;
+    static float camAngle = -90.0f * deg2rad;
+    camAngle += (15.0f * deg2rad) * gt.GetTimeElapsed();
+
+    XMFLOAT3 LookTargetWorldScale = m_MainPlayerObj->m_ObjectInfo->m_WorldScale;
+    XMFLOAT3 LookAtPosition = m_MainPlayerObj->m_ObjectInfo->m_WorldPosition;
+    float Scale_average = (LookTargetWorldScale.x + LookTargetWorldScale.y + LookTargetWorldScale.z) * 0.3333f;
+    float phi = 20.0f * deg2rad;
+    float rad = 1500.0f * Scale_average;
+    XMVECTOR Eye_Pos = MathHelper::SphericalToCartesian(rad, camAngle, phi);
+    Eye_Pos = XMVectorAdd(Eye_Pos, XMLoadFloat3(&LookAtPosition));
+    XMFLOAT3 EyePosition;
+    XMStoreFloat3(&EyePosition, Eye_Pos);
     XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
 
     m_MainCamera.SetPosition(EyePosition);
-    m_MainCamera.SetPerspectiveLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 1000.0f);
+    m_MainCamera.SetPerspectiveLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 10000.0f);
     m_MainCamera.LookAt(EyePosition, LookAtPosition, UpDirection);
     m_MainCamera.UpdateViewMatrix();
 }

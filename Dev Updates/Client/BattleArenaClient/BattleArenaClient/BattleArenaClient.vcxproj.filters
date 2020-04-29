@@ -27,6 +27,9 @@
     <Filter Include="Common\Utilities\d3d12">
       <UniqueIdentifier>{c8803dad-1b89-4db9-a680-71bbd19f8de3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common\Utilities\DirectXTK">
+      <UniqueIdentifier>{0db9e342-780e-406e-be27-9c2e96e15cfe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientTest.cpp">
@@ -78,6 +81,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PlayGameScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -150,6 +156,12 @@
     </ClInclude>
     <ClInclude Include="Object.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\PngLoader.h">
+      <Filter>Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FileLoader\SpriteFontLoader.h">
+      <Filter>Common\FileLoaders</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

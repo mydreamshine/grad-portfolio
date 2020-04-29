@@ -15,10 +15,13 @@
 #include "LightingUtil.hlsl"
 
 // Constant data that varies per frame.
-cbuffer cbPerObject : register(b0)
+cbuffer cbObject : register(b0)
 {
+    float4x4 gLocal;
     float4x4 gWorld;
     float4x4 gTexTransform;
+    float    gTexAlpha;
+    float3   cbPerObjectPad3;
 };
 
 #define MAX_BONE 100
@@ -47,7 +50,7 @@ cbuffer cbPass : register(b3)
     float4x4 gViewProjTex;
     float4x4 gShadowTransform;
     float3 gEyePosW;
-    float cbPerObjectPad1;
+    float  cbPerPassPad1;
     float2 gRenderTargetSize;
     float2 gInvRenderTargetSize;
     float gNearZ;

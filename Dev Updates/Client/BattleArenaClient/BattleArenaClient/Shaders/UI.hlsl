@@ -35,7 +35,17 @@ PSInput VS(VSInput vin)
 
 float4 PS(PSInput pin) : SV_TARGET
 {
-    return gDiffuseMap.Sample(gsamAnisotropicWrap, pin.uv);
+	float4 color = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.uv);
+	color.a = color.a * gTexAlpha;
+
+#ifdef ALPHA_TEST
+	// 텍스처 알파가 0.01보다 작으면 픽셀을 폐기한다.
+	// 이 판정을 최대한 일찍 수행하는 것이 바람직하다. 그러면 폐기 시
+	// 셰이더의 나머지 코드의 실행을 생략할 수 있으므로 효율적이다.
+	clip(color.a - 0.01f);
+#endif
+
+    return color;
 }
 
 

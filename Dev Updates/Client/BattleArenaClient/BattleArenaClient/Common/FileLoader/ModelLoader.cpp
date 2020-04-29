@@ -22,7 +22,7 @@ const aiScene* ModelLoader::loadScene(std::string filepath)
 	return pScene;
 }
 
-bool ModelLoader::loadMeshAndSkeleton(std::string filepath)
+bool ModelLoader::loadMeshAndSkeleton(std::string filepath, std::vector<std::string>* execpt_nodes)
 {
 	const aiScene* pScene = ModelLoader::loadScene(filepath);
 
@@ -38,8 +38,8 @@ bool ModelLoader::loadMeshAndSkeleton(std::string filepath)
 	if (!mMeshes.empty()) mMeshes.clear();
 	if (mSkeleton != nullptr) mSkeleton = nullptr;
 
-	ModelLoader::generateSkeleton(pScene->mRootNode, pScene, aiMatrix4x4(), _Filename);
-	ModelLoader::processNode(pScene->mRootNode, pScene, aiMatrix4x4());
+	ModelLoader::generateSkeleton(pScene->mRootNode, pScene, aiMatrix4x4(), _Filename, execpt_nodes);
+	ModelLoader::processNode(pScene->mRootNode, pScene, aiMatrix4x4(), execpt_nodes);
 
 	return true;
 }
@@ -67,9 +67,12 @@ aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene,
 {
 	std::vector<aiModelData::aiVertex> Vertices;
 	std::vector<std::uint32_t> Indices;
-	aiNode* parentBoneNode = parentNode;
-	int parentBoneID = mSkeleton->FindJointIndex(parentBoneNode->mName.C_Str());
+
 	aiMatrix4x4 BindPoseTransform = matrix;
+
+	aiAABB AABB;
+	AABB.mMin = { FLT_MAX, FLT_MAX, FLT_MAX };
+	AABB.mMax = BindPoseTransform * mesh->mVertices[0];
 
 	// read mesh's vertices
 	for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
@@ -77,6 +80,13 @@ aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene,
 		aiModelData::aiVertex vertex;
 
 		vertex.vPosition = BindPoseTransform * mesh->mVertices[i];;
+
+		AABB.mMin.x = fminf(AABB.mMin.x, vertex.vPosition.x);
+		AABB.mMin.y = fminf(AABB.mMin.y, vertex.vPosition.y);
+		AABB.mMin.z = fminf(AABB.mMin.z, vertex.vPosition.z);
+		AABB.mMax.x = fmaxf(AABB.mMax.x, vertex.vPosition.x);
+		AABB.mMax.y = fmaxf(AABB.mMax.y, vertex.vPosition.y);
+		AABB.mMax.z = fmaxf(AABB.mMax.z, vertex.vPosition.z);
 
 		if (mesh->mNormals) vertex.vNormal = BindPoseTransform * mesh->mNormals[i];
 		if (mesh->mTangents) vertex.vTangent = BindPoseTransform * mesh->mTangents[i];
@@ -87,20 +97,21 @@ aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene,
 			vertex.vTextureUV[0].y = 1.0f - (float)mesh->mTextureCoords[0][i].y;
 		}
 
-		// static Mesh
-		if (parentBoneNode && mesh->mBones == nullptr)
-		{
-			if (parentBoneID != -1)
-			{
-				// 애니메이션에 바인딩되기 위해 BoneID와 BoneWeights를 부여한다.
-				vertex.i32BoneIndices[0] = parentBoneID;
-				vertex.fBoneWeights[0] = 1.0f;
-			}
-		}
-
 		Vertices.push_back(vertex);
 	}
 
+	for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
+	{
+		aiFace face = mesh->mFaces[i];
+
+		for (unsigned int j = 0; j < face.mNumIndices; ++j)
+			Indices.push_back(face.mIndices[j]);
+	}
+
+	aiNode* parentBoneNode = parentNode;
+	int parentBoneID = -1;
+	if (mSkeleton != nullptr) parentBoneID = mSkeleton->FindJointIndex(parentBoneNode->mName.C_Str());
+	
 	if (mesh->mBones == nullptr) // Static Mesh
 	{
 		// Static Mesh에 대한 애니메이션을 위해
@@ -115,20 +126,18 @@ aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene,
 		}
 	}
 	else
-		ModelLoader::processBoneWeights(Vertices, mesh->mBones, mesh->mNumBones, BindPoseTransform);
-
-	for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
 	{
-		aiFace face = mesh->mFaces[i];
-
-		for (unsigned int j = 0; j < face.mNumIndices; ++j)
-			Indices.push_back(face.mIndices[j]);
+		parentBoneID = -1;
+		ModelLoader::processBoneWeights(Vertices, mesh->mBones, mesh->mNumBones, BindPoseTransform);
 	}
 
-	return aiModelData::aiMesh(mesh->mName.C_Str(), Vertices, Indices);
+	return aiModelData::aiMesh(mesh->mName.C_Str(), Vertices, Indices, AABB, parentBoneID);
 }
 
-void ModelLoader::processBoneWeights(std::vector<aiModelData::aiVertex>& pOut, aiBone** Bones_intoMesh, unsigned int numBone, aiMatrix4x4 BindPoseTransform)
+void ModelLoader::processBoneWeights(
+	std::vector<aiModelData::aiVertex>& pOut,
+	aiBone** Bones_intoMesh, unsigned int numBone,
+	aiMatrix4x4 BindPoseTransform)
 {
 	for (unsigned int BoneID_intoMesh = 0; BoneID_intoMesh < numBone; ++BoneID_intoMesh)
 	{
@@ -144,7 +153,7 @@ void ModelLoader::processBoneWeights(std::vector<aiModelData::aiVertex>& pOut, a
 				// Offset Transform == BindPoseInverse
 				if (Bones_intoMesh[BoneID_intoMesh]->mOffsetMatrix.IsIdentity() != true)
 				{
-					if(Joint.mOffsetTransform.IsIdentity())
+					if (Joint.mOffsetTransform.IsIdentity())
 						Joint.mOffsetTransform = Bones_intoMesh[BoneID_intoMesh]->mOffsetMatrix/* * BindPoseTransform.Inverse()*/;
 				}
 
@@ -163,12 +172,20 @@ void ModelLoader::processBoneWeights(std::vector<aiModelData::aiVertex>& pOut, a
 	}
 }
 
-void ModelLoader::generateSkeleton(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, const std::string& name)
+void ModelLoader::generateSkeleton(
+	aiNode* node, const aiScene* scene,
+	aiMatrix4x4 matrix,
+	const std::string& name,
+	std::vector<std::string>* execpt_nodes)
 {
 	std::string cs_NodeName = node->mName.C_Str();
 	aiMatrix4x4 curMat = matrix * node->mTransformation;
 
-	if (node->mNumMeshes == 0) // 뼈대 노드인 경우
+	bool execpt_processing = false;
+	if (execpt_nodes)
+		execpt_processing = ModelLoader::execptNodeProcessing(node, *execpt_nodes);
+
+	if (execpt_processing != true && node->mNumMeshes == 0) // 뼈대 노드인 경우
 	{
 		if (mSkeleton == nullptr)
 		{
@@ -181,15 +198,18 @@ void ModelLoader::generateSkeleton(aiNode* node, const aiScene* scene, aiMatrix4
 			aiModelData::aiJoint joint;
 			joint.mName = cs_NodeName;
 			if (node->mParent) joint.mParentIndex = mSkeleton->FindJointIndex(node->mParent->mName.C_Str());
+
 			joint.mLocalTransform = node->mTransformation;
+
 			aiMatrix4x4 globalM = curMat;
 			joint.mOffsetTransform = globalM.Inverse();
 
 			mSkeleton->mJoints.push_back(joint);
 		}
 	}
+
 	for (unsigned int i = 0; i < node->mNumChildren; ++i)
-		ModelLoader::generateSkeleton(node->mChildren[i], scene, curMat, name);
+		ModelLoader::generateSkeleton(node->mChildren[i], scene, curMat, name, execpt_nodes);
 }
 
 void ModelLoader::getAnimation_0(const aiScene* scene, const std::string& anim_name)
@@ -223,17 +243,36 @@ void ModelLoader::getAnimation_0(const aiScene* scene, const std::string& anim_n
 	}
 }
 
-void ModelLoader::processNode(aiNode * node, const aiScene * scene, aiMatrix4x4 matrix)
+void ModelLoader::processNode(aiNode * node, const aiScene * scene, aiMatrix4x4 matrix, std::vector<std::string>* execpt_nodes)
 {
 	aiMatrix4x4 curMat = matrix * node->mTransformation;
-	for (unsigned int i = 0; i < node->mNumMeshes; i++)
+
+	bool execpt_processing = false;
+	if (execpt_nodes)
+		execpt_processing = ModelLoader::execptNodeProcessing(node, *execpt_nodes);
+
+	if (execpt_processing != true)
 	{
-		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		mMeshes.push_back(this->processMesh(mesh, scene, curMat, node->mParent));
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			mMeshes.push_back(this->processMesh(mesh, scene, curMat, node->mParent));
+		}
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
 	{
-		this->processNode(node->mChildren[i], scene, curMat);
+		this->processNode(node->mChildren[i], scene, curMat, execpt_nodes);
 	}
+}
+
+bool ModelLoader::execptNodeProcessing(aiNode* node, const std::vector<std::string>& execpt_nodes)
+{
+	for (auto& execpt_node_name : execpt_nodes)
+	{
+		std::string nodeName = node->mName.C_Str();
+		if (execpt_node_name == nodeName || (nodeName.find(execpt_node_name.c_str()) != std::string::npos))
+			return true;
+	}
+	return false;
 }

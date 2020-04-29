@@ -9,6 +9,7 @@
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/TextureLoader.h"
+#include "Common/FileLoader/SpriteFontLoader.h"
 
 using namespace DirectX;
 
@@ -37,23 +38,24 @@ public:
     virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) = 0;
     void LoadSkinnedModelData( ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         ModelLoader& model_loader,
-        const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths);
+        const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths,
+        std::vector<std::string>* execpt_nodes = nullptr);
 
     virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat) = 0;
     virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index) = 0;
 
     // Material에 대한 지정은 이 함수 외부에서 지정해줘야 한다.
     // (Material의 이름을 기준으로 RenderItem에 매칭시키기 때문.) => 이름으론 Material 매칭 패턴을 찾을 수가 없다.
-    void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems, MeshGeometry* Geo);
+    void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo);
     virtual void BuildRenderItems() = 0;
 
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index) = 0;
 
-    virtual void RandomCreateSkinnedObject() {};
+    virtual void RandomCreateCharacterObject() {};
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);
-    void aiM2dxM(XMFLOAT4X4& dest, aiMatrix4x4& source);
+    void aiM2dxM(XMFLOAT4X4& dest, const aiMatrix4x4& source);
     virtual void UpdateSkinnedCBs(UploadBuffer<SkinnedConstants>* skinnedCB, CTimer& gt);
     virtual void UpdateMaterialCBs(UploadBuffer<MaterialConstants>* matCB, CTimer& gt);
     virtual void UpdateMainPassCB(UploadBuffer<PassConstants>* passCB, CTimer& gt);
@@ -74,14 +76,13 @@ public:
     const std::unordered_map<std::string, std::unique_ptr<Material>>& GetMaterials() { return m_Materials; }
     const std::unordered_map<std::string, std::unique_ptr<Texture>>& GetTextures() { return m_Textures; }
     const std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>& GetModelSkeltons() { return m_ModelSkeltons; }
-
-    const std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GetAllRitems() { return m_AllRitems; }
+    
     const std::vector<Object*>& GetObjRenderLayer(RenderLayer layer) { return m_ObjRenderLayer[(int)layer]; }
 
     const std::vector<std::unique_ptr<Object>>& GetAllObjects() { return m_AllObjects; }
-    const std::vector<Object*> GetSkinnedObjects() { return m_SkinnedObjects; }
-    const std::vector<Object*> GetUIObjects() { return m_UIObjects; }
+    const std::vector<Object*> GetCharacterObjects() { return m_CharacterObjects; }
     const std::vector<Object*> GetWorldObjects() { return m_WorldObjects; }
+    const std::vector<Object*> GetUIObjects() { return m_UIObjects; }
 
 
 protected:
@@ -90,26 +91,28 @@ protected:
     PassConstants m_MainPassCB; // index 0 of pass cbuffer.
     PassConstants m_ShadowPassCB; // index 1 of pass cbuffer.
 
+    // Original Resource
     std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
     std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
 
-    // List of all the render items.
+    // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems;
+
     // Object divided by PSO.
     std::vector<Object*> m_ObjRenderLayer[(int)RenderLayer::Count];
 
-    // Object 1 : Geometric 1
+    // List of objects by type.
     std::vector<std::unique_ptr<Object>> m_AllObjects;
-    std::vector<Object*> m_SkinnedObjects; // SkinnedCB가 있는 오브젝트
-    std::vector<Object*> m_UIObjects; // MatCB만 있는 오브젝트
-    std::vector<Object*> m_WorldObjects; // ObjCB가 있는 오브젝트
+    std::vector<Object*> m_CharacterObjects; // SkinnedConstants + ObjConstants + MatConstants가 있는 오브젝트
+    std::vector<Object*> m_WorldObjects; // ObjConstants + MatConstants가 있는 오브젝트
+    std::vector<Object*> m_UIObjects; // ObjConstants + MatConstants만 있는 오브젝트
 
 public:
-    UINT m_nSKinnedCB = 0;
-    UINT m_nObjCB = 0;
-    UINT m_nMatCB = 0;
+    UINT m_nSKinnedCB = 0; // = m_CharacterObjects.size();
+    UINT m_nObjCB = 0; // = m_WorldObjects.size() + m_UIObjects.size();
+    UINT m_nMatCB = 0; // = m_Materials.size();
 
 protected:
     Camera m_MainCamera;
@@ -158,3 +161,5 @@ class GameOverScene;
 /////////////////////////////////////////////
 #include "LoginScene.h"
 #include "PlayGameScene.h"
+
+#define SIZE_ShadowMap 2048

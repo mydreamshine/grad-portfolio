@@ -6,8 +6,11 @@
 
 struct ObjectConstants
 {
+    DirectX::XMFLOAT4X4 Local = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
+    float TexAlpha = 1.0f;
+    DirectX::XMFLOAT3 cbPerObjectPad3 = { 0.0f, 0.0f, 0.0f };
 };
 
 #define MAX_BONE 100
@@ -17,7 +20,9 @@ struct SkinnedConstants
     SkinnedConstants()
     {
         for (int i = 0; i < MAX_BONE; ++i)
+        {
             BoneTransform[i] = MathHelper::Identity4x4();
+        }
     }
 };
 
@@ -32,7 +37,7 @@ struct PassConstants
     DirectX::XMFLOAT4X4 ViewProjTex = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 ShadowTransform = MathHelper::Identity4x4();
     DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
-    float cbPerObjectPad1 = 0.0f;
+    float cbPerPassPad1 = 0.0f;
     DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
     DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
     float NearZ = 0.0f;
@@ -87,8 +92,9 @@ enum class RenderLayer : int
 {
     Opaque = 0,
     SkinnedOpaque,
-    UIOpaque,
-    Debug,
+    Transparent,
+    SkinnedTransparent,
+    UI, // support Transparency
     Count
 };
 
