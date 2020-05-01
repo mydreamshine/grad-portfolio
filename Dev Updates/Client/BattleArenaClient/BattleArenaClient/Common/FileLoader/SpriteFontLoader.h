@@ -1,10 +1,10 @@
 #pragma once
-#include "../Util/DirectXTK/include/RenderTargetState.h"
-#include "../Util/DirectXTK/include/DescriptorHeap.h"
-#include "../Util/DirectXTK/include/ResourceUploadBatch.h"
-#include "../Util/DirectXTK/include/SpriteBatch.h"
-#include "../Util/DirectXTK/include/SpriteFont.h"
-#include "../Util/DirectXTK/include/SimpleMath.h"
+#include "../Util/DirectXTK12_srcinc/RenderTargetState.h"
+#include "../Util/DirectXTK12_srcinc/DescriptorHeap.h"
+#include "../Util/DirectXTK12_srcinc/ResourceUploadBatch.h"
+#include "../Util/DirectXTK12_srcinc/SpriteBatch.h"
+#include "../Util/DirectXTK12_srcinc/SpriteFont.h"
+#include "../Util/DirectXTK12_srcinc/SimpleMath.h"
 
 #include <memory>
 #include <string>

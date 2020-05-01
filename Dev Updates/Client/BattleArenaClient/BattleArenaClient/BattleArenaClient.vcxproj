@@ -163,9 +163,6 @@
     <ClCompile Include="Common\Util\d3d12\d3dUtil.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Common\Util\d3d12\DDSTextureLoader.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="Common\Util\d3d12\GeometryGenerator.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -173,6 +170,19 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Common\Util\d3d12\ShadowMap.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\BinaryReader.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\CommonStates.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\DDSTextureLoader.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\DescriptorHeap.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\DirectXHelpers.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\GraphicsMemory.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\LinearAllocator.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\pch.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\SimpleMath.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\SpriteBatch.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\SpriteFont.cpp" />
+    <ClCompile Include="Common\Util\DirectXTK12_srcinc\VertexTypes.cpp" />
     <ClCompile Include="DXSample.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -204,11 +214,30 @@
     <ClInclude Include="Common\Timer\Timer.h" />
     <ClInclude Include="Common\Util\d3d12\Camera.h" />
     <ClInclude Include="Common\Util\d3d12\d3dUtil.h" />
-    <ClInclude Include="Common\Util\d3d12\DDSTextureLoader.h" />
     <ClInclude Include="Common\Util\d3d12\GeometryGenerator.h" />
     <ClInclude Include="Common\Util\d3d12\MathHelper.h" />
     <ClInclude Include="Common\Util\d3d12\ShadowMap.h" />
     <ClInclude Include="Common\Util\d3d12\UploadBuffer.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\AlignedNew.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\BinaryReader.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\CommonStates.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\d3dx12.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\DDS.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\DDSTextureLoader.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\DescriptorHeap.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\DirectXHelpers.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\GraphicsMemory.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\LinearAllocator.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\LoaderHelpers.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\pch.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\PlatformHelpers.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\RenderTargetState.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\SharedResourcePool.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\SimpleMath.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\SpriteBatch.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\SpriteFont.h" />
+    <ClInclude Include="Common\Util\DirectXTK12_srcinc\VertexTypes.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DXSample.h" />
     <ClInclude Include="DXSampleHelper.h" />
