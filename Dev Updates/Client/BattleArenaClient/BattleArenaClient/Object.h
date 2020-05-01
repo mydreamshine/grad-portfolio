@@ -8,6 +8,15 @@
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Util/d3d12/MathHelper.h"
 
+// rel. UI
+struct TextInfo
+{
+	std::wstring m_FontName;
+	DirectX::XMFLOAT2 m_TextPos;
+	DirectX::XMVECTOR m_TextColor;
+	std::wstring m_Text;
+};
+
 // rel. SkinnedConstatns
 struct SkeletonInfo
 {
@@ -139,6 +148,8 @@ struct Object
 	std::unique_ptr<ObjectInfo> m_ObjectInfo = nullptr;
 	// rel. SkinnedConstants
 	std::unique_ptr<SkeletonInfo> m_SkeletonInfo = nullptr;
+	// rel. UI (only used in UI Object)
+	std::unordered_map<std::string, std::unique_ptr<TextInfo>> m_UIinfos;
 
 	// rel. MaterialConstants
 	// Ritem에 대해선 인스턴싱을 하지 않으므로

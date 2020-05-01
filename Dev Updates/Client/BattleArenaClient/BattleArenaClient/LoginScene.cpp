@@ -164,7 +164,7 @@ void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
             auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
-            m_ObjRenderLayer[(int)RenderLayer::UI].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
             objManager.SetObjectComponent(newObj, objName, Ritem);

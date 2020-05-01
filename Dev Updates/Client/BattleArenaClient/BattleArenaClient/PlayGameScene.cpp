@@ -331,13 +331,21 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
         {
             const UINT maxUIObject = (UINT)m_Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
             auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
-            m_ObjRenderLayer[(int)RenderLayer::UI].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             // UI 오브젝트 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
             // 이미 버텍스 자체가 스크린좌표계 기준으로 지정되어 있기 때문에
             // UI 오브젝트의 Transform에 대해선 따로 지정하지 않아도 된다.
             std::string objName = Ritem_iter.first;
             objManager.SetObjectComponent(newObj, objName, Ritem);
+
+            newObj->m_UIinfos[objName] = std::make_unique<TextInfo>();
+            auto text_info = newObj->m_UIinfos[objName].get();
+            text_info->m_FontName = L"맑은 고딕";
+            text_info->m_TextColor = DirectX::Colors::Blue;
+            text_info->m_Text = L"UI Text Rendering test";
+            auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
+            text_info->m_TextPos = { (float)m_width / 2.0f, (float)m_height / 2.0f };
         }
         else // Environment Objects + Equipment Object
         {

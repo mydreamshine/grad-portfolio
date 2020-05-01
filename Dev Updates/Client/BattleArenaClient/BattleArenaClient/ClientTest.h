@@ -1,6 +1,7 @@
 #pragma once
 
 #include"Scene.h"
+#include "Common/FileLoader/SpriteFontLoader.h"
 
 class ClientTest : public DXSample
 {
@@ -9,7 +10,7 @@ public:
 
     virtual void OnInit();
     virtual void OnUpdate();
-    virtual void OnRender(HWND hwnd);
+    virtual void OnRender();
     virtual void OnDestroy();
 
 private:
@@ -23,6 +24,9 @@ private:
     void BuildPSOs();
 
     void BuildScene();
+    // BuildFont는 ResourceUploadBatch때문에 CommandQueue가 초기화 되므로,
+    // CommandQueue가 비어있고 Fence가 업데이트된 상태에서 따로 호출해줘야 한다.
+    void BuildFonts();
     void BuildFrameResources();
     
     void PopulateCommandList();
@@ -30,7 +34,6 @@ private:
     void DrawSceneToShadowMap();
     void DrawSceneToBackBuffer();
     void DrawSceneToUI();
-    void DrawSceneToTexts(HWND hwnd);
 
     void WaitForPreviousFrame();
 
@@ -80,6 +83,10 @@ private:
 
     // Material의 diffuseSrvHeapIndex와 각 Scene에서의 Texture 생성 순서를 매칭하기 위해 m_Texture만 Vector로 정의
     std::vector<Texture*> m_Textures;
+
+    // Scene별로 Font 텍스쳐 중복 생성을 방지하기 위해
+    // Font는 Scene 외부에서 관리
+    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
 
     UINT m_nSKinnedCB = 0;
     UINT m_nObjCB = 0;

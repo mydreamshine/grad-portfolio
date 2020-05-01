@@ -9,7 +9,6 @@
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/TextureLoader.h"
-#include "Common/FileLoader/SpriteFontLoader.h"
 
 using namespace DirectX;
 

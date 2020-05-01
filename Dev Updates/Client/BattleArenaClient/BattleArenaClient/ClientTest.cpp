@@ -221,6 +221,8 @@ void ClientTest::LoadAssets()
 
     for (auto& scene : m_Scenes)
         scene.second->DisposeUploaders();
+
+    BuildFonts();
 }
 
 // Create the root signature.
@@ -365,8 +367,8 @@ void ClientTest::BuildShadersAndInputLayout()
     m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
     m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
 
-    m_Shaders["UI_VS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", nullptr, "VS", "vs_5_1");
-    m_Shaders["UI_PS"] = d3dUtil::CompileShader(L"Shaders/UI.hlsl", alphaTestDefines, "PS", "ps_5_1");
+    m_Shaders["UILayout_Background_VS"] = d3dUtil::CompileShader(L"Shaders/UILayout_Background.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["UILayout_Background_PS"] = d3dUtil::CompileShader(L"Shaders/UILayout_Background.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
     m_InputLayout =
     {
@@ -523,15 +525,15 @@ void ClientTest::BuildPSOs()
     UIPsoDesc.InputLayout = { m_InputLayout.data(), (UINT)m_InputLayout.size() };
     UIPsoDesc.VS =
     {
-        reinterpret_cast<BYTE*>(m_Shaders["UI_VS"]->GetBufferPointer()),
-        m_Shaders["UI_VS"]->GetBufferSize()
+        reinterpret_cast<BYTE*>(m_Shaders["UILayout_Background_VS"]->GetBufferPointer()),
+        m_Shaders["UILayout_Background_VS"]->GetBufferSize()
     };
     UIPsoDesc.PS =
     {
-        reinterpret_cast<BYTE*>(m_Shaders["UI_PS"]->GetBufferPointer()),
-        m_Shaders["UI_PS"]->GetBufferSize()
+        reinterpret_cast<BYTE*>(m_Shaders["UILayout_Background_PS"]->GetBufferPointer()),
+        m_Shaders["UILayout_Background_PS"]->GetBufferSize()
     };
-    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIPsoDesc, IID_PPV_ARGS(&m_PSOs["UI"])));
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIPsoDesc, IID_PPV_ARGS(&m_PSOs["UILayout_Background"])));
 }
 
 void ClientTest::BuildScene()
@@ -565,6 +567,16 @@ void ClientTest::BuildScene()
 
     m_CurrSceneName = "PlayGameScene";
     m_CurrScene = m_Scenes["PlayGameScene"].get();
+}
+
+void ClientTest::BuildFonts()
+{
+    RenderTargetState rtState(m_BackBufferFormat, m_DepthStencilFormat);
+    SpriteBatchPipelineStateDescription pd(rtState);
+
+    m_Fonts[L"¸¼Àº °íµñ"]
+        = std::make_unique<DXTK_FONT>(m_device.Get(), m_commandQueue.Get(), &m_viewport,
+            pd, L"UI/Font/¸¼Àº °íµñ.spritefont");
 }
 
 void ClientTest::BuildFrameResources()
@@ -618,7 +630,7 @@ void ClientTest::OnUpdate()
 }
 
 // Render the scene.
-void ClientTest::OnRender(HWND hwnd)
+void ClientTest::OnRender()
 {
     // Record all the commands we need to render the scene into the command list.
     PopulateCommandList();
@@ -626,8 +638,6 @@ void ClientTest::OnRender(HWND hwnd)
     // Execute the command list.
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-    DrawSceneToTexts(hwnd);
 
     // Present the frame.
     ThrowIfFailed(m_swapChain->Present(1, 0));
@@ -817,13 +827,27 @@ void ClientTest::DrawSceneToUI()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-    m_commandList->SetPipelineState(m_PSOs["UI"].Get());
-    auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UI);
+    m_commandList->SetPipelineState(m_PSOs["UILayout_Background"].Get());
+    auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
     DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
-}
 
-void ClientTest::DrawSceneToTexts(HWND hwnd)
-{
+    for (auto& obj : UIObjRenderLayer)
+    {
+        if (obj->m_UIinfos.empty() != true)
+        {
+            for (auto& ui_info_iter : obj->m_UIinfos)
+            {
+                auto ui_info = ui_info_iter.second.get();
+
+                auto font_iter = m_Fonts.find(ui_info->m_FontName);
+                if (font_iter != m_Fonts.end())
+                {
+                    auto font_render = font_iter->second.get();
+                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
+                }
+            }
+        }
+    }
 }
 
 void ClientTest::WaitForPreviousFrame()

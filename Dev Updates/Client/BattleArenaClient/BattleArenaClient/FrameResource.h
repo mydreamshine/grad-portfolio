@@ -94,7 +94,7 @@ enum class RenderLayer : int
     SkinnedOpaque,
     Transparent,
     SkinnedTransparent,
-    UI, // support Transparency
+    UILayout_Background, // support Transparency
     Count
 };
 
