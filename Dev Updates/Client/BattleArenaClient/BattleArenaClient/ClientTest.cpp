@@ -831,6 +831,8 @@ void ClientTest::DrawSceneToUI()
     auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
     DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
 
+    static int rand_num = 0;
+
     for (auto& obj : UIObjRenderLayer)
     {
         if (obj->m_UIinfos.empty() != true)
@@ -843,7 +845,10 @@ void ClientTest::DrawSceneToUI()
                 if (font_iter != m_Fonts.end())
                 {
                     auto font_render = font_iter->second.get();
-                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
+                    std::wstring draw_text = ui_info->m_Text;
+                    rand_num = MathHelper::Rand(0, 100);
+                    draw_text += std::to_wstring(rand_num);
+                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, draw_text);
                 }
             }
         }

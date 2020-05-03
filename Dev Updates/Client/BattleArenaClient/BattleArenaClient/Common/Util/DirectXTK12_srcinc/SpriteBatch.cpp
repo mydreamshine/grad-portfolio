@@ -488,7 +488,7 @@ void XM_CALLCONV SpriteBatch::Impl::Begin(ID3D12GraphicsCommandList* commandList
     mSortMode = sortMode;
     mTransformMatrix = transformMatrix;
     mCommandList = commandList;
-    mSpriteCount = 0;
+    //mSpriteCount = 0;
 
     if (sortMode == SpriteSortMode_Immediate)
     {
@@ -512,7 +512,8 @@ void SpriteBatch::Impl::End()
     }
 
     // Release this memory
-    mVertexSegment.Reset();
+    //mVertexSegment.Reset();
+    mConstantBuffer.Reset();
 
     // Break circular reference chains, in case the state lambda closed
     // over an object that holds a reference to this SpriteBatch.
@@ -799,6 +800,7 @@ void SpriteBatch::Impl::RenderBatch(D3D12_GPU_DESCRIPTOR_HANDLE texture, XMVECTO
         // Allocate a new page of vertex memory if we're starting the batch
         if (mSpriteCount == 0)
         {
+            // mSpriteCount가 0이면 새로운 페이지가 계속 생성되서 메모리 누수가 일어난다.
             mVertexSegment = GraphicsMemory::Get(mDeviceResources->mDevice).Allocate(mVertexPageSize);
         }
 
@@ -828,7 +830,8 @@ void SpriteBatch::Impl::RenderBatch(D3D12_GPU_DESCRIPTOR_HANDLE texture, XMVECTO
         commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 
         // Advance the buffer position.
-        mSpriteCount += batchSize;
+        //mSpriteCount += batchSize;
+        if(mSpriteCount < batchSize) mSpriteCount += batchSize;
 
         sprites += batchSize;
         count -= batchSize;
