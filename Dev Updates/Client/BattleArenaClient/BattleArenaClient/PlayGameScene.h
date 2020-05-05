@@ -1,5 +1,6 @@
 #pragma once
 #include "Scene.h"
+#include "Player.h"
 
 class PlayGameScene : public Scene
 {
@@ -38,17 +39,19 @@ public:
     virtual void AnimateLights(CTimer& gt);
     virtual void AnimateSkeletons(CTimer& gt);
     virtual void AnimateCameras(CTimer& gt);
+    void AnimateWorldObjectsTransform(CTimer& gt);
 
 public:
-    virtual void ProcessInput(CTimer& gt) {}
+    virtual void ProcessInput(CTimer& gt);
 
 private:
     const UINT m_MaxWorldObject = 2000;
     const UINT m_MaxCharacterObject = 100;
+    UINT m_CurrSkillObjInstanceNUM = 0;
     DirectX::XMFLOAT3 m_WorldCenter = { 0.0f, 0.0f, 0.0f };
     DirectX::BoundingBox m_SpawnBound;
 
-    Object* m_MainPlayerObj = nullptr;
+    std::unique_ptr<Player> m_MainPlayer = nullptr;
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,
@@ -99,7 +102,7 @@ private:
             else if (GetAsyncKeyState(VK_RIGHT) && 0x8000)
                 local_pos.z += 1.0f;
         }
-        obj->m_ObjectInfo->SetLocalRotationEuler(local_angle);
-        obj->m_ObjectInfo->SetLocalPosition(local_pos);
+        obj->m_TransformInfo->SetLocalRotationEuler(local_angle);
+        obj->m_TransformInfo->SetLocalPosition(local_pos);
     }
 };

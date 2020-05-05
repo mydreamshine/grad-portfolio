@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <map>
 #include <set>
+#include <float.h>
 
 #include "../Util/assimp/Importer.hpp"
 #include "../Util/assimp/scene.h"
@@ -48,15 +49,24 @@ namespace aiModelData
 		}
 	};
 
+	struct AnimNotify
+	{
+		float TimePos = FLT_MAX;
+		bool  TimeLineOver = false;
+		bool  PickUp = false;
+	};
+
 	struct AnimInfo
 	{
 		std::string CurrPlayingAnimName;
 		std::vector<aiMatrix4x4> CurrAnimJointTransforms;
 		std::vector<aiMatrix4x4> OffsetJointTransforms;
 		float CurrAnimTimePos = 0.0f;
+		std::unordered_map<std::string, AnimNotify> AnimTimeLineNotifys;
 		bool CurrAnimIsLoop = false;
 		bool CurrAnimIsStop = true;
 		bool CurrAnimIsPause = false;
+		bool CurrAnimDurationIsOnceDone = false;
 
 		void Init()
 		{
@@ -67,6 +77,22 @@ namespace aiModelData
 			CurrAnimIsLoop = false;
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
+			CurrAnimDurationIsOnceDone = false;
+			AnimTimeLineNotifys.clear();
+		}
+
+		void AnimTimeLineNotifyInit(const std::string& AnimName)
+		{
+			for (auto& notify_iter : AnimTimeLineNotifys)
+			{
+				auto& notify_name = notify_iter.first;
+				if (notify_name.find(AnimName.c_str()) != std::string::npos)
+				{
+					auto& notify = notify_iter.second;
+					notify.TimeLineOver = false;
+					notify.PickUp = false;
+				}
+			}
 		}
 
 		void AnimPlay(const std::string& AnimName)
@@ -75,6 +101,8 @@ namespace aiModelData
 			CurrAnimTimePos = 0.0f;
 			CurrAnimIsStop = false;
 			CurrAnimIsPause = false;
+			CurrAnimDurationIsOnceDone = false;
+			AnimInfo::AnimTimeLineNotifyInit(AnimName);
 		}
 		void AnimStop(const std::string& AnimName)
 		{
@@ -82,6 +110,8 @@ namespace aiModelData
 			CurrAnimTimePos = 0.0f;
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
+			CurrAnimDurationIsOnceDone = false;
+			AnimInfo::AnimTimeLineNotifyInit(AnimName);
 		}
 		void AnimResume(const std::string& AnimName)
 		{
@@ -104,6 +134,45 @@ namespace aiModelData
 			else isSetted = true;
 			return !CurrAnimIsStop && !CurrAnimIsPause;
 		}
+		bool AnimOnceDone(const std::string& AnimName, bool& isSetted)
+		{
+			if (CurrPlayingAnimName != AnimName) isSetted = false;
+			else isSetted = true;
+
+			return CurrAnimDurationIsOnceDone;
+		}
+
+		void SetAnimTimeLineNotify(const std::string& notify_name, float notify_timePos)
+		{
+			auto& notify = AnimTimeLineNotifys[notify_name];
+			notify.TimePos = notify_timePos;
+			notify.TimeLineOver = false;
+			notify.PickUp = false;
+		}
+
+		bool CheckAnimTimeLineNotify(const std::string& notify_name, bool& IsSetted)
+		{
+			if (AnimTimeLineNotifys.find(notify_name) != AnimTimeLineNotifys.end())
+			{
+				IsSetted = true;
+			}
+			else
+			{
+				IsSetted = false;
+				return false;
+			}
+
+			auto& notify = AnimTimeLineNotifys[notify_name];
+
+			bool retCheck = false;
+			if (notify.PickUp == false && notify.TimeLineOver == true)
+			{
+				notify.PickUp = true;
+				retCheck = true;
+			}
+
+			return retCheck;
+		}
 	};
 
 	struct aiAnimClip
@@ -116,7 +185,7 @@ namespace aiModelData
 		float mDuration = 0.0f;
 		float mTickPerSecond = 0.0f;
 
-		float CalculateAnimationTime(float& TimePos, float deltaTime, bool IsStop, bool IsPause, bool IsLoop)
+		float CalculateAnimationTime(float& TimePos, float deltaTime, bool IsStop, bool IsPause, bool IsLoop, bool& DurationOnceDone, bool& initDuration)
 		{
 			if (IsStop || IsPause) return TimePos;
 
@@ -128,9 +197,16 @@ namespace aiModelData
 					TimePos = (TimePos + deltaTime) - ClipEndTime;
 				else
 					TimePos = ClipEndTime;
+
+				DurationOnceDone = true;
+
+				initDuration = true;
 			}
 			else
+			{
 				TimePos += deltaTime;
+				initDuration = false;
+			}
 
 			return TimePos;
 		}
@@ -266,9 +342,12 @@ namespace aiModelData
 			bool IsStop = Anim_info.CurrAnimIsStop;
 			bool IsPause = Anim_info.CurrAnimIsPause;
 			bool IsLoop = Anim_info.CurrAnimIsLoop;
+			bool& DurationOnceDone = Anim_info.CurrAnimDurationIsOnceDone;
+			bool InitDuration = false;
 			float& TimePos = Anim_info.CurrAnimTimePos;
 			auto& AnimTransforms = Anim_info.CurrAnimJointTransforms;
 			auto& OffsetTransforms = Anim_info.OffsetJointTransforms;
+			auto& AnimNotifys = Anim_info.AnimTimeLineNotifys;
 
 			if (AnimTransforms.size() < mJoints.size()) AnimTransforms.resize(mJoints.size());
 			if (OffsetTransforms.size() < mJoints.size()) OffsetTransforms.resize(mJoints.size());
@@ -283,7 +362,25 @@ namespace aiModelData
 					if (anim_iter != mJoints[i].mAnimations.end())
 					{
 						auto& anim = anim_iter->second;
-						animationTime = anim.CalculateAnimationTime(TimePos, deltaTime, IsStop, IsPause, IsLoop);
+						animationTime = anim.CalculateAnimationTime(TimePos, deltaTime, IsStop, IsPause, IsLoop, DurationOnceDone, InitDuration);
+
+						// Check&Set AnimTimeLineNotifys
+						{
+							if (InitDuration == true)
+								Anim_info.AnimTimeLineNotifyInit(AnimName);
+
+							for (auto& anim_notify_iter : AnimNotifys)
+							{
+								auto& notify_name = anim_notify_iter.first;
+								if (notify_name.find(AnimName.c_str()) != std::string::npos)
+								{
+									auto& notify = anim_notify_iter.second;
+									if (notify.TimePos <= TimePos)
+										notify.TimeLineOver = true;
+								}
+							}
+						}
+
 						CalculatedAnimationTime = true;
 					}
 				}
@@ -313,7 +410,7 @@ namespace aiModelData
 // Quarternion에서의 유닛변환도 해줘야 하는 것으로 추측.
 // Quarternion의 유닛변환은 구현하기가 어려우므로
 // 단순히 해당 메쉬를 취하는 오브젝트의 트랜스폼 스케일값을 변경하기로 결정.
-namespace ModelFineUnit
+namespace ModelFileUnit
 {
 	constexpr float meter = 1.0f;
 	constexpr float centimeter = 0.01f;

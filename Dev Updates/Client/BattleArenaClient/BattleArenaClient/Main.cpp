@@ -10,7 +10,7 @@
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-    ClientTest sample(1280, 720, L"Client Test");
+    ClientTest sample(WND_WIDTH, WND_HEIGHT, L"Client Test");
     int ret_num = Win32Application::Run(&sample, hInstance, nCmdShow);
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     return ret_num;

@@ -391,6 +391,18 @@ void ClientTest::BuildShadersAndInputLayout()
 
 void ClientTest::BuildPSOs()
 {
+    D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
+    transparencyBlendDesc.BlendEnable = true;
+    transparencyBlendDesc.LogicOpEnable = false;
+    transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+    transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+    transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+    transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+    transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
 
     //
@@ -411,6 +423,7 @@ void ClientTest::BuildPSOs()
     };
     opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    opaquePsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
     opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     opaquePsoDesc.SampleMask = UINT_MAX;
     opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -438,18 +451,6 @@ void ClientTest::BuildPSOs()
         m_Shaders["opaquePS"]->GetBufferSize()
     };
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedOpaque"])));
-
-    D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
-    transparencyBlendDesc.BlendEnable = true;
-    transparencyBlendDesc.LogicOpEnable = false;
-    transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-    transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-    transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-    transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-    transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
-    transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
     //
     // PSO for transparent objects
@@ -606,7 +607,7 @@ void ClientTest::OnUpdate()
     static int sub2 = 0;
     float totalTime = m_Timer.GetTotalTime();
     int totalTime_i = (int)totalTime;
-    if ((totalTime_i != 0) && (totalTime_i % 10 == 0))
+    /*if ((totalTime_i != 0) && (totalTime_i % 10 == 0))
     {
         if (sub2 < totalTime_i / 10)
         {
@@ -617,7 +618,7 @@ void ClientTest::OnUpdate()
             m_CurrScene->OnInitProperties();
         }
     }
-    else if ((totalTime_i != 0) && (totalTime_i % 2 == 0))
+    else */if ((totalTime_i != 0) && (totalTime_i % 2 == 0))
     {
         if (sub < totalTime_i / 2)
         {
@@ -712,8 +713,10 @@ void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const st
     {
         if (obj->Activated == false) continue;
         if (obj->m_Name == "ground_grid") continue;
+        if (obj->m_Name.find("SwordSlash") != std::string::npos)
+            int a = 0;
         auto Ritem = obj->m_RenderItem;
-        UINT ObjCBIndex = obj->m_ObjectInfo->ObjCBIndex;
+        UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
         UINT SkinCBIndex = -1;
         if (obj->m_SkeletonInfo != nullptr)
             SkinCBIndex = obj->m_SkeletonInfo->SkinCBIndex;
@@ -831,8 +834,6 @@ void ClientTest::DrawSceneToUI()
     auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
     DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
 
-    static int rand_num = 0;
-
     for (auto& obj : UIObjRenderLayer)
     {
         if (obj->m_UIinfos.empty() != true)
@@ -845,10 +846,7 @@ void ClientTest::DrawSceneToUI()
                 if (font_iter != m_Fonts.end())
                 {
                     auto font_render = font_iter->second.get();
-                    std::wstring draw_text = ui_info->m_Text;
-                    rand_num = MathHelper::Rand(0, 100);
-                    draw_text += std::to_wstring(rand_num);
-                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, draw_text);
+                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
                 }
             }
         }

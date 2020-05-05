@@ -35,16 +35,13 @@ struct PSInput
 };
 
 // Matrix multiply order for mesh transform:
-// LocalM * AnimM(BoneM) * WorldM (* ViewM * ProjM)
+// AnimM(BoneM) * LocalM * WorldM (* ViewM * ProjM)
 PSInput VS(VSInput vin)
 {
     PSInput vout;
 
     float4 PosW = float4(vin.position, 1.0f);
     float3 NormalW = vin.normal;
-
-    PosW = mul(PosW, gLocal);
-    NormalW = mul(NormalW, (float3x3)gLocal);
 
 #ifdef SKINNED
     if (vin.boneids[0] >= 0)
@@ -59,12 +56,14 @@ PSInput VS(VSInput vin)
     }
 #endif
 
+    PosW = mul(PosW, gLocal);
     PosW = mul(PosW, gWorld);
 
     // Transform to world space.
     vout.PosW = PosW.xyz;
 
     // Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
+    NormalW = mul(NormalW, (float3x3)gLocal);
     vout.NormalW = mul(NormalW, (float3x3)gWorld);
 
     // Transform to homogeneous clip space.

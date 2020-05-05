@@ -22,8 +22,6 @@ PSInput VS(VSInput vin)
 
     float4 PosW = float4(vin.position, 1.0f);
 
-    PosW = mul(PosW, gLocal);
-
 #ifdef SKINNED
     if (vin.boneids[0] >= 0)
     {
@@ -36,7 +34,9 @@ PSInput VS(VSInput vin)
     }
 #endif
 
+
     // Transform to world space.
+    PosW = mul(PosW, gLocal);
     PosW = mul(PosW, gWorld);
 
     // Transform to homogeneous clip space.
@@ -55,6 +55,13 @@ PSInput VS(VSInput vin)
 void PS(PSInput pin)
 {
     float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.uv) * gDiffuseAlbedo;
+
+#ifdef ALPHA_TEST
+    // 텍스처 알파가 0.1보다 작으면 픽셀을 폐기한다.
+    // 이 판정을 최대한 일찍 수행하는 것이 바람직하다. 그러면 폐기 시
+    // 셰이더의 나머지 코드의 실행을 생략할 수 있으므로 효율적이다.
+    clip(diffuseAlbedo.a - 0.01f);
+#endif
 }
 
 

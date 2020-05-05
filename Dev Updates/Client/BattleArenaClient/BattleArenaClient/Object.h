@@ -3,10 +3,12 @@
 #include <vector>
 #include <unordered_map>
 #include <stdexcept>
+#include <string>
 
 #include "FrameResource.h"
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Util/d3d12/MathHelper.h"
+#include "Common/Timer/Timer.h"
 
 // rel. UI
 struct TextInfo
@@ -30,10 +32,10 @@ struct SkeletonInfo
 };
 
 // rel. ObjectConstants
-// ObjectInfo를 업데이트 할 때마다
+// TransformInfo를 업데이트 할 때마다
 // 반드시 NumObjectCBDirty = gNumFrameResources;
 // 해줘야 ObjectCB내에 해당 ObjectConstants가 변경된다.
-struct ObjectInfo
+struct TransformInfo
 {
 	// ObjectCB rel. data
 	int NumObjectCBDirty = gNumFrameResources;
@@ -71,6 +73,8 @@ struct ObjectInfo
 	DirectX::XMFLOAT3 m_Up = { 0.0f, 1.0f, 0.0f };
 	DirectX::XMFLOAT3 m_Look = { 0.0f, 0.0f, 1.0f };
 
+	DirectX::XMFLOAT3 m_Velocity = { 0.0f, 0.0f, 0.0f };
+
 	int m_AttachingTargetBoneID = -1;
 	/*
 	AttachingTargetBoneID는 StaticMesh에 대해서만 사용한다.
@@ -105,31 +109,60 @@ struct ObjectInfo
 
 	void SetWorldScale(const DirectX::XMFLOAT3& newScale);
 	// degree angle
+	// roll: +z축을 기준으로 쉐이더 내에서 시계반대방향으로 회전
+	// pitch: +x축을 기준으로 쉐이더 내에서 시계방향으로 회전
+	// yaw: +y축을 기준으로 쉐이더 내에서 시계방향으로 회전
+	// 쉐이더에 WorldTransform을 전치시켜서 넘겨주므로 회전방향이 반대.
+	// 즉 쉐이더 내에선 왼손좌표계 회전.
+	// 쉐이더 넘기기 전 전치하지 않은 WorldTransform은 오른손좌표계의 트랜스폼.
 	void SetWorldRotationEuler(const DirectX::XMFLOAT3& newRot);
 	void SetWorldPosition(const DirectX::XMFLOAT3& newPos);
 
 	void SetLocalScale(const DirectX::XMFLOAT3& newScale);
 	// degree angle
+	// roll: +z축을 기준으로 시계반대방향으로 회전
+	// pitch: +x축을 기준으로 시계방향으로 회전
+	// yaw: +y축을 기준으로 시계방향으로 회전
 	void SetLocalRotationEuler(const DirectX::XMFLOAT3& newRot);
-	// 누적 회전
-	// angle만큼 현재 LocalTransform을 회전
-	// degree angle
-	void RotationLocalY(float angle);
 	void SetLocalPosition(const DirectX::XMFLOAT3& newPos);
 
+	void SetWorldTransform(const DirectX::XMFLOAT3& newScale, const DirectX::XMFLOAT3& newRotationEuler, const DirectX::XMFLOAT3& newPosition);
 	void SetWorldTransform(const DirectX::XMFLOAT4X4& newTransform);
+	void SetLocalTransform(const DirectX::XMFLOAT3& newScale, const DirectX::XMFLOAT3& newRotationEuler, const DirectX::XMFLOAT3& newPosition);
 	void SetLocalTransform(const DirectX::XMFLOAT4X4& newTransform);
 
-	void UpdateBound();
+	void SetVelocity(const DirectX::XMFLOAT3& newVelocity);
+
+	void UpdateBound(const DirectX::XMFLOAT3& centerOffset);
 	void UpdateWorldTransform();
 	void UpdateLocalTransform();
+	// 쉐이더에 WorldTransform을 전치시켜 전달하기 때문에
+	// 쉐이더 내에선 기저벡터가 WorldTransform과는 다르다.
+	// 이를 감안하여 GetRight, GetUp, GetLook은
+	// 쉐이더에 넘겨진 (전치된) WorldTransform을 기준으로 한다.
+	// 즉, WorldTransform을 전치시킨 Transform을 기준으로
+	// 기저벡터를 계산한다.
+	void UpdateBaseAxis();
+	void AnimateMovementWithVelocity(CTimer& gt);
 
 	DirectX::XMFLOAT4X4 GetWorldTransform();
 	DirectX::XMFLOAT4X4 GetLocalTransform();
 
+	DirectX::XMFLOAT3 GetWorldScale() { return m_WorldScale; }
+	DirectX::XMFLOAT3 GetLocalScale() { return m_LocalScale; }
+
 	DirectX::XMFLOAT3 GetWorldEuler() { return m_WorldRotationEuler; }
 	DirectX::XMFLOAT3 GetLocalEuler() { return m_LocalRotationEuler; }
 
+	DirectX::XMFLOAT3 GetWorldPosition() { return m_WorldPosition; }
+	DirectX::XMFLOAT3 GetLocalPosition() { return m_LocalPosition; }
+
+	// 쉐이더에 WorldTransform을 전치시켜 전달하기 때문에
+	// 쉐이더 내에선 기저벡터가 WorldTransform과는 다르다.
+	// 이를 감안하여 GetRight, GetUp, GetLook은
+	// 쉐이더에 넘겨진 (전치된) WorldTransform을 기준으로 한다.
+	// 즉, WorldTransform을 전치시킨 Transform을 기준으로
+	// 기저벡터를 계산한다.
 	DirectX::XMFLOAT3 GetRight();
 	DirectX::XMFLOAT3 GetUp();
 	DirectX::XMFLOAT3 GetLook();
@@ -145,7 +178,7 @@ struct Object
 	std::vector<Object*> m_Childs;
 
 	// rel. ObjectConstants
-	std::unique_ptr<ObjectInfo> m_ObjectInfo = nullptr;
+	std::unique_ptr<TransformInfo> m_TransformInfo = nullptr;
 	// rel. SkinnedConstants
 	std::unique_ptr<SkeletonInfo> m_SkeletonInfo = nullptr;
 	// rel. UI (only used in UI Object)
@@ -157,15 +190,24 @@ struct Object
 	RenderItem*   m_RenderItem = nullptr;
 
 	bool Activated = false;
+	bool SelfDeActivated = false;
+	float DeActivatedTime = 0.0f;
+
+	bool ProcessSelfDeActivate(CTimer& gt);
 };
 
 class ObjectManager
 {
 private:
+	enum class OBJ_TYPE
+	{
+		nonCharacterObj = 0,
+		CharacterObj = 1
+	};
 	Object* FindDeactiveObject(
 		std::vector<std::unique_ptr<Object>>& GenDestList,
 		std::vector<Object*>& SearchList,
-		const UINT GenerateMaximum)
+		const UINT GenerateMaximum, OBJ_TYPE objType = OBJ_TYPE::nonCharacterObj )
 	{
 		Object* retObj = nullptr;
 
@@ -173,6 +215,11 @@ private:
 		{
 			if (obj->Activated == false)
 			{
+				if (objType == OBJ_TYPE::nonCharacterObj && obj->m_SkeletonInfo != nullptr)
+					continue;
+				else if (objType == OBJ_TYPE::CharacterObj && obj->m_SkeletonInfo == nullptr)
+					continue;
+
 				obj->Activated = true;
 				retObj = obj;
 				break;
@@ -215,7 +262,7 @@ public:
 
 		if (retObj == nullptr && CharacterObjects.size() < MaxCharacterObj)
 		{
-			retObj = ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj);
+			retObj = ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::CharacterObj);
 			if (retObj != nullptr) CharacterObjects.push_back(retObj);
 		}
 
@@ -227,7 +274,7 @@ public:
 		std::vector<Object*>& WorldObjects,
 		const UINT MaxWorldObj)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::nonCharacterObj);
 	}
 
 	Object* FindDeactiveUIObject(
@@ -235,18 +282,18 @@ public:
 		std::vector<Object*>& UIObjects,
 		const UINT MaxUIObj)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, UIObjects, MaxUIObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, UIObjects, MaxUIObj, OBJ_TYPE::nonCharacterObj);
 	}
 
 	bool SetAttaching(Object* Source, Object* Dest, const std::string& AttachingTargetBoneName)
 	{
-		if (Source->m_ObjectInfo == nullptr || Dest->m_SkeletonInfo == nullptr)
+		if (Source->m_TransformInfo == nullptr || Dest->m_SkeletonInfo == nullptr)
 		{
-			throw std::invalid_argument("ObjectInfo or SkeletonInfo does not exist");
+			throw std::invalid_argument("TransformInfo or SkeletonInfo does not exist");
 			return false;
 		}
 
-		auto objInfo_src = Source->m_ObjectInfo.get();
+		auto objInfo_src = Source->m_TransformInfo.get();
 		auto skeleton_deset = Dest->m_SkeletonInfo->m_Skeleton;
 		auto& AttachingTargetBoneID = objInfo_src->m_AttachingTargetBoneID;
 		// Attaching 본 ID 지정
@@ -280,9 +327,9 @@ public:
 		if (obj->m_SkeletonInfo != nullptr)
 			obj->m_SkeletonInfo->m_Skeleton = Skeleton;
 
-		if (obj->m_ObjectInfo != nullptr)
+		if (obj->m_TransformInfo != nullptr)
 		{
-			auto ObjInfo = obj->m_ObjectInfo.get();
+			auto ObjInfo = obj->m_TransformInfo.get();
 			ObjInfo->SetBound(Ritem->Geo->DrawArgs[Ritem->Name].Bounds);
 			if (LocalScale)
 			{
@@ -333,8 +380,8 @@ public:
 
 		if (retObj != nullptr)
 		{
-			retObj->m_ObjectInfo = std::make_unique<ObjectInfo>();
-			retObj->m_ObjectInfo->ObjCBIndex = objCB_index;
+			retObj->m_TransformInfo = std::make_unique<TransformInfo>();
+			retObj->m_TransformInfo->ObjCBIndex = objCB_index;
 			retObj->m_SkeletonInfo = std::make_unique<SkeletonInfo>();
 			retObj->m_SkeletonInfo->SkinCBIndex = skinnedCB_index;
 			retObj->m_SkeletonInfo->m_AnimInfo = std::make_unique<aiModelData::AnimInfo>();
@@ -355,8 +402,8 @@ public:
 
 		if (retObj != nullptr)
 		{
-			retObj->m_ObjectInfo = std::make_unique<ObjectInfo>();
-			retObj->m_ObjectInfo->ObjCBIndex = objCB_index;
+			retObj->m_TransformInfo = std::make_unique<TransformInfo>();
+			retObj->m_TransformInfo->ObjCBIndex = objCB_index;
 		}
 
 		return retObj;
@@ -374,8 +421,8 @@ public:
 
 		if (retObj != nullptr)
 		{
-			retObj->m_ObjectInfo = std::make_unique<ObjectInfo>();
-			retObj->m_ObjectInfo->ObjCBIndex = objCB_index;
+			retObj->m_TransformInfo = std::make_unique<TransformInfo>();
+			retObj->m_TransformInfo->ObjCBIndex = objCB_index;
 		}
 
 		return retObj;
@@ -388,5 +435,7 @@ public:
 		obj->m_Childs.clear();
 		obj->m_RenderItem = nullptr;
 		obj->Activated = false;
+		obj->SelfDeActivated = false;
+		obj->DeActivatedTime = 0.0f;
 	}
 };

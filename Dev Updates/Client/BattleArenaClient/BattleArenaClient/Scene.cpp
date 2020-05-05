@@ -30,14 +30,14 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTime
     AnimateSkeletons(gt);
     AnimateCameras(gt);
 
-    ProcessInput(gt);
-
     UpdateObjectCBs(frame_resource->ObjectCB.get(), gt);
     UpdateSkinnedCBs(frame_resource->SkinnedCB.get(), gt);
     UpdateMaterialCBs(frame_resource->MaterialCB.get(), gt);
     UpdateShadowTransform(gt);
     UpdateMainPassCB(frame_resource->PassCB.get(), gt);
     UpdateShadowPassCB(frame_resource->PassCB.get(), shadow_map, gt);
+
+    ProcessInput(gt);
 }
 
 void Scene::DisposeUploaders()
@@ -241,7 +241,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 {
     for (auto& obj : m_WorldObjects)
     {
-        auto objInfo = obj->m_ObjectInfo.get();
+        auto objInfo = obj->m_TransformInfo.get();
         if (objInfo->NumObjectCBDirty > 0)
         {
             XMFLOAT4X4 WorldTransform, LocalTransform;
@@ -267,7 +267,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 
     for (auto& obj : m_UIObjects)
     {
-        auto objInfo = obj->m_ObjectInfo.get();
+        auto objInfo = obj->m_TransformInfo.get();
         if (objInfo->NumObjectCBDirty > 0)
         {
             XMFLOAT4X4 WorldTransform, LocalTransform;

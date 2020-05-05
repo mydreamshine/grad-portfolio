@@ -30,6 +30,9 @@
 #pragma comment(lib, "Common/Util/libpng/lib/x64/Release/libpng16.lib")
 #endif
 
+#define WND_WIDTH 1280
+#define WND_HEIGHT 720
+
 inline void getFileName(const char* str, std::string& pFileName)
 {
     char _Drive[_MAX_DRIVE];
@@ -38,4 +41,9 @@ inline void getFileName(const char* str, std::string& pFileName)
     char _Ext[_MAX_EXT];
     _splitpath_s(str, _Drive, _Dir, _Filename, _Ext);
     pFileName = _Filename;
+}
+
+inline bool compareFloat(float A, float B, float epsilon = 0.000001f)
+{
+    return (fabs(A - B) < epsilon);
 }
