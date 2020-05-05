@@ -21,7 +21,7 @@ namespace ActionNotifyTime
 
 namespace CharacterSpeed
 {
-	constexpr float MeshtintFreeKnightSpeed = 500.0f;
+	constexpr float MeshtintFreeKnightSpeed = 360.0f;
 }
 
 struct Player

@@ -390,15 +390,15 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
             text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
             text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
 
-            //if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit\n    3:00";
-            //else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0    D: 0    A: 0";
-            /*else */if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
-            //else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
-            ////else if (objName == "UI_Layout_SkillList");
-            //else if (objName == "UI_Layout_Skill1")  text_info->m_Text = L"Skill1";
-            //else if (objName == "UI_Layout_Skill2")  text_info->m_Text = L"Skill2";
-            //else if (objName == "UI_Layout_Skill3")  text_info->m_Text = L"Skill3";
-            //else if (objName == "UI_Layout_Skill4")  text_info->m_Text = L"Skill4";
+            if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit\n    3:00";
+            else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0    D: 0    A: 0";
+            else if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
+            else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
+            //else if (objName == "UI_Layout_SkillList");
+            else if (objName == "UI_Layout_Skill1")  text_info->m_Text = L"Skill1";
+            else if (objName == "UI_Layout_Skill2")  text_info->m_Text = L"Skill2";
+            else if (objName == "UI_Layout_Skill3")  text_info->m_Text = L"Skill3";
+            else if (objName == "UI_Layout_Skill4")  text_info->m_Text = L"Skill4";
         }
         else if (Ritem_iter.first.find("Effect") != std::string::npos)
         {
