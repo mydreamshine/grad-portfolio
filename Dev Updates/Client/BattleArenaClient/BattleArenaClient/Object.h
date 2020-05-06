@@ -9,6 +9,7 @@
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Util/d3d12/MathHelper.h"
 #include "Common/Timer/Timer.h"
+#include "Common/FileLoader/SpriteFontLoader.h"
 
 // rel. UI
 struct TextInfo
@@ -17,6 +18,9 @@ struct TextInfo
 	DirectX::XMFLOAT2 m_TextPos;
 	DirectX::XMVECTOR m_TextColor;
 	std::wstring m_Text;
+	// 렌더링할 텍스트마다 SpriteBatch를 지정해줘야 하기에
+	// 각 텍스트는 고유한 SpriteBatchIndex를 지닌다.
+	UINT TextBatchIndex = 0;
 };
 
 // rel. SkinnedConstatns

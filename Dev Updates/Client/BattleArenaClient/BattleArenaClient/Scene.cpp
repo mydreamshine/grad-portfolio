@@ -12,7 +12,8 @@ Scene::~Scene()
 
 void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index, int& objCB_index, int& skinnedCB_index)
+    int& matCB_index, int& diffuseSrvHeap_Index,
+    int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     // 아래 메소드 순서는 반드시 지켜져야 한다.
     BuildShapeGeometry(device, commandList);
@@ -20,7 +21,7 @@ void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     LoadTextures(device, commandList, BackBufferFormat);
     BuildMaterials(matCB_index, diffuseSrvHeap_Index);
     BuildRenderItems();
-    BuildObjects(objCB_index, skinnedCB_index);
+    BuildObjects(objCB_index, skinnedCB_index, textBatch_index);
 }
 
 

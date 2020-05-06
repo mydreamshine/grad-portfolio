@@ -7,11 +7,13 @@ LoginScene::~LoginScene()
 
 void LoginScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index, int& objCB_index, int& skinnedCB_index)
+    int& matCB_index, int& diffuseSrvHeap_Index,
+    int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     Scene::OnInit(device, commandList,
         BackBufferFormat,
-        matCB_index, diffuseSrvHeap_Index, objCB_index, skinnedCB_index);
+        matCB_index, diffuseSrvHeap_Index,
+        objCB_index, skinnedCB_index, textBatch_index);
 }
 
 void LoginScene::OnInitProperties()
@@ -154,7 +156,7 @@ void LoginScene::BuildRenderItems()
     }
 }
 
-void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
+void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     ObjectManager objManager;
     const UINT maxUIObject = (UINT)m_AllRitems.size();
@@ -172,6 +174,7 @@ void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
     }
     m_nObjCB = (UINT)m_UIObjects.size();
     m_nSKinnedCB = 0;
+    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
 }
 
 void LoginScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)

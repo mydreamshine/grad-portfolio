@@ -13,11 +13,12 @@
 
 // 자체적으로 Font에 대한 Resource 및 Descriptor를 생성 및 관리
 // m_graphicMemory를 통해 commandAllocator 또한 별도로 지니고 있다.
+// 렌더링할 텍스트마다 SpriteBatch를 지정해줘야 한다.
 class DXTK_FONT
 {
 	std::unique_ptr<DirectX::SpriteFont> m_Font;
 	std::unique_ptr<DirectX::DescriptorHeap> m_FontDescriptors;
-	std::unique_ptr<DirectX::SpriteBatch> m_FontSpriteBatch;
+	std::vector<std::unique_ptr<DirectX::SpriteBatch>> m_FontSpriteBatchs;
 	std::unique_ptr<DirectX::GraphicsMemory> m_graphicMemory;
 
 public:
@@ -25,6 +26,7 @@ public:
 	DXTK_FONT(ID3D12Device* device, ID3D12CommandQueue* commandQueue,
 		const D3D12_VIEWPORT* viewport,
 		const DirectX::SpriteBatchPipelineStateDescription& psoDesc,
+		UINT nDrawingTexts,
 		const std::wstring& font_filepath)
 	{
 		m_graphicMemory = std::make_unique<DirectX::GraphicsMemory>(device);
@@ -58,18 +60,22 @@ public:
 		}
 
 		// Make SpriteBatch
+		for (UINT i = 0; i < nDrawingTexts; ++i)
 		{
 			DirectX::ResourceUploadBatch SpriteBatch_upload(device);
 			SpriteBatch_upload.Begin(); // 자체적으로 CommandAllocator와 CommadList를 생성
 
-			m_FontSpriteBatch = std::make_unique<DirectX::SpriteBatch>(device, SpriteBatch_upload, psoDesc, viewport);
+			auto batch = std::make_unique<DirectX::SpriteBatch>(device, SpriteBatch_upload, psoDesc, viewport);
 
 			auto uploadResourcesFinished = SpriteBatch_upload.End(commandQueue); // CommadList 실행 및 FenceEvent 발생
 			uploadResourcesFinished.wait();
+
+			m_FontSpriteBatchs.push_back(std::move(batch));
 		}
 	}
 
 	void DrawString(ID3D12GraphicsCommandList* commandList,
+		const UINT& TextBatchIndex,
 		const DirectX::XMFLOAT2& text_Pos, DirectX::XMVECTOR color,
 		const std::wstring& text)
 	{
@@ -81,11 +87,12 @@ public:
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
 		try {
-			m_FontSpriteBatch->Begin(commandList, DirectX::SpriteSortMode_Deferred);
-			m_Font->DrawString(m_FontSpriteBatch.get(), text.c_str(),
+			m_FontSpriteBatchs[TextBatchIndex]->Begin(commandList, DirectX::SpriteSortMode_Deferred);
+
+			m_Font->DrawString(m_FontSpriteBatchs[TextBatchIndex].get(), text.c_str(),
 				text_Pos, color, 0.f, origin);
 
-			m_FontSpriteBatch->End();
+			m_FontSpriteBatchs[TextBatchIndex]->End();
 		}
 		catch (...) {
 			abort();

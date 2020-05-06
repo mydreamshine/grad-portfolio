@@ -546,20 +546,24 @@ void ClientTest::BuildScene()
     int diffuseSrvHeap_index = 0;
     int objCB_index = 0;
     int skinnedCB_index = 0;
+    int textBatch_index = 0;
 
     m_nSKinnedCB = 0;
     m_nObjCB = 0;
     m_nMatCB = 0;
+    m_nTextBatch = 0;
     for (auto& scene_iter : m_Scenes)
     {
         auto& scene = scene_iter.second;
         scene->OnInit(m_device.Get(), m_commandList.Get(),
             m_BackBufferFormat,
-            matCB_index, diffuseSrvHeap_index, objCB_index, skinnedCB_index);
+            matCB_index, diffuseSrvHeap_index,
+            objCB_index, skinnedCB_index, textBatch_index);
 
         m_nSKinnedCB += scene->m_nSKinnedCB;
         m_nObjCB += scene->m_nObjCB;
         m_nMatCB += scene->m_nMatCB;
+        m_nTextBatch += scene->m_nTextBatch;
 
         auto& sceneTextures = scene->GetTextures();
         for (auto& Tex_iter : sceneTextures)
@@ -577,7 +581,7 @@ void ClientTest::BuildFonts()
 
     m_Fonts[L"¸¼Àº °íµñ"]
         = std::make_unique<DXTK_FONT>(m_device.Get(), m_commandQueue.Get(), &m_viewport,
-            pd, L"UI/Font/¸¼Àº °íµñ.spritefont");
+            pd, m_nTextBatch, L"UI/Font/¸¼Àº °íµñ.spritefont");
 }
 
 void ClientTest::BuildFrameResources()
@@ -834,6 +838,28 @@ void ClientTest::DrawSceneToUI()
     auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
     DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
 
+    static int sub = 0;
+    float totalTime = m_Timer.GetTotalTime();
+    int totalTime_i = (int)totalTime;
+    static std::wstring time_str = L"\n   03:00";
+    static UINT TimeLimit_sec = 132;
+    
+    if ((totalTime_i != 0) && (totalTime_i % 1 == 0))
+    {
+        if (sub < totalTime_i / 1)
+        {
+            sub = totalTime_i / 1;
+            TimeLimit_sec = ((int)TimeLimit_sec - 1 > 0) ? TimeLimit_sec - 1 : 0;
+            time_str = L"\n   ";
+            if ((TimeLimit_sec / 60) / 10 == 0)
+                time_str += std::to_wstring(0);
+            time_str += std::to_wstring(TimeLimit_sec / 60);
+            time_str += L":";
+            if ((TimeLimit_sec % 60) / 10 == 0)
+                time_str += std::to_wstring(0);
+            time_str += std::to_wstring(TimeLimit_sec % 60);
+        }
+    }
     for (auto& obj : UIObjRenderLayer)
     {
         if (obj->m_UIinfos.empty() != true)
@@ -846,7 +872,11 @@ void ClientTest::DrawSceneToUI()
                 if (font_iter != m_Fonts.end())
                 {
                     auto font_render = font_iter->second.get();
-                    font_render->DrawString(m_commandList.Get(), ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
+
+                    std::wstring text = ui_info->m_Text;
+                    if (obj->m_Name.find("TimeLimit") != std::string::npos)
+                        text += time_str;
+                    font_render->DrawString(m_commandList.Get(), ui_info->TextBatchIndex, ui_info->m_TextPos, ui_info->m_TextColor, text);
                 }
             }
         }

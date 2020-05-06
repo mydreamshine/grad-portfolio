@@ -476,6 +476,13 @@ SpriteBatch::Impl::Impl(ID3D12Device* device, ResourceUploadBatch& upload, const
         IID_GRAPHICS_PPV_ARGS(mPSO.GetAddressOf())));
 
     SetDebugObjectName(mPSO.Get(), L"SpriteBatch");
+
+    // 리소스에 대한 버퍼는 생성될 때 한번만 한다.
+    // 단 이렇게 되면 텍스트에 대한 Transform을 사용하지 못한다.
+    XMMATRIX transformMatrix = (mRotation == DXGI_MODE_ROTATION_UNSPECIFIED)
+        ? mTransformMatrix
+        : (mTransformMatrix * GetViewportTransform(mRotation));
+    mConstantBuffer = GraphicsMemory::Get(mDeviceResources->mDevice).AllocateConstant(transformMatrix);
 }
 
 // Begins a batch of sprite drawing operations.
@@ -513,7 +520,8 @@ void SpriteBatch::Impl::End()
 
     // Release this memory
     //mVertexSegment.Reset();
-    mConstantBuffer.Reset();
+    //mConstantBuffer.Reset();
+
 
     // Break circular reference chains, in case the state lambda closed
     // over an object that holds a reference to this SpriteBatch.
@@ -636,11 +644,11 @@ void SpriteBatch::Impl::PrepareForRendering()
     commandList->IASetIndexBuffer(&mDeviceResources->indexBufferView);
 
     // Set the transform matrix.
-    XMMATRIX transformMatrix = (mRotation == DXGI_MODE_ROTATION_UNSPECIFIED)
+    /*XMMATRIX transformMatrix = (mRotation == DXGI_MODE_ROTATION_UNSPECIFIED)
         ? mTransformMatrix
         : (mTransformMatrix * GetViewportTransform(mRotation));
 
-    mConstantBuffer = GraphicsMemory::Get(mDeviceResources->mDevice).AllocateConstant(transformMatrix);
+    mConstantBuffer = GraphicsMemory::Get(mDeviceResources->mDevice).AllocateConstant(transformMatrix);*/
     commandList->SetGraphicsRootConstantBufferView(RootParameterIndex::ConstantBuffer, mConstantBuffer.GpuAddress());
 }
 

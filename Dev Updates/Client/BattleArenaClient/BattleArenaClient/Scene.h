@@ -24,7 +24,7 @@ public:
     virtual void OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         DXGI_FORMAT BackBufferFormat,
         int& matCB_index, int& diffuseSrvHeap_Index,
-        int& objCB_index, int& skinnedCB_index);
+        int& objCB_index, int& skinnedCB_index, int& textBatch_index);
     virtual void OnInitProperties() = 0;
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt);
     virtual void DisposeUploaders();
@@ -48,7 +48,7 @@ public:
     void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo);
     virtual void BuildRenderItems() = 0;
 
-    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index) = 0;
+    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index) = 0;
 
     virtual void RandomCreateCharacterObject() {};
 
@@ -112,6 +112,7 @@ public:
     UINT m_nSKinnedCB = 0; // = m_CharacterObjects.size();
     UINT m_nObjCB = 0; // = m_WorldObjects.size() + m_UIObjects.size();
     UINT m_nMatCB = 0; // = m_Materials.size();
+    UINT m_nTextBatch = 0; // = sum(ui_obj->m_UIinfos.size() in m_UIObjects)
 
 protected:
     Camera m_MainCamera;

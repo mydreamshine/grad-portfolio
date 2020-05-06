@@ -43,7 +43,7 @@ size_t LinearAllocatorPage::Suballocate(_In_ size_t size, _In_ size_t alignment)
         // so really shouldn't happen.
         throw std::exception("LinearAllocatorPage::Suballocate");
     }
-    //mOffset = offset + size;
+    mOffset = offset + size;
     return offset;
 }
 

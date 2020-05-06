@@ -10,7 +10,7 @@ public:
     virtual void OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         DXGI_FORMAT BackBufferFormat,
         int& matCB_index, int& diffuseSrvHeap_Index,
-        int& objCB_index, int& skinnedCB_index);
+        int& objCB_index, int& skinnedCB_index, int& textBatch_index);
     virtual void OnInitProperties();
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt);
     virtual void DisposeUploaders();
@@ -21,7 +21,7 @@ public:
     virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat);
     virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index);
     virtual void BuildRenderItems();
-    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index);
+    virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index);
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);

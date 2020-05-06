@@ -91,6 +91,7 @@ private:
     UINT m_nSKinnedCB = 0;
     UINT m_nObjCB = 0;
     UINT m_nMatCB = 0;
+    UINT m_nTextBatch = 0;
 
 private:
     std::unordered_map<std::string, std::unique_ptr<Scene>> m_Scenes;

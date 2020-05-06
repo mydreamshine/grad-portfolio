@@ -7,11 +7,13 @@ PlayGameScene::~PlayGameScene()
 
 void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
     DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index, int& objCB_index, int& skinnedCB_index)
+    int& matCB_index, int& diffuseSrvHeap_Index,
+    int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     Scene::OnInit(device, commandList,
         BackBufferFormat,
-        matCB_index, diffuseSrvHeap_Index, objCB_index, skinnedCB_index);
+        matCB_index, diffuseSrvHeap_Index,
+        objCB_index, skinnedCB_index, textBatch_index);
 
     m_SpawnBound.Center = m_WorldCenter;
     m_SpawnBound.Extents.x = 1355.4405f;
@@ -332,7 +334,7 @@ void PlayGameScene::BuildRenderItems()
     }
 }
 
-void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
+void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     ObjectManager objManager;
 
@@ -382,6 +384,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
             std::string objName = Ritem_iter.first;
             objManager.SetObjectComponent(newObj, objName, Ritem);
 
+            if (objName == "UI_Layout_SkillList") continue;
             newObj->m_UIinfos[objName] = std::make_unique<TextInfo>();
             auto text_info = newObj->m_UIinfos[objName].get();
             text_info->m_FontName = L"¸¼Àº °íµñ";
@@ -389,8 +392,9 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
             text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
             text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
+            text_info->TextBatchIndex = textBatch_index++;
 
-            if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit\n    3:00";
+            if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit";
             else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0    D: 0    A: 0";
             else if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
             else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
@@ -501,6 +505,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index)
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
+    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
 }
 
 // character & equipment object generate test
