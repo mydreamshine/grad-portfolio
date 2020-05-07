@@ -37,6 +37,7 @@ private:
     void DrawSceneToShadowMap();
     void DrawSceneToBackBuffer();
     void DrawSceneToUI();
+    void DrawSceneToBackground();
 
     void WaitForPreviousFrame();
 

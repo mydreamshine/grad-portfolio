@@ -563,6 +563,7 @@ void ClientTest::BuildPSOs()
 void ClientTest::BuildScene()
 {
     m_Scenes["LoginScene"] = std::make_unique<LoginScene>(m_width, m_height);
+    m_Scenes["LobyScene"] = std::make_unique<LobyScene>(m_width, m_height);
     m_Scenes["PlayGameScene"] = std::make_unique<PlayGameScene>(m_width, m_height);
 
     int matCB_index = 0;
@@ -593,8 +594,8 @@ void ClientTest::BuildScene()
             m_Textures.push_back(Tex_iter.second.get());
     }
 
-    m_CurrSceneName = "PlayGameScene";
-    m_CurrScene = m_Scenes["PlayGameScene"].get();
+    m_CurrSceneName = "LobyScene";
+    m_CurrScene = m_Scenes["LobyScene"].get();
 }
 
 void ClientTest::BuildFonts()
@@ -742,8 +743,7 @@ void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const st
     {
         if (obj->Activated == false) continue;
         if (obj->m_Name == "ground_grid") continue;
-        if (obj->m_Name.find("SwordSlash") != std::string::npos)
-            int a = 0;
+        if (obj->m_Name.find("Background") != std::string::npos) continue;
         auto Ritem = obj->m_RenderItem;
         UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
         UINT SkinCBIndex = -1;
@@ -826,13 +826,17 @@ void ClientTest::DrawSceneToBackBuffer()
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
-        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 
     auto passCB = m_CurrFrameResource->PassCB->Resource();
     m_commandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
+
+    // Background render.
+    DrawSceneToBackground();
+
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
+        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
     auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
@@ -905,6 +909,66 @@ void ClientTest::DrawSceneToUI()
                 }
             }
         }
+    }
+}
+
+void ClientTest::DrawSceneToBackground()
+{
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
+        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+    m_commandList->SetPipelineState(m_PSOs["UILayout_Background"].Get());
+    auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
+
+    UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+    UINT skinnedCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(SkinnedConstants));
+    UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
+
+    auto objCB = m_CurrFrameResource->ObjectCB->Resource();
+    auto skinnedCB = m_CurrFrameResource->SkinnedCB->Resource();
+    auto matCB = m_CurrFrameResource->MaterialCB->Resource();
+
+    for (auto& obj : UIObjRenderLayer)
+    {
+        if (obj->Activated == false) continue;
+        if (obj->m_Name.find("Background") == std::string::npos) continue;
+        auto Ritem = obj->m_RenderItem;
+        UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
+        UINT SkinCBIndex = -1;
+        if (obj->m_SkeletonInfo != nullptr)
+            SkinCBIndex = obj->m_SkeletonInfo->SkinCBIndex;
+
+        m_commandList->IASetVertexBuffers(0, 1, &Ritem->Geo->VertexBufferView());
+        m_commandList->IASetIndexBuffer(&Ritem->Geo->IndexBufferView());
+        m_commandList->IASetPrimitiveTopology(Ritem->PrimitiveType);
+
+        D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+        if (ObjCBIndex != -1) objCBAddress += ObjCBIndex * objCBByteSize;
+        m_commandList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+
+        D3D12_GPU_VIRTUAL_ADDRESS skinnedCBAddress = skinnedCB->GetGPUVirtualAddress();
+        if (SkinCBIndex != -1) skinnedCBAddress += SkinCBIndex * skinnedCBByteSize;
+        m_commandList->SetGraphicsRootConstantBufferView(1, skinnedCBAddress);
+
+        if (Ritem->Mat != nullptr)
+        {
+            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + Ritem->Mat->MatCBIndex * matCBByteSize;
+            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+
+            int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + Ritem->Mat->DiffuseSrvHeapIndex;
+            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+            TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
+            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+        }
+        else
+        {
+            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
+            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+        }
+
+        m_commandList->DrawIndexedInstanced(Ritem->IndexCount, 1, Ritem->StartIndexLocation, Ritem->BaseVertexLocation, 0);
     }
 }
 

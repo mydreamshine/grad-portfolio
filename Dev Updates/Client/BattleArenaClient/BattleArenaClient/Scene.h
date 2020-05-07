@@ -9,6 +9,7 @@
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/TextureLoader.h"
+#include "Player.h"
 
 using namespace DirectX;
 
@@ -164,6 +165,7 @@ class PlayGameScene;
 class GameOverScene;
 /////////////////////////////////////////////
 #include "LoginScene.h"
+#include "LobyScene.h"
 #include "PlayGameScene.h"
 
 #define SIZE_ShadowMap 2048

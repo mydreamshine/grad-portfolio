@@ -773,11 +773,11 @@ void PlayGameScene::AnimateCameras(CTimer& gt)
     else
     {
         float deg2rad = MathHelper::Pi / 180.0f;
-        float camAngle = -90.0f * deg2rad;
-        float phi = 20.0f * deg2rad;
-        float rad = 1500.0f * 2.0f;
+        static float camAngle = -90.0f * deg2rad;
+        camAngle += 5.0f * deg2rad;
+        float phi = 30.0f * deg2rad;
+        float rad = 1500.0f;
         XMVECTOR Eye_Pos = MathHelper::SphericalToCartesian(rad, camAngle, phi);
-        LookAtPosition.z += 40.0f * gt.GetTimeElapsed();
         Eye_Pos = XMVectorAdd(Eye_Pos, XMLoadFloat3(&LookAtPosition));
         XMStoreFloat3(&EyePosition, Eye_Pos);
     }
