@@ -21,8 +21,31 @@ void ClientTest::OnDestroy()
         CloseHandle(m_FrameResources[i]->FenceEvent);
 }
 
-void ClientTest::OnInit()
+void ClientTest::OnKeyDown(UINT8 key)
 {
+    m_KeyState[key] = true;
+    if (key == VK_RBUTTON || key == VK_LBUTTON)
+    {
+        //마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
+        ::SetCapture(m_hwnd);
+        ::GetCursorPos(&m_OldCursorPos);
+        ::ScreenToClient(m_hwnd, &m_OldCursorPos);
+    }
+}
+
+void ClientTest::OnKeyUp(UINT8 key)
+{
+    m_KeyState[key] = false;
+    if (key == VK_RBUTTON || key == VK_LBUTTON)
+    {
+        //마우스 캡쳐를 해제한다.
+        ::ReleaseCapture();
+    }
+}
+
+void ClientTest::OnInit(HWND hwnd)
+{
+    DXSample::OnInit(hwnd);
     LoadPipeline();
     LoadAssets();
 
@@ -631,7 +654,9 @@ void ClientTest::OnUpdate()
         }
     }
 
-    m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_Timer);
+    RECT ClientRect;
+    ::GetClientRect(m_hwnd, &ClientRect);
+    m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_KeyState, m_OldCursorPos, ClientRect, m_Timer);
 }
 
 // Render the scene.
@@ -842,7 +867,7 @@ void ClientTest::DrawSceneToUI()
     float totalTime = m_Timer.GetTotalTime();
     int totalTime_i = (int)totalTime;
     static std::wstring time_str = L"\n   03:00";
-    static UINT TimeLimit_sec = 132;
+    static UINT TimeLimit_sec = 180;
     
     if ((totalTime_i != 0) && (totalTime_i % 1 == 0))
     {

@@ -39,7 +39,7 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         pSample);
 
     // Initialize the sample. OnInit is defined in each child-implementation of DXSample.
-    pSample->OnInit();
+    pSample->OnInit(m_hwnd);
 
     ShowWindow(m_hwnd, nCmdShow);
 
@@ -77,6 +77,10 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
         return 0;
 
     case WM_KEYDOWN:
+    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+        if (message == WM_LBUTTONDOWN) wParam = VK_LBUTTON;
+        else if (message == WM_RBUTTONDOWN) wParam = VK_RBUTTON;
         if (pSample)
         {
             pSample->OnKeyDown(static_cast<UINT8>(wParam));
@@ -84,8 +88,12 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
         return 0;
 
     case WM_KEYUP:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
         if (pSample)
         {
+            if (message == WM_LBUTTONUP) wParam = VK_LBUTTON;
+            else if (message == WM_RBUTTONUP) wParam = VK_RBUTTON;
             pSample->OnKeyUp(static_cast<UINT8>(wParam));
         }
         return 0;

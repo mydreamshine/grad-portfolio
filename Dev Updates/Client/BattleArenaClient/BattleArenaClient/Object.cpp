@@ -192,7 +192,7 @@ void TransformInfo::UpdateBaseAxis()
 	XMStoreFloat3(&m_Look, XMVector3Normalize(XMLoadFloat3(&m_Look)));
 }
 
-void TransformInfo::AnimateMovementWithVelocity(CTimer& gt)
+void TransformInfo::Animate(CTimer& gt)
 {
 	if (compareFloat(m_Velocity.x, 0.0f) && compareFloat(m_Velocity.y, 0.0f) && compareFloat(m_Velocity.z, 0.0f)) return;
 
@@ -237,16 +237,49 @@ DirectX::XMFLOAT3 TransformInfo::GetLook()
 	return m_Look;
 }
 
+void TransformInfo::Init()
+{
+	NumObjectCBDirty = gNumFrameResources;
+	m_WorldTransform = MathHelper::Identity4x4();
+	m_TexTransform = MathHelper::Identity4x4();
+	m_TexAlpha = 1.0f;
+
+	m_Bound.Center = { 0.0f, 0.0f, 0.0f };
+	m_Bound.Extents = { 0.0f, 0.0f, 0.0f };
+	m_BoundExtendsOrigin = { 0.0f, 0.0f, 0.0f };
+	m_LocalTransform = MathHelper::Identity4x4();
+
+	m_WorldPosition = { 0.0f, 0.0f, 0.0f };
+	m_WorldRotationQut = { 0.0f, 0.0f, 0.0f, 1.0f };
+	m_WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+	m_WorldScale = { 1.0f, 1.0f, 1.0f };
+	m_LocalPosition = { 0.0f, 0.0f, 0.0f };
+	m_LocalRotationQut = { 0.0f, 0.0f, 0.0f, 1.0f };
+	m_LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+	m_LocalScale = { 1.0f, 1.0f, 1.0f };
+
+	m_Right = { 1.0f, 0.0f, 0.0f };
+	m_Up = { 0.0f, 1.0f, 0.0f };
+	m_Look = { 0.0f, 0.0f, 1.0f };
+
+	m_Velocity = { 0.0f, 0.0f, 0.0f };
+
+	m_AttachingTargetBoneID = -1;
+}
+
 bool Object::ProcessSelfDeActivate(CTimer& gt)
 {
 	if (SelfDeActivated == false) return !Activated;
 
-	if (DeActivatedTime - gt.GetTimeElapsed() <= 0.0f)
+	if (DeActivatedDecrease - gt.GetTimeElapsed() <= 0.0f)
 	{
 		ObjectManager objManager;
 		objManager.DeActivateObj(this);
 	}
-	else DeActivatedTime -= gt.GetTimeElapsed();
+	else DeActivatedDecrease -= gt.GetTimeElapsed();
+
+	if (DisappearForDeAcTime == true)
+		m_TransformInfo->m_TexAlpha = DeActivatedDecrease / DeActivatedTime;
 
 	return !Activated;
 }

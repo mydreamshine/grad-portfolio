@@ -21,9 +21,12 @@ void LoginScene::OnInitProperties()
     
 }
 
-void LoginScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt)
+void LoginScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+    const bool key_state[], const POINT& oldCursorPos,
+    const RECT& ClientRect,
+    CTimer& gt)
 {
-    Scene::OnUpdate(frame_resource, shadow_map, gt);
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
 }
 
 void LoginScene::DisposeUploaders()
@@ -214,4 +217,8 @@ void LoginScene::UpdateShadowPassCB(UploadBuffer<PassConstants>* passCB, ShadowM
 void LoginScene::UpdateShadowTransform(CTimer& gt)
 {
     Scene::UpdateShadowTransform(gt);
+}
+
+void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
+{
 }

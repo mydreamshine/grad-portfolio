@@ -11,16 +11,27 @@
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/SpriteFontLoader.h"
 
+#define MAX_WORLD_OBJECT 2000
+#define MAX_CHARACTER_OBJECT 100
+
 // rel. UI
 struct TextInfo
 {
 	std::wstring m_FontName;
-	DirectX::XMFLOAT2 m_TextPos;
-	DirectX::XMVECTOR m_TextColor;
+	DirectX::XMFLOAT2 m_TextPos = { 0.0f, 0.0f };
+	DirectX::XMVECTOR m_TextColor = DirectX::Colors::Black;
 	std::wstring m_Text;
 	// 렌더링할 텍스트마다 SpriteBatch를 지정해줘야 하기에
 	// 각 텍스트는 고유한 SpriteBatchIndex를 지닌다.
 	UINT TextBatchIndex = 0;
+
+	void Init()
+	{
+		m_FontName.clear();
+		m_TextPos = { 0.0f, 0.0f };
+		m_TextColor = DirectX::Colors::Black;
+		m_Text.clear();
+	}
 };
 
 // rel. SkinnedConstatns
@@ -33,6 +44,12 @@ struct SkeletonInfo
 
 	// Index into GPU constant buffer corresponding to the SkinndCB for this render item.
 	UINT SkinCBIndex = -1;
+
+	void Init()
+	{
+		NumSkinnedCBDirty = gNumFrameResources;
+		m_Skeleton = nullptr;
+	}
 };
 
 // rel. ObjectConstants
@@ -147,7 +164,7 @@ struct TransformInfo
 	// 즉, WorldTransform을 전치시킨 Transform을 기준으로
 	// 기저벡터를 계산한다.
 	void UpdateBaseAxis();
-	void AnimateMovementWithVelocity(CTimer& gt);
+	void Animate(CTimer& gt);
 
 	DirectX::XMFLOAT4X4 GetWorldTransform();
 	DirectX::XMFLOAT4X4 GetLocalTransform();
@@ -170,6 +187,8 @@ struct TransformInfo
 	DirectX::XMFLOAT3 GetRight();
 	DirectX::XMFLOAT3 GetUp();
 	DirectX::XMFLOAT3 GetLook();
+
+	void Init();
 };
 
 
@@ -196,6 +215,8 @@ struct Object
 	bool Activated = false;
 	bool SelfDeActivated = false;
 	float DeActivatedTime = 0.0f;
+	float DeActivatedDecrease = 0.0f;
+	bool DisappearForDeAcTime = false; // DeActivatedTime동안 Alpha값이 서서히 줄어들게 하는 플래그
 
 	bool ProcessSelfDeActivate(CTimer& gt);
 };
@@ -441,5 +462,16 @@ public:
 		obj->Activated = false;
 		obj->SelfDeActivated = false;
 		obj->DeActivatedTime = 0.0f;
+		obj->DeActivatedDecrease = 0.0f;
+		obj->DisappearForDeAcTime = false;
+		if (obj->m_TransformInfo != nullptr)
+			obj->m_TransformInfo->Init();
+		if (obj->m_SkeletonInfo != nullptr)
+			obj->m_SkeletonInfo->Init();
+		if (obj->m_UIinfos.empty() != true)
+		{
+			for (auto& textInfo_iter : obj->m_UIinfos)
+				textInfo_iter.second->Init();
+		}
 	}
 };

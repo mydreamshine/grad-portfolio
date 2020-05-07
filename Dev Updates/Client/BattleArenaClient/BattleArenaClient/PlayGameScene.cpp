@@ -74,10 +74,13 @@ void PlayGameScene::OnInitProperties()
     m_LightRotationAngle = 0.0f;
 }
 
-void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt)
+void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+    const bool key_state[], const POINT& oldCursorPos,
+    const RECT& ClientRect,
+    CTimer& gt)
 {
     PlayGameScene::AnimateWorldObjectsTransform(gt);
-    Scene::OnUpdate(frame_resource, shadow_map, gt);
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
 }
 
 void PlayGameScene::DisposeUploaders()
@@ -88,13 +91,6 @@ void PlayGameScene::DisposeUploaders()
 void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 {
     GeometryGenerator geoGen;
-
-    float wnd_width = (float)m_width;
-    float wnd_height = (float)m_height;
-    float wnd_top = wnd_height / 2;
-    float wnd_bottom = -wnd_top;
-    float wnd_right = wnd_width / 2;
-    float wnd_left = -wnd_right;
 
     // UI Position relative to DC(Device Coordinate) with origin at screen center.
     std::unordered_map<std::string, GeometryGenerator::MeshData> UILayerBacground_Meshes;
@@ -118,6 +114,7 @@ void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsComma
 
     std::unordered_map<std::string, GeometryGenerator::MeshData> EffectGeo_Meshs;
     EffectGeo_Meshs["SkillEffect_SwordSlash_a"] = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
+    EffectGeo_Meshs["PickingEffect_CrossTarget"] = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
     m_Geometries["GameEffectGeo"]
         = std::move(Scene::BuildMeshGeometry(device, commandList, "GameEffectGeo", EffectGeo_Meshs));
 }
@@ -158,7 +155,8 @@ void PlayGameScene::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList
         "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga",
         "UI/White_Transparency50.png",
         "UI/LightGreen_Transparency50.png",
-        "UI/Effect/SwordSlash_a.png"
+        "UI/Effect/SwordSlash_a.png",
+        "UI/Effect/CrossTarget.png"
     };
 
     for (auto& texture_path : material_filepaths)
@@ -331,6 +329,8 @@ void PlayGameScene::BuildRenderItems()
         std::string subMeshName = subMesh_iter.first;
         if(subMeshName == "SkillEffect_SwordSlash_a")
             m_AllRitems[subMeshName]->Mat = m_Materials["SwordSlash_a"].get();
+        else if(subMeshName == "PickingEffect_CrossTarget")
+            m_AllRitems[subMeshName]->Mat = m_Materials["CrossTarget"].get();
     }
 }
 
@@ -502,6 +502,8 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         for (UINT i = m_MaxWorldObject - nDeAcativateWorldObj; i < m_MaxWorldObject; ++i)
             m_WorldObjects[i]->Activated = false;
     }
+
+    m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, m_AllRitems, m_CurrSkillObjInstanceNUM);
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
@@ -678,7 +680,10 @@ void PlayGameScene::AnimateLights(CTimer& gt)
 void PlayGameScene::AnimateSkeletons(CTimer& gt)
 {
     if (m_MainPlayer != nullptr)
-        m_MainPlayer->ProcessSkeletonAnimDurationDone(m_AllObjects, m_WorldObjects, m_MaxWorldObject, m_AllRitems, m_CurrSkillObjInstanceNUM);
+    {
+        CD3DX12_VIEWPORT ViewPort(0.0f, 0.0f, (float)m_width, (float)m_height);
+        m_MainPlayer->ProcessSkeletonAnimDurationDone();
+    }
 
     for (auto& obj : m_CharacterObjects)
     {
@@ -788,12 +793,16 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt)
     for (auto& obj : m_WorldObjects)
     {
         if (obj->ProcessSelfDeActivate(gt) != true)
-            obj->m_TransformInfo->AnimateMovementWithVelocity(gt);
+            obj->m_TransformInfo->Animate(gt);
     }
 }
 
-void PlayGameScene::ProcessInput(CTimer& gt)
+void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
 {
     if (m_MainPlayer != nullptr)
-        m_MainPlayer->ProcessInput(gt);
+    {
+        CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
+        m_MainPlayer->ProcessInput(key_state, oldCursorPos,
+            ViewPort, gt);
+    }
 }

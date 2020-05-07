@@ -9,7 +9,7 @@ public:
     DXSample(UINT width, UINT height, std::wstring name);
     virtual ~DXSample();
 
-    virtual void OnInit() = 0;
+    virtual void OnInit(HWND hwnd) { m_hwnd = hwnd; }
     virtual void OnUpdate() = 0;
     virtual void OnRender() = 0;
     virtual void OnDestroy() = 0;
@@ -29,6 +29,8 @@ protected:
     std::wstring GetAssetFullPath(LPCWSTR assetName);
     void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter);
     void SetCustomWindowText(LPCWSTR text);
+
+    HWND m_hwnd;
 
     // Viewport dimensions.
     UINT m_width;

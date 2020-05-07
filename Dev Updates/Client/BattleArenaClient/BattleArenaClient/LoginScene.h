@@ -12,7 +12,10 @@ public:
         int& matCB_index, int& diffuseSrvHeap_Index,
         int& objCB_index, int& skinnedCB_index, int& textBatch_index);
     virtual void OnInitProperties();
-    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt);
+    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+        const bool key_state[], const POINT& oldCursorPos,
+        const RECT& ClientRect,
+        CTimer& gt);
     virtual void DisposeUploaders();
 
 public:
@@ -35,5 +38,5 @@ public:
     virtual void AnimateCameras(CTimer& gt) {}
 
 public:
-    virtual void ProcessInput(CTimer& gt) {}
+    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt);
 };

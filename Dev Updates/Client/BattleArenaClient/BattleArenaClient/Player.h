@@ -1,5 +1,6 @@
 #pragma once
 #include "Object.h"
+#include "Ray.h"
 #include <string>
 #include "Common/Util/d3d12/Camera.h"
 #include "Common/Timer/Timer.h"
@@ -32,9 +33,28 @@ struct Player
 	Camera m_Camera;
 	int m_CurrAction = ActionType::Idle;
 
+	POINT m_oldCursorPos;
+
+
+private:
+	std::vector<std::unique_ptr<Object>>* AllObjectsRef = nullptr;
+	std::vector<Object*>* WorldObjectsRef = nullptr;
+	UINT MaxCreateWorldObj = 2000;
+	std::unordered_map<std::string, std::unique_ptr<RenderItem>>* AllRitemsRef = nullptr;
+	UINT* CurrSkillObjInstanceNUMRef = nullptr;
+
+public:
+	void SetCreateSkillObjRef(
+		std::vector<std::unique_ptr<Object>>& AllObjects,
+		std::vector<Object*>& WorldObjects,
+		const UINT MaxWorldObj,
+		std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems,
+		UINT& CurrSkillObjInstanceNUM);
+
 public:
 	// PlayerObject의 위치가 바뀔때마다 Camera의 위치도 변경된다.
-	void ProcessInput(CTimer& gt);
+	void ProcessInput(const bool key_state[], const POINT& oldCursorPos,
+		const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
 
 	// PlayGameScene에서 매 업데이트마다
 	// AnimateWorldObjectsTransform()를 통해 오브젝트의 Transform을 업데이트하기 때문에
@@ -44,12 +64,9 @@ public:
 	// Player Object의 Transform을 업데이트 하기 위해선 Velocity를 갱신해줄 필요가 있다.
 	//void UpdateMove(CTimer& gt);
 
-	void ProcessSkeletonAnimDurationDone(
-		std::vector<std::unique_ptr<Object>>& AllObjects,
-		std::vector<Object*>& WorldObjects,
-		const UINT MaxWorldObj,
-		std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems,
-		UINT& CurrSkillObjInstanceNUM);
+	void ProcessPicking(const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
+
+	void ProcessSkeletonAnimDurationDone();
 
 	void CreateSkillObject(std::vector<std::unique_ptr<Object>>& AllObjects,
 		std::vector<Object*>& WorldObjects,

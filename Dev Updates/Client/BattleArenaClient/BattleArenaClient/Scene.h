@@ -26,7 +26,10 @@ public:
         int& matCB_index, int& diffuseSrvHeap_Index,
         int& objCB_index, int& skinnedCB_index, int& textBatch_index);
     virtual void OnInitProperties() = 0;
-    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt);
+    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+        const bool key_state[], const POINT& oldCursorPos,
+        const RECT& ClientRect,
+        CTimer& gt);
     virtual void DisposeUploaders();
 
 public:
@@ -65,7 +68,7 @@ public:
     virtual void AnimateCameras(CTimer& gt) = 0;
     
 public:
-    virtual void ProcessInput(CTimer& gt) = 0;
+    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt) = 0;
 
 public:
     const PassConstants& GetMainPassCB() { return m_MainPassCB; }
@@ -86,6 +89,7 @@ public:
 
 protected:
     UINT m_width, m_height;
+    RECT m_ClientRect;
 
     PassConstants m_MainPassCB; // index 0 of pass cbuffer.
     PassConstants m_ShadowPassCB; // index 1 of pass cbuffer.

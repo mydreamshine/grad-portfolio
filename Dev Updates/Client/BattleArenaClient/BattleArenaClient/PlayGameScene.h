@@ -13,7 +13,10 @@ public:
         int& matCB_index, int& diffuseSrvHeap_Index,
         int& objCB_index, int& skinnedCB_index, int& textBatch_index);
     virtual void OnInitProperties();
-    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt);
+    virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+        const bool key_state[], const POINT& oldCursorPos,
+        const RECT& ClientRect,
+        CTimer& gt);
     virtual void DisposeUploaders();
 
 public:
@@ -42,11 +45,11 @@ public:
     void AnimateWorldObjectsTransform(CTimer& gt);
 
 public:
-    virtual void ProcessInput(CTimer& gt);
+    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt);
 
 private:
-    const UINT m_MaxWorldObject = 2000;
-    const UINT m_MaxCharacterObject = 100;
+    const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
+    const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
     UINT m_CurrSkillObjInstanceNUM = 0;
     DirectX::XMFLOAT3 m_WorldCenter = { 0.0f, 0.0f, 0.0f };
     DirectX::BoundingBox m_SpawnBound;

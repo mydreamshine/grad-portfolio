@@ -8,10 +8,13 @@ class ClientTest : public DXSample
 public:
     ClientTest(UINT width, UINT height, std::wstring name);
 
-    virtual void OnInit();
+    virtual void OnInit(HWND hwnd);
     virtual void OnUpdate();
     virtual void OnRender();
     virtual void OnDestroy();
+
+    virtual void OnKeyDown(UINT8 key);
+    virtual void OnKeyUp(UINT8 key);
 
 private:
     void LoadPipeline();
@@ -106,4 +109,8 @@ private:
     UINT m_frameIndex;
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue;
+
+private:
+    bool m_KeyState[256]; // false: KeyUp, true: KeyDown
+    POINT m_OldCursorPos;
 };

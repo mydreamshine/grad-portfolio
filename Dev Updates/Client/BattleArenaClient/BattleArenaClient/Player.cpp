@@ -3,14 +3,24 @@
 
 using namespace DirectX;
 
-void Player::ProcessInput(CTimer& gt)
+void Player::SetCreateSkillObjRef(
+	std::vector<std::unique_ptr<Object>>& AllObjects,
+	std::vector<Object*>& WorldObjects,
+	const UINT MaxWorldObj,
+	std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems,
+	UINT& CurrSkillObjInstanceNUM)
+{
+	AllObjectsRef = &AllObjects;
+	WorldObjectsRef = &WorldObjects;
+	MaxCreateWorldObj = MaxWorldObj;
+	AllRitemsRef = &AllRitems;
+	CurrSkillObjInstanceNUMRef = &CurrSkillObjInstanceNUM;
+}
+
+void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
+	const CD3DX12_VIEWPORT& ViewPort, CTimer& gt)
 {
 	if (m_ObjectRef == nullptr) return;
-
-	/*static float ydt = 0.0f;
-	ydt += 5.0f;
-	m_ObjectRef->m_TransformInfo->SetWorldRotationEuler({ ydt, 0.0f, 0.0f });
-	m_ObjectRef->m_TransformInfo->UpdateWorldTransform();*/
 
 	// Set Velocity
 	if (((m_CurrAction & ActionType::Idle) == ActionType::Idle)
@@ -19,34 +29,29 @@ void Player::ProcessInput(CTimer& gt)
 		XMFLOAT3 newVelocity = { 0.0f, 0.0f, 0.0f };
 		float yaw_angle = 0.0f;
 		float deg2rad = MathHelper::Pi / 180.0f;
-		std::unordered_map<int, bool> keypress;
-		keypress[0x57] = ::GetAsyncKeyState(0x57) & 0x8001; // w
-		keypress[0x41] = ::GetAsyncKeyState(0x41) & 0x8001; // a
-		keypress[0x53] = ::GetAsyncKeyState(0x53) & 0x8001; // s
-		keypress[0x44] = ::GetAsyncKeyState(0x44) & 0x8001; // d
 
-		if (keypress[0x57] == true) // w
+		if (key_state[0x57] == true) // w
 		{
 			yaw_angle = 0.0f;
 		}
-		if (keypress[0x41] == true) // a
+		if (key_state[0x41] == true) // a
 		{
-			if (keypress[0x57] == true) yaw_angle = -45.0f;
+			if (key_state[0x57] == true) yaw_angle = -45.0f;
 			else yaw_angle = -90.0f;
 		}
-		if (keypress[0x53] == true) // s
+		if (key_state[0x53] == true) // s
 		{
-			if (keypress[0x41] == true) yaw_angle = -135.0f;
+			if (key_state[0x41] == true) yaw_angle = -135.0f;
 			else yaw_angle = -180.0f;
 		}
-		if (keypress[0x44] == true) // d
+		if (key_state[0x44] == true) // d
 		{
-			if (keypress[0x57] == true) yaw_angle = 45.0f;
-			else if (keypress[0x53] == true) yaw_angle = 135.0f;
+			if (key_state[0x57] == true) yaw_angle = 45.0f;
+			else if (key_state[0x53] == true) yaw_angle = 135.0f;
 			else yaw_angle = 90.0f;
 		}
 
-		if (keypress[0x57] || keypress[0x41] || keypress[0x53] || keypress[0x44])
+		if (key_state[0x57] || key_state[0x41] || key_state[0x53] || key_state[0x44])
 		{
 			m_ObjectRef->m_TransformInfo->SetWorldRotationEuler({ 0.0f, yaw_angle, 0.0f });
 			m_ObjectRef->m_TransformInfo->UpdateWorldTransform();
@@ -93,8 +98,9 @@ void Player::ProcessInput(CTimer& gt)
 	}
 
 	// Set Animation Action
-	if (::GetAsyncKeyState(VK_LBUTTON) & 0x8001)
+	if (key_state[VK_LBUTTON] == true)
 	{
+		m_oldCursorPos = oldCursorPos;
 		std::string objName = m_ObjectRef->m_Name;
 		if (objName.find("Meshtint Free Knight") != std::string::npos)
 		{
@@ -105,6 +111,8 @@ void Player::ProcessInput(CTimer& gt)
 				animInfo->AnimStop(currAnimName);
 				animInfo->AnimPlay("Meshtint Free Knight@Sword And Shield Slash");
 
+				Player::ProcessPicking(ViewPort, gt);
+
 				m_ObjectRef->m_TransformInfo->SetVelocity({0.0f, 0.0f, 0.0f});
 			}
 		}
@@ -113,12 +121,77 @@ void Player::ProcessInput(CTimer& gt)
 	}
 }
 
-void Player::ProcessSkeletonAnimDurationDone(
-	std::vector<std::unique_ptr<Object>>& AllObjects,
-	std::vector<Object*>& WorldObjects,
-	const UINT MaxWorldObj,
-	std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems,
-	UINT& CurrSkillObjInstanceNUM)
+void Player::ProcessPicking(const CD3DX12_VIEWPORT& ViewPort, CTimer& gt)
+{
+	if (WorldObjectsRef == nullptr) return;
+	Object* groundObj = nullptr;
+	for (auto& obj : (*WorldObjectsRef))
+	{
+		if (obj->m_Name == "Floor1")
+			groundObj = obj;
+	}
+
+	XMVECTOR PlayerPOS = XMLoadFloat3(&m_ObjectRef->m_TransformInfo->GetWorldPosition());
+	XMFLOAT3 PlayerWorldEuler = m_ObjectRef->m_TransformInfo->GetWorldEuler();
+
+	bool Picking = false;
+	XMFLOAT3 intersectPos;
+	if (groundObj != nullptr)
+	{
+		CRay CursorRay;
+		CursorRay = CursorRay.RayAtWorldSpace(ViewPort, m_Camera.GetProj4x4f(), m_Camera.GetView4x4f(), m_oldCursorPos.x, m_oldCursorPos.y);
+
+		Picking = CursorRay.RayAABBIntersect(CursorRay, groundObj->m_TransformInfo->m_Bound, intersectPos);
+	}
+	if (Picking == true)
+	{
+		XMFLOAT3 playerPos; XMStoreFloat3(&playerPos, PlayerPOS);
+		intersectPos.y = playerPos.y + m_ObjectRef->m_TransformInfo->m_Bound.Extents.y;
+		XMVECTOR PickedPos = XMLoadFloat3(&intersectPos);
+		XMVECTOR PlayerNewLOOK = XMVector3Normalize(PickedPos - PlayerPOS);
+		XMVECTOR Z_Axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+		XMFLOAT3 Dot; XMStoreFloat3(&Dot, XMVector3Dot(PlayerNewLOOK, Z_Axis));
+		XMFLOAT3 playerNewLook; XMStoreFloat3(&playerNewLook, PlayerNewLOOK);
+		float rad2deg = 180.0f / MathHelper::Pi;
+		PlayerWorldEuler.y = atanf(playerNewLook.x / (playerNewLook.z)) * rad2deg;
+		if (Dot.x < 0.0f)// PickedPos가 Player 뒤에 있을 때
+		{
+			if (PlayerWorldEuler.y < 0.0f) // PickedPos가 우측후방에 있을때
+				PlayerWorldEuler.y += 180.0f;
+			else if (PlayerWorldEuler.y > 0.0f) // PickedPos가 좌측후방에 있을때
+				PlayerWorldEuler.y -= 180.0f;
+		}
+		m_ObjectRef->m_TransformInfo->SetWorldRotationEuler(PlayerWorldEuler);
+		m_ObjectRef->m_TransformInfo->UpdateWorldTransform();
+
+		if (AllObjectsRef != nullptr && WorldObjectsRef != nullptr && AllRitemsRef != nullptr && CurrSkillObjInstanceNUMRef != nullptr)
+		{
+			ObjectManager objManager;
+
+			auto newSkillEffectObj = objManager.FindDeactiveWorldObject(*AllObjectsRef, *WorldObjectsRef, MaxCreateWorldObj);
+			if (newSkillEffectObj == nullptr)
+			{
+				MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+				return;
+			}
+
+			std::string objName = "CrossTarget - Instancing" + std::to_string(++(*CurrSkillObjInstanceNUMRef));
+			XMFLOAT3 WorldPosition; XMStoreFloat3(&WorldPosition, PickedPos);
+			WorldPosition.y = 20.0f;
+			objManager.SetObjectComponent(newSkillEffectObj, objName,
+				(*AllRitemsRef)["PickingEffect_CrossTarget"].get(), nullptr,
+				nullptr, nullptr, nullptr,
+				nullptr, nullptr, &WorldPosition);
+
+			newSkillEffectObj->DeActivatedTime = 1.0f;
+			newSkillEffectObj->DeActivatedDecrease = 1.0f;
+			newSkillEffectObj->SelfDeActivated = true;
+			newSkillEffectObj->DisappearForDeAcTime = true;
+		}
+	}
+}
+
+void Player::ProcessSkeletonAnimDurationDone()
 {
 	if ((m_CurrAction & ActionType::Attacking) == ActionType::Attacking)
 	{
@@ -134,7 +207,10 @@ void Player::ProcessSkeletonAnimDurationDone(
 
 				bool AnimNotifyIsSetted = false;
 				if (animInfo->CheckAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", AnimNotifyIsSetted) == true)
-					Player::CreateSkillObject(AllObjects, WorldObjects, MaxWorldObj, AllRitems, CurrSkillObjInstanceNUM);
+				{
+					if(AllObjectsRef != nullptr && WorldObjectsRef != nullptr && AllRitemsRef != nullptr && CurrSkillObjInstanceNUMRef != nullptr)
+						Player::CreateSkillObject(*AllObjectsRef, *WorldObjectsRef, MaxCreateWorldObj, *AllRitemsRef, *CurrSkillObjInstanceNUMRef);
+				}
 
 				if (animInfo->AnimOnceDone(currAnimName, AnimIsSetted) == true)
 				{
@@ -148,8 +224,7 @@ void Player::ProcessSkeletonAnimDurationDone(
 	}
 }
 
-void Player::CreateSkillObject(
-	std::vector<std::unique_ptr<Object>>& AllObjects,
+void Player::CreateSkillObject(std::vector<std::unique_ptr<Object>>& AllObjects,
 	std::vector<Object*>& WorldObjects,
 	const UINT MaxWorldObj,
 	std::unordered_map<std::string, std::unique_ptr<RenderItem>>& AllRitems,
@@ -159,7 +234,7 @@ void Player::CreateSkillObject(
 	if (objName.find("Meshtint Free Knight") != std::string::npos)
 	{
 		XMVECTOR PlayerPOS = XMLoadFloat3(&m_ObjectRef->m_TransformInfo->GetWorldPosition());
-		XMFLOAT3 PlayerWorldEuler = m_ObjectRef->m_TransformInfo->GetWorldEuler();
+		XMFLOAT3 PlayerWorldEuler = m_ObjectRef->m_TransformInfo->GetWorldEuler();		
 		XMFLOAT3 SpawnWorldEuler[3] =
 		{
 			PlayerWorldEuler,
@@ -192,13 +267,14 @@ void Player::CreateSkillObject(
 			newSkillEffectObj->m_TransformInfo->SetWorldPosition(WorldPosition);
 
 			XMFLOAT3 newVelocity; XMStoreFloat3(&newVelocity, SpawnLOOK);
-			newVelocity.x *= CharacterSpeed::MeshtintFreeKnightSpeed * 4.5f;
-			newVelocity.y *= CharacterSpeed::MeshtintFreeKnightSpeed * 4.5f;
-			newVelocity.z *= CharacterSpeed::MeshtintFreeKnightSpeed * 4.5f;
+			newVelocity.x *= CharacterSpeed::MeshtintFreeKnightSpeed * 5.5f;
+			newVelocity.y *= CharacterSpeed::MeshtintFreeKnightSpeed * 5.5f;
+			newVelocity.z *= CharacterSpeed::MeshtintFreeKnightSpeed * 5.5f;
 
 			newSkillEffectObj->m_TransformInfo->SetVelocity(newVelocity);
 
 			newSkillEffectObj->DeActivatedTime = 10.0f;
+			newSkillEffectObj->DeActivatedDecrease = 10.0f;
 			newSkillEffectObj->SelfDeActivated = true;
 		}
 	}

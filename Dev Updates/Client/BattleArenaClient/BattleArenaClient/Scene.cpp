@@ -25,8 +25,13 @@ void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
 }
 
 
-void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTimer& gt)
+void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
+    const bool key_state[], const POINT& oldCursorPos,
+    const RECT& ClientRect,
+    CTimer& gt)
 {
+    m_ClientRect = ClientRect;
+
     AnimateLights(gt);
     AnimateSkeletons(gt);
     AnimateCameras(gt);
@@ -38,7 +43,7 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map, CTime
     UpdateMainPassCB(frame_resource->PassCB.get(), gt);
     UpdateShadowPassCB(frame_resource->PassCB.get(), shadow_map, gt);
 
-    ProcessInput(gt);
+    ProcessInput(key_state, oldCursorPos, gt);
 }
 
 void Scene::DisposeUploaders()
