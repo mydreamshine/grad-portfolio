@@ -132,8 +132,8 @@ void Camera::SetOrthographicLens(UINT ViewWidth, UINT ViewHeight, float zn, floa
 	mNearZ = zn;
 	mFarZ = zf;
 
-	mNearWindowHeight = 2.0f * mNearZ * tanf(0.5f * mFovY);
-	mFarWindowHeight = 2.0f * mFarZ * tanf(0.5f * mFovY);
+	mNearWindowHeight = (float)ViewHeight;
+	mFarWindowHeight = (float)ViewHeight;
 
 	XMMATRIX P = XMMatrixOrthographicLH((float)ViewWidth, (float)ViewHeight, mNearZ, mFarZ);
 	XMStoreFloat4x4(&mProj, P);

@@ -295,7 +295,7 @@ void Player::UpdateCamera(CTimer& gt, float aspect)
 	XMFLOAT3 LookTargetWorldScale = transformInfo->m_WorldScale;
 	XMFLOAT3 LookAtPosition = transformInfo->m_WorldPosition;
 	float Scale_average = (LookTargetWorldScale.x + LookTargetWorldScale.y + LookTargetWorldScale.z) * 0.333333f;
-	float phi = 25.0f * deg2rad;
+	float phi = 30.0f * deg2rad;
 	float rad = 1500.0f * Scale_average;
 	XMVECTOR Eye_Pos = MathHelper::SphericalToCartesian(rad, camAngle, phi);
 	Eye_Pos = XMVectorAdd(Eye_Pos, XMLoadFloat3(&LookAtPosition));
@@ -304,7 +304,7 @@ void Player::UpdateCamera(CTimer& gt, float aspect)
 	XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
 
 	m_Camera.SetPosition(EyePosition);
-	m_Camera.SetPerspectiveLens(DirectX::XM_1DIVPI, aspect, 1.0f, 10000.0f);
+	m_Camera.SetPerspectiveLens(DirectX::XM_PIDIV4, aspect, 1.0f, 10000.0f);
 	m_Camera.LookAt(EyePosition, LookAtPosition, UpDirection);
 	m_Camera.UpdateViewMatrix();
 }

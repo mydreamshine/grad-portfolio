@@ -67,7 +67,11 @@ void PlayGameScene::OnInitProperties()
         }
     }
 
-    if (m_MainPlayer != nullptr) m_MainPlayer->m_CurrAction = ActionType::Idle;
+    if (m_MainPlayer != nullptr)
+    {
+        m_MainPlayer->m_CurrAction = ActionType::Idle;
+        m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, m_AllRitems, m_CurrSkillObjInstanceNUM);
+    }
 
     m_CurrSkillObjInstanceNUM = 0;
 
