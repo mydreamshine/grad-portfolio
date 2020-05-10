@@ -244,6 +244,10 @@ namespace BattleArena {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}
+		if (isConnect(uid) == true) {
+			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
+			return;
+		}
 
 		m_clients[client].uid = uid;
 		strcpy_s(m_clients[client].id, packet->id);
