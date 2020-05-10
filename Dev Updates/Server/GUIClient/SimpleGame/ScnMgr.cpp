@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include "ScnMgr.h"
 #include "Dependencies\freeglut.h"
-#include "..\\..\\server\server\PacketMgr.h"
+#include "..\..\Common\PacketMgr.h"
 #include <WinSock2.h>
 
 ScnMgr::ScnMgr()

@@ -7,6 +7,7 @@
 #include <list>
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <set>
 #include "lobby_protocol.h"
 #include "DBMANAGER.h"
@@ -15,8 +16,7 @@
 #include "..\..\Common\CSOCKADDR_IN.h"
 #include "..\..\Common\OVER_EX.h"
 
-#define BATTLE_OFFLINE
-
+//#define BATTLE_OFFLINE
 
 
 namespace BattleArena {
@@ -37,7 +37,7 @@ namespace BattleArena {
 
 		int uid;
 		char id[ID_LENGTH];
-		std::set<int> friendlist; //(ONLY index)
+		std::set<int> friendlist; //(ONLY index for client_table, show ONLY ONLINE friends)
 
 		void set_recv()
 		{
@@ -97,6 +97,7 @@ namespace BattleArena {
 		void InitThreads();
 
 		void do_worker();
+
 		void send_packet(int client, void* buff);
 		void send_packet_default(int client, int TYPE);
 		void send_packet_room_info(int client, int room_id);
@@ -116,8 +117,9 @@ namespace BattleArena {
 		void insert_client_table(int uid, int clinet);
 		void delete_client_table(int uid);
 
-		int isConnect(int uid);
-		int isConnect(const char* id);
+		//is client connect?
+		int isConnect(int uid); //uid ver
+		int isConnect(const char* id); //char ver
 	public:
 		LOBBYSERVER();
 		~LOBBYSERVER();

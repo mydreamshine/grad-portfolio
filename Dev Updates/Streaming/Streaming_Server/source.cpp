@@ -106,6 +106,18 @@ void ProcessPacket(int client, void* packet)
 	case 3:
 		clients[client].GameFramework.OnProcessingKeyboardMessage(0, WM_KEYUP, 'S', 0);
 		break;
+	case 4:
+		clients[client].GameFramework.OnProcessingKeyboardMessage(0, WM_KEYDOWN, 'A', 0);
+		break;
+	case 5:
+		clients[client].GameFramework.OnProcessingKeyboardMessage(0, WM_KEYDOWN, 'D', 0);
+		break;
+	case 6:
+		clients[client].GameFramework.OnProcessingKeyboardMessage(0, WM_KEYUP, 'A', 0);
+		break;
+	case 7:
+		clients[client].GameFramework.OnProcessingKeyboardMessage(0, WM_KEYUP, 'D', 0);
+		break;
 	}
 };
 
@@ -162,6 +174,7 @@ void do_worker() {
 			}
 			clients[key].GameFramework.FrameAdvance();
 			delete over_ex;
+			PostEvent(key, EV_ENCODE);
 			break;
 
 		case EV_ENCODE:
@@ -225,7 +238,7 @@ int main()
 	vector<thread> threads;
 	for (int i = 0; i < 4; ++i)
 		threads.emplace_back(do_worker);
-	threads.emplace_back(do_checker);
+	//threads.emplace_back(do_checker);
 
 	while (true)
 	{

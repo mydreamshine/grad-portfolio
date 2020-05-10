@@ -13,6 +13,8 @@
 
 using namespace std;
 bool state = false;
+
+bool friend_flag = false;
 char last_id[ID_LENGTH];
 
 void battleFunc(int room_id);
@@ -32,6 +34,7 @@ int ProcessPacket(void* ptr)
 	case CS_PACKET_REQUEST_FRIEND: {
 		cs_packet_request_friend* cprf = reinterpret_cast<cs_packet_request_friend*>(ptr);
 		strcpy_s(last_id, cprf->id);
+		friend_flag = true;
 		printf("%s로부터 친구요청이 왔습니다.\n", cprf->id);
 	}
 		break;
@@ -217,6 +220,11 @@ vector<string> split(string& str, char delimiter) {
 	return internal;
 }
 
+void print_help()
+{
+	printf("명령어 : /enqueue, /dequeue, /add friend_id, /accept\n");
+}
+
 int main()
 {
 	WSADATA wsa;
@@ -233,6 +241,7 @@ int main()
 	cout << "[CLI CLIENT]" << endl;
 	loginFunc(serverSocket);
 	thread recvThread{ recvFunc, serverSocket };
+	print_help();
 
 	while (true)
 	{
@@ -247,11 +256,16 @@ int main()
 			else if (token[0] == "/dequeue")
 				send_packet_default(serverSocket, CS_PACKET_MATCH_DEQUEUE);
 			else if (token[0] == "/add") {
+				if (friend_flag == false) continue;
 				send_packet_request_friend(serverSocket, token[1].c_str());
-				printf("%s에게 친구 요청을 보냈습니다.\n", token[1]);
+				token[1] += '\0';
+				printf("%s에게 친구 요청을 보냈습니다.\n", token[1].c_str());
 			}
 			else if (token[0] == "/accept") {
 				send_packet_accept_friend(serverSocket, last_id);
+			}
+			else if (token[0] == "/help") {
+				print_help();
 			}
 		}
 	}

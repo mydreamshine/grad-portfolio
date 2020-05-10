@@ -1,5 +1,6 @@
 #pragma once
 #define LOBBYSERVER_PORT 15500
+#define BATTLESERVER_PORT 15600
 #define ID_LENGTH 11
 /*
 C : Client

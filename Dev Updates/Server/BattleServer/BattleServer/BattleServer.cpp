@@ -120,8 +120,10 @@ namespace BattleArena {
 				std::wcout << L"[CLIENT - " << key << L"] Disconnected" << std::endl;
 				if (client->room != nullptr)
 					client->room->disconnect(client);
-				if(client->socket != INVALID_SOCKET)
+				if (client->socket != INVALID_SOCKET) {
 					closesocket(client->socket);
+					client->socket = INVALID_SOCKET;
+				}
 				if(client != &m_Lobby)
 					delete client;
 				continue;
@@ -152,8 +154,9 @@ namespace BattleArena {
 				wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
 				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
-					//m_Rooms[key]->end();
-					delete m_Rooms[key];
+					ROOM* tmp = m_Rooms[key];
+					m_Rooms[key] = nullptr;
+					delete tmp;
 					set_empty_room(key);
 				}
 				else add_event(static_cast<int>(key), EV_UPDATE, UPDATE_INTERVAL);

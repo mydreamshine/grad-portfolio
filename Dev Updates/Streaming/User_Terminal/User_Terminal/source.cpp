@@ -203,6 +203,14 @@ void event_loop()
 					keycode = 1;
 					send(serverSocket, &keycode, sizeof(char), 0);
 					break;
+				case SDLK_LEFT:
+					keycode = 4;
+					send(serverSocket, &keycode, sizeof(char), 0);
+					break;
+				case SDLK_RIGHT:
+					keycode = 5;
+					send(serverSocket, &keycode, sizeof(char), 0);
+					break;
 				}
 				break;
 
@@ -217,6 +225,14 @@ void event_loop()
 
 				case SDLK_DOWN:
 					keycode = 3;
+					send(serverSocket, &keycode, sizeof(char), 0);
+					break;
+				case SDLK_LEFT:
+					keycode = 6;
+					send(serverSocket, &keycode, sizeof(char), 0);
+					break;
+				case SDLK_RIGHT:
+					keycode = 7;
 					send(serverSocket, &keycode, sizeof(char), 0);
 					break;
 				}

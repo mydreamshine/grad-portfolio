@@ -88,7 +88,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,7 +118,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\Lobby Project\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,7 +149,6 @@
     <ClInclude Include="..\..\Common\Vector2d.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
     <ClInclude Include="BattleServer.h" />
-    <ClInclude Include="battle_protocol.h" />
     <ClInclude Include="general_config.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
