@@ -1,0 +1,64 @@
+DB Name : BattleArena
+
+user_table
+id [nchar11]
+uid[int, key]
+
+friend_table
+friendA[nchar11]
+friendB[nchar11]
+
+
+////////////////////////////////////////////////// PROCEDURE ////////////////////////////////////////////////////////
+USE [BattleArena]
+GO
+/****** Object:  StoredProcedure [dbo].[get_friendlist]    Script Date: 2020-05-10 오후 11:37:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[get_friendlist]
+	@ID nchar(11)
+AS
+BEGIN
+
+    SELECT [friendB] as friend
+  FROM [dbo].[friend_table]
+  WHERE friendA = @ID
+
+  Union
+
+  SELECT [friendA] as friend
+  FROM [dbo].[friend_table]
+  WHERE friendB = @ID
+END
+
+USE [BattleArena]
+GO
+/****** Object:  StoredProcedure [dbo].[get_uid]    Script Date: 2020-05-10 오후 11:38:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[get_uid]
+	@ID NCHAR(11)
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SELECT uid FROM user_table WHERE ID = @ID;
+END
+
+USE [BattleArena]
+GO
+/****** Object:  StoredProcedure [dbo].[insert_friend]    Script Date: 2020-05-10 오후 11:39:10 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[insert_friend]
+	@A NCHAR(11),
+	@B NCHAR(11)
+AS
+BEGIN
+	INSERT INTO friend_table VALUES (@A, @B)
+END
