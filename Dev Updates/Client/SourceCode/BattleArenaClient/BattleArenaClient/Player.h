@@ -52,6 +52,10 @@ public:
 		UINT& CurrSkillObjInstanceNUM);
 
 public:
+	// 점프를 하지 않기에 x-z평면에 대해서만 offset 시킨다.
+	DirectX::XMFLOAT3 GetIntersectedWorldOffset(const DirectX::BoundingBox& Bound, const DirectX::BoundingBox& holdBound);
+
+public:
 	// PlayerObject의 위치가 바뀔때마다 Camera의 위치도 변경된다.
 	void ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
@@ -63,6 +67,8 @@ public:
 	// WorldObject의 Velocity를 기준으로 Transform이 업데이트되는 방식이기 때문에
 	// Player Object의 Transform을 업데이트 하기 위해선 Velocity를 갱신해줄 필요가 있다.
 	//void UpdateMove(CTimer& gt);
+
+	void ProcessCollision(std::vector<Object*>& WorldObjects);
 
 	void ProcessPicking(const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
 

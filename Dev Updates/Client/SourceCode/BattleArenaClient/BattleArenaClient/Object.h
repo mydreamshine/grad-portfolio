@@ -69,12 +69,11 @@ struct TransformInfo
 	UINT ObjCBIndex = -1;
 
 	// AABB
-	// Center는 m_WorldPosition에 영향을 받고
-	// Extends는 m_LocalScale에 영향을 받는다.
+	// Center는 m_WorldPosition에 영향을 받는다.
 	DirectX::BoundingBox m_Bound;
-	// Bound의 Extends가 스케일에 의해 바뀔 경우를 대비하여
-	// 원래 크기를 따로 지닌다.
-	DirectX::XMFLOAT3 m_BoundExtendsOrigin = { 0.0f, 0.0f, 0.0f };
+	DirectX::BoundingBox m_OriginBound;
+	enum class BoundPivot { Center, Bottom };
+	BoundPivot m_BoundPivot = BoundPivot::Center;
 
 	// 렌더링에서만 쓰임
 	// 정확히는 Update ObjectConstants를 할 때
@@ -127,7 +126,7 @@ struct TransformInfo
 	결국 AttachingTargetBoneID는 StaticMesh에 대해서만 사용하기로 한다.
 	*/
 
-	void SetBound(const DirectX::BoundingBox& newBound);
+	void SetBound(const DirectX::BoundingBox& newBound, BoundPivot pivot);
 
 	void SetWorldScale(const DirectX::XMFLOAT3& newScale);
 	// degree angle
@@ -155,7 +154,7 @@ struct TransformInfo
 
 	void SetVelocity(const DirectX::XMFLOAT3& newVelocity);
 
-	void UpdateBound(const DirectX::XMFLOAT3& centerOffset);
+	void UpdateBound();
 	void UpdateWorldTransform();
 	void UpdateLocalTransform();
 	// 쉐이더에 WorldTransform을 전치시켜 전달하기 때문에
@@ -356,7 +355,7 @@ public:
 		if (obj->m_TransformInfo != nullptr)
 		{
 			auto ObjInfo = obj->m_TransformInfo.get();
-			ObjInfo->SetBound(Ritem->Geo->DrawArgs[Ritem->Name].Bounds);
+			ObjInfo->SetBound(Ritem->Geo->DrawArgs[Ritem->Name].Bounds, TransformInfo::BoundPivot::Center);
 			if (LocalScale)
 			{
 				DirectX::XMFLOAT3 L_S = *LocalScale;

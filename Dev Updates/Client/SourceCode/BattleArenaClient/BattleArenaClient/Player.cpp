@@ -17,6 +17,47 @@ void Player::SetCreateSkillObjRef(
 	CurrSkillObjInstanceNUMRef = &CurrSkillObjInstanceNUM;
 }
 
+// 점프를 하지 않기에 x-z평면에 대해서만 offset 시킨다.
+DirectX::XMFLOAT3 Player::GetIntersectedWorldOffset(const DirectX::BoundingBox& MovedBound, const DirectX::BoundingBox& holdBound)
+{
+	XMFLOAT3 A_min = { MovedBound.Center.x - MovedBound.Extents.x, MovedBound.Center.y - MovedBound.Extents.y, MovedBound.Center.z - MovedBound.Extents.z };
+	XMFLOAT3 A_max = { MovedBound.Center.x + MovedBound.Extents.x, MovedBound.Center.y + MovedBound.Extents.y, MovedBound.Center.z + MovedBound.Extents.z };
+
+	XMFLOAT3 B_min = { holdBound.Center.x - holdBound.Extents.x, holdBound.Center.y - holdBound.Extents.y, holdBound.Center.z - holdBound.Extents.z };
+	XMFLOAT3 B_max = { holdBound.Center.x + holdBound.Extents.x, holdBound.Center.y + holdBound.Extents.y, holdBound.Center.z + holdBound.Extents.z };
+
+	XMFLOAT3 Offset = { 0.0f, 0.0f, 0.0f };
+	RECT intersect;
+	RECT A_rect = { (LONG)A_min.x, (LONG)A_min.z, (LONG)A_max.x, (LONG)A_max.z };
+	RECT B_rect = { (LONG)B_min.x, (LONG)B_min.z, (LONG)B_max.x, (LONG)B_max.z };
+	if (::IntersectRect(&intersect, &A_rect, &B_rect))
+	{
+		int nInterW = intersect.right - intersect.left;
+		int nInterH = intersect.bottom - intersect.top;
+
+		// 위/아래 체크
+		if (nInterW > nInterH)
+		{
+			// 위에서 충돌
+			if (intersect.top == B_rect.top)
+				Offset.z = -(float)nInterH;
+			// 아래서 충돌
+			else if (intersect.bottom == B_rect.bottom)
+				Offset.z = +(float)nInterH;
+		}
+		// 좌/우 체크
+		else
+		{
+			if (intersect.left == B_rect.left)
+				Offset.x = -(float)nInterW;
+			else if (intersect.right == B_rect.right)
+				Offset.x = +(float)nInterW;
+		}
+	}
+
+	return Offset;
+}
+
 void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 	const CD3DX12_VIEWPORT& ViewPort, CTimer& gt)
 {
@@ -118,6 +159,39 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		}
 
 		m_CurrAction = ActionType::Attacking;
+	}
+}
+
+void Player::ProcessCollision(std::vector<Object*>& WorldObjects)
+{
+	if (WorldObjectsRef == nullptr) WorldObjectsRef = &WorldObjects;
+
+	auto& player_bound = m_ObjectRef->m_TransformInfo->m_Bound;
+	for (auto& obj : (*WorldObjectsRef))
+	{
+		if (obj->Activated == false || obj == m_ObjectRef) continue;
+		if (obj->m_SkeletonInfo != nullptr) continue; // 다른 캐릭터일 경우 충돌처리 x
+		if (obj->m_Name.find("Grass") != std::string::npos) continue; // 수풀 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("rock") != std::string::npos) continue; // 돌 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("Flower") != std::string::npos) continue; // 꽃 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("ground_grid") != std::string::npos) continue; // 테스트 스테이지 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("Floor") != std::string::npos) continue; // 지면 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("Equipment") != std::string::npos) continue; // 장착한 아이템일 경우 충돌처리 x
+		if (obj->m_Name.find("Effect") != std::string::npos) continue; // 이펙트 오브젝트일 경우 충돌처리 x
+
+		auto& other_bound = obj->m_TransformInfo->m_Bound;
+
+		if (player_bound.Intersects(other_bound) == true)
+		{
+			auto& transform = m_ObjectRef->m_TransformInfo;
+			XMVECTOR WorldPOS = XMLoadFloat3(&transform->GetWorldPosition());
+			XMVECTOR WorldPOS_OFFSET = XMLoadFloat3(&Player::GetIntersectedWorldOffset(player_bound, other_bound));
+			WorldPOS += WorldPOS_OFFSET;
+
+			XMFLOAT3 newWorldPos; XMStoreFloat3(&newWorldPos, WorldPOS);
+			transform->SetWorldPosition(newWorldPos);
+			transform->UpdateWorldTransform();
+		}
 	}
 }
 

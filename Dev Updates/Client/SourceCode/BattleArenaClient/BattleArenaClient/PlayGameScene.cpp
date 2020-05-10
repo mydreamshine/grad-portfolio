@@ -34,8 +34,12 @@ void PlayGameScene::OnInitProperties()
             XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
             XMFLOAT3 WorldPosition = { 17.86f, 0.0f, 0.0f };
             XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
+            transformInfo->Init();
+            auto& MeshBound = obj->m_RenderItem->Geo->DrawArgs[obj->m_RenderItem->Name].Bounds;
+            transformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
             transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
             transformInfo->SetLocalRotationEuler(LocalRotationEuler);
+
 
             auto skeletonInfo = obj->m_SkeletonInfo.get();
             auto animInfo = skeletonInfo->m_AnimInfo.get();
@@ -94,16 +98,17 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     CTimer& gt)
 {
     PlayGameScene::AnimateWorldObjectsTransform(gt);
+    PlayGameScene::ProcessCollision(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
 
     float totalTime = gt.GetTotalTime();
     int totalTime_i = (int)totalTime;
 
-    if ((totalTime_i != 0) && (totalTime_i % 2 == 0))
+    if ((totalTime_i != 0) && (totalTime_i % 5 == 0))
     {
-        if (sec2 < totalTime_i / 2)
+        if (sec2 < totalTime_i / 5)
         {
-            sec2 = totalTime_i / 2;
+            sec2 = totalTime_i / 5;
             this->RandomCreateCharacterObject();
         }
     }
@@ -391,6 +396,10 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 m_ModelSkeltons["Meshtint Free Knight"].get(),
                 nullptr, &LocalRotationEuler, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
+            auto& MeshBound = newObj->m_RenderItem->Geo->DrawArgs[newObj->m_RenderItem->Name].Bounds;
+            newObj->m_TransformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
+            newObj->m_TransformInfo->UpdateLocalTransform();
+            newObj->m_TransformInfo->UpdateWorldTransform();
             auto animInfo = newObj->m_SkeletonInfo->m_AnimInfo.get();
             animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
             animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
@@ -444,9 +453,10 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             // Attaching 할 거라 WorldTransform을 지정하지 않아도 된다.
             if (objName == "Sword" || objName == "Shield")
             {
+                objName += " - Equipment";
                 float ConvertModelUnit = ModelFileUnit::meter;
                 XMFLOAT3 ModelLocalScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-                if (objName == "Sword")
+                if (objName.find("Sword") != std::string::npos)
                 {
                     XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
                     XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
@@ -454,7 +464,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                         &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
                     objManager.SetAttaching(newObj, m_MainPlayer->m_ObjectRef, "RigRPalm");
                 }
-                else if (objName == "Shield")
+                else if (objName.find("Shield") != std::string::npos)
                 {
                     XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
                     XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
@@ -573,6 +583,11 @@ void PlayGameScene::RandomCreateCharacterObject()
             m_ModelSkeltons["Meshtint Free Knight"].get(),
             nullptr, &LocalRotationEuler, nullptr,
             &WorldScale, &WorldRotationEuler, &WorldPosition);
+        auto& MeshBound = newCharacterObj->m_RenderItem->Geo->DrawArgs[newCharacterObj->m_RenderItem->Name].Bounds;
+        newCharacterObj->m_TransformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
+        newCharacterObj->m_TransformInfo->UpdateLocalTransform();
+        newCharacterObj->m_TransformInfo->UpdateWorldTransform();
+
         auto animInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
         animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
         animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
@@ -596,7 +611,7 @@ void PlayGameScene::RandomCreateCharacterObject()
 
             XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
             XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
-            std::string objName = "Sword - Instancing" + std::to_string(EquipmentCreatingNum);
+            std::string objName = "Sword - Equipment - Instancing" + std::to_string(EquipmentCreatingNum);
             objManager.SetObjectComponent(newEquipmentObj, objName,
                 m_AllRitems["Sword"].get(), nullptr,
                 &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
@@ -614,7 +629,7 @@ void PlayGameScene::RandomCreateCharacterObject()
 
             XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
             XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
-            std::string objName = "Shield - Instancing" + std::to_string(EquipmentCreatingNum++);
+            std::string objName = "Shield - Equipment - Instancing" + std::to_string(EquipmentCreatingNum++);
             objManager.SetObjectComponent(newEquipmentObj, objName,
                 m_AllRitems["Shield"].get(), nullptr,
                 &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
@@ -861,7 +876,12 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
     if (m_MainPlayer != nullptr)
     {
         CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
-        m_MainPlayer->ProcessInput(key_state, oldCursorPos,
-            ViewPort, gt);
+        m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt);
     }
+}
+
+void PlayGameScene::ProcessCollision(CTimer& gt)
+{
+    if (m_MainPlayer != nullptr)
+        m_MainPlayer->ProcessCollision(m_WorldObjects);
 }

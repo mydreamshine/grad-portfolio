@@ -46,6 +46,7 @@ public:
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt);
+    void ProcessCollision(CTimer& gt);
 
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;

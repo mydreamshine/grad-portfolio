@@ -3,16 +3,21 @@
 
 using namespace DirectX;
 
-void TransformInfo::SetBound(const DirectX::BoundingBox& newBound)
+void TransformInfo::SetBound(const DirectX::BoundingBox& newBound, BoundPivot pivot)
 {
-	m_Bound = newBound;
-	m_BoundExtendsOrigin = m_Bound.Extents;
+	m_BoundPivot = pivot;
+	m_OriginBound = m_Bound = newBound;
+	if (m_BoundPivot == BoundPivot::Bottom)
+	{
+		float bottom_y = m_OriginBound.Center.y - m_OriginBound.Extents.y;
+		m_Bound.Center.y = bottom_y + m_Bound.Extents.y;
+	}
 }
 
 void TransformInfo::SetWorldScale(const DirectX::XMFLOAT3& newScale)
 {
 	m_WorldScale = newScale;
-	TransformInfo::UpdateBound({ 0.0f, 0.0f, 0.0f });
+	TransformInfo::UpdateBound();
 }
 
 void TransformInfo::SetWorldRotationEuler(const DirectX::XMFLOAT3& newRot)
@@ -27,15 +32,14 @@ void TransformInfo::SetWorldRotationEuler(const DirectX::XMFLOAT3& newRot)
 
 void TransformInfo::SetWorldPosition(const DirectX::XMFLOAT3& newPos)
 {
-	XMFLOAT3 centerOffset = { newPos.x - m_WorldPosition.x, newPos.y - m_WorldPosition.y, newPos.z - m_WorldPosition.z };
 	m_WorldPosition = newPos;
-	TransformInfo::UpdateBound(centerOffset);
+	TransformInfo::UpdateBound();
 }
 
 void TransformInfo::SetLocalScale(const DirectX::XMFLOAT3& newScale)
 {
 	m_LocalScale = newScale;
-	TransformInfo::UpdateBound({ 0.0f, 0.0f, 0.0f });
+	TransformInfo::UpdateBound();
 }
 
 void TransformInfo::SetLocalRotationEuler(const DirectX::XMFLOAT3& newRot)
@@ -50,9 +54,8 @@ void TransformInfo::SetLocalRotationEuler(const DirectX::XMFLOAT3& newRot)
 
 void TransformInfo::SetLocalPosition(const DirectX::XMFLOAT3& newPos)
 {
-	XMFLOAT3 centerOffset = { newPos.x - m_LocalPosition.x, newPos.y - m_LocalPosition.y, newPos.z - m_LocalPosition.z };
 	m_LocalPosition = newPos;
-	TransformInfo::UpdateBound(centerOffset);
+	TransformInfo::UpdateBound();
 }
 
 void TransformInfo::SetWorldTransform(const DirectX::XMFLOAT3& newScale, const DirectX::XMFLOAT3& newRotationEuler, const DirectX::XMFLOAT3& newPosition)
@@ -61,6 +64,7 @@ void TransformInfo::SetWorldTransform(const DirectX::XMFLOAT3& newScale, const D
 	m_WorldRotationEuler = newRotationEuler;
 	m_WorldPosition = newPosition;
 
+	TransformInfo::UpdateBound();
 	TransformInfo::UpdateWorldTransform();
 }
 
@@ -73,13 +77,10 @@ void TransformInfo::SetWorldTransform(const DirectX::XMFLOAT4X4& newTransform)
 	XMMatrixDecompose(&S, &R, &T, WorldM);
 	XMStoreFloat3(&m_WorldScale, S);
 	XMStoreFloat4(&m_WorldRotationQut, R);
-	XMFLOAT3 newPos;
-	XMStoreFloat3(&newPos, T);
-	XMFLOAT3 centerOffset = { newPos.x - m_WorldPosition.x, newPos.y - m_WorldPosition.y, newPos.z - m_WorldPosition.z };
-	m_WorldPosition = newPos;
+	XMStoreFloat3(&m_WorldPosition, T);
 
 	TransformInfo::UpdateBaseAxis();
-	TransformInfo::UpdateBound(centerOffset);
+	TransformInfo::UpdateBound();
 
 	NumObjectCBDirty = gNumFrameResources;
 }
@@ -90,6 +91,7 @@ void TransformInfo::SetLocalTransform(const DirectX::XMFLOAT3& newScale, const D
 	m_LocalRotationEuler = newRotationEuler;
 	m_LocalPosition = newPosition;
 
+	TransformInfo::UpdateBound();
 	TransformInfo::UpdateLocalTransform();
 }
 
@@ -102,12 +104,9 @@ void TransformInfo::SetLocalTransform(const DirectX::XMFLOAT4X4& newTransform)
 	XMMatrixDecompose(&S, &R, &T, LocalM);
 	XMStoreFloat3(&m_LocalScale, S);
 	XMStoreFloat4(&m_LocalRotationQut, R);
-	XMFLOAT3 newPos;
-	XMStoreFloat3(&newPos, T);
-	XMFLOAT3 centerOffset = { newPos.x - m_LocalPosition.x, newPos.y - m_LocalPosition.y, newPos.z - m_LocalPosition.z };
-	m_LocalPosition = newPos;
+	XMStoreFloat3(&m_LocalPosition, T);
 
-	TransformInfo::UpdateBound(centerOffset);
+	TransformInfo::UpdateBound();
 
 	NumObjectCBDirty = gNumFrameResources;
 }
@@ -120,16 +119,21 @@ void TransformInfo::SetVelocity(const DirectX::XMFLOAT3& newVelocity)
 	// 속도를 지정해줄 때에는 굳이 NumObjectCBDirty = gNumFrameResources;을 해줄 필요가 없다.
 }
 
-void TransformInfo::UpdateBound(const DirectX::XMFLOAT3& centerOffset)
+void TransformInfo::UpdateBound()
 {
-	XMFLOAT3 BoundCenter;
-	BoundCenter.x = m_Bound.Center.x + centerOffset.x;
-	BoundCenter.y = m_Bound.Center.y + centerOffset.y;
-	BoundCenter.z = m_Bound.Center.z + centerOffset.z;
-	m_Bound.Center = BoundCenter;
-	m_Bound.Extents.x = m_BoundExtendsOrigin.x * m_LocalScale.x * m_WorldScale.x;
-	m_Bound.Extents.y = m_BoundExtendsOrigin.y * m_LocalScale.y * m_WorldScale.y;;
-	m_Bound.Extents.z = m_BoundExtendsOrigin.z * m_LocalScale.z * m_WorldScale.z;;
+	m_Bound.Center.x = m_OriginBound.Center.x + m_LocalPosition.x + m_WorldPosition.x;
+	m_Bound.Center.y = m_OriginBound.Center.y + m_LocalPosition.y + m_WorldPosition.y;
+	m_Bound.Center.z = m_OriginBound.Center.z + m_LocalPosition.z + m_WorldPosition.z;
+	m_Bound.Extents.x = m_OriginBound.Extents.x * m_LocalScale.x * m_WorldScale.x;
+	m_Bound.Extents.y = m_OriginBound.Extents.y * m_LocalScale.y * m_WorldScale.y;;
+	m_Bound.Extents.z = m_OriginBound.Extents.z * m_LocalScale.z * m_WorldScale.z;;
+
+	if (m_BoundPivot == BoundPivot::Bottom)
+	{
+		float bottom_y = m_OriginBound.Center.y - m_OriginBound.Extents.y;
+		m_Bound.Center.y = bottom_y + m_Bound.Extents.y;
+		m_Bound.Center.y += m_LocalPosition.y + m_WorldPosition.y;
+	}
 }
 
 void TransformInfo::UpdateWorldTransform()
@@ -145,7 +149,7 @@ void TransformInfo::UpdateWorldTransform()
 	XMStoreFloat4x4(&m_WorldTransform, WorldM);
 
 	TransformInfo::UpdateBaseAxis();
-	TransformInfo::UpdateBound({ 0.0f, 0.0f, 0.0f });
+	TransformInfo::UpdateBound();
 
 	NumObjectCBDirty = gNumFrameResources;
 }
@@ -162,7 +166,7 @@ void TransformInfo::UpdateLocalTransform()
 
 	XMStoreFloat4x4(&m_LocalTransform, LocalM);
 
-	TransformInfo::UpdateBound({ 0.0f, 0.0f, 0.0f });
+	TransformInfo::UpdateBound();
 
 	NumObjectCBDirty = gNumFrameResources;
 }
@@ -244,9 +248,10 @@ void TransformInfo::Init()
 	m_TexTransform = MathHelper::Identity4x4();
 	m_TexAlpha = 1.0f;
 
+	m_OriginBound.Center = { 0.0f, 0.0f, 0.0f };
+	m_OriginBound.Extents = { 0.0f, 0.0f, 0.0f };
 	m_Bound.Center = { 0.0f, 0.0f, 0.0f };
 	m_Bound.Extents = { 0.0f, 0.0f, 0.0f };
-	m_BoundExtendsOrigin = { 0.0f, 0.0f, 0.0f };
 	m_LocalTransform = MathHelper::Identity4x4();
 
 	m_WorldPosition = { 0.0f, 0.0f, 0.0f };
