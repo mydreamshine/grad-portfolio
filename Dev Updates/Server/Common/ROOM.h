@@ -103,15 +103,14 @@ private:
 		return idx;
 	}
 
+	float shootTime = 0.05f;
+	float remainTime = 0.0f;
+	float rot = 3.0f;
+	Vector2d m_pos{ 0, 0 };
+	Vector2d m_dir[4]{ {1, 0},{-1, 0}, {0, 1}, {0, -1} };
 	//ÃÑ¾ËºĞ¼ö
 	void ShootBullet(float fTimeElapsed)
 	{
-		static float shootTime = 0.05f;
-		static float remainTime = 0.0f;
-		static float rot = 3.0f;
-		static Vector2d m_pos{ 0, 0 };
-		static Vector2d m_dir[4]{ {1, 0},{-1, 0}, {0, 1}, {0, -1} };
-
 		remainTime -= fTimeElapsed;
 		if (remainTime > 0) return;
 
