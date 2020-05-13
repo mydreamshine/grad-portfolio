@@ -11,16 +11,8 @@ Scene::~Scene()
 }
 
 void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-    DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index,
     int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
-    // 아래 메소드 순서는 반드시 지켜져야 한다.
-    BuildShapeGeometry(device, commandList);
-    LoadSkinnedModels(device, commandList);
-    LoadTextures(device, commandList, BackBufferFormat);
-    BuildMaterials(matCB_index, diffuseSrvHeap_Index);
-    BuildRenderItems();
     BuildObjects(objCB_index, skinnedCB_index, textBatch_index);
 }
 
@@ -45,203 +37,6 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     UpdateTextInfo(gt);
 
     ProcessInput(key_state, oldCursorPos, gt);
-}
-
-void Scene::DisposeUploaders()
-{
-    for (auto& Geo_iter : m_Geometries)
-        Geo_iter.second->DisposeUploaders();
-
-    for (auto& tex_iter : m_Textures)
-        tex_iter.second->UploadHeap = nullptr;
-}
-
-std::unique_ptr<MeshGeometry> Scene::BuildMeshGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-    const std::string& geoName, std::unordered_map<std::string, GeometryGenerator::MeshData>& Meshes)
-{
-    std::vector<DXTexturedVertex> total_vertices;
-    std::vector<std::uint16_t> total_indices;
-
-    auto geo = std::make_unique<MeshGeometry>();
-    geo->Name = geoName;
-    UINT VertexOffset = 0;
-    UINT IndexOffset = 0;
-    UINT k = 0;
-
-    for (auto& mesh_iter : Meshes)
-    {
-        auto& meshData = mesh_iter.second;
-
-        total_vertices.insert(total_vertices.end(), meshData.Vertices.size(), DXTexturedVertex());
-        DirectX::XMFLOAT3 minPosition = { FLT_MAX, FLT_MAX, FLT_MAX };
-        DirectX::XMFLOAT3 maxPosition = meshData.Vertices[0].Position;
-
-        for (int i = 0; i < meshData.Vertices.size(); ++i, ++k)
-        {
-            total_vertices[k].xmf3Position = meshData.Vertices[i].Position;
-            total_vertices[k].xmf3Normal = meshData.Vertices[i].Normal;
-            total_vertices[k].xmf2TextureUV = meshData.Vertices[i].TexC;
-            total_vertices[k].xmf3Tangent = meshData.Vertices[i].TangentU;
-
-            minPosition.x = min(minPosition.x, total_vertices[k].xmf3Position.x);
-            minPosition.y = min(minPosition.y, total_vertices[k].xmf3Position.y);
-            minPosition.z = min(minPosition.z, total_vertices[k].xmf3Position.z);
-            maxPosition.x = max(maxPosition.x, total_vertices[k].xmf3Position.x);
-            maxPosition.y = max(maxPosition.y, total_vertices[k].xmf3Position.y);
-            maxPosition.z = max(maxPosition.z, total_vertices[k].xmf3Position.z);
-        }
-        total_indices.insert(total_indices.end(), std::begin(meshData.GetIndices16()), std::end(meshData.GetIndices16()));
-
-        SubmeshGeometry Submesh;
-        Submesh.IndexCount = (UINT)meshData.Indices32.size();
-        Submesh.StartIndexLocation = IndexOffset;
-        Submesh.BaseVertexLocation = VertexOffset;
-        Submesh.Bounds.Center = {
-                (maxPosition.x + minPosition.x) * 0.5f,
-                (maxPosition.y + minPosition.y) * 0.5f,
-                (maxPosition.z + minPosition.z) * 0.5f };
-        Submesh.Bounds.Extents = {
-            (maxPosition.x - minPosition.x) * 0.5f,
-            (maxPosition.y - minPosition.y) * 0.5f,
-            (maxPosition.z - minPosition.z) * 0.5f };
-
-        geo->DrawArgs[mesh_iter.first] = Submesh;
-
-        VertexOffset += (UINT)meshData.Vertices.size();
-        IndexOffset += (UINT)meshData.Indices32.size();
-    }
-
-    const UINT vbByteSize = (UINT)total_vertices.size() * sizeof(DXTexturedVertex);
-    const UINT ibByteSize = (UINT)total_indices.size() * sizeof(std::uint16_t);
-
-    ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-    CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), total_vertices.data(), vbByteSize);
-
-    ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-    CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), total_indices.data(), ibByteSize);
-
-    geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        total_vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-    geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(device, commandList,
-        total_indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-    geo->VertexByteStride = sizeof(DXTexturedVertex);
-    geo->VertexBufferByteSize = vbByteSize;
-    geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-    geo->IndexBufferByteSize = ibByteSize;
-    return std::move(geo);
-}
-
-void Scene::LoadSkinnedModelData(
-    ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-    ModelLoader& model_loader,
-    const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths,
-    std::vector<std::string>* execpt_nodes)
-{
-    model_loader.loadMeshAndSkeleton(mesh_filepath, execpt_nodes);
-    for (auto& anim_path : anim_filepaths)
-        model_loader.loadAnimation(anim_path);
-
-    std::string ModelName;
-    getFileName(mesh_filepath.c_str(), ModelName);
-
-    // aiSkeleton data move
-    if (model_loader.mSkeleton != nullptr)
-    {
-        std::string skeletonName = model_loader.mSkeleton->mName;
-        m_ModelSkeltons[skeletonName] = std::move(model_loader.mSkeleton);
-    }
-
-    // aiMesh to dxMesh
-    if (!model_loader.mMeshes.empty())
-    {
-        auto& meshGeo = m_Geometries[ModelName] = std::make_unique<MeshGeometry>();
-        meshGeo->Name = ModelName;
-
-        std::vector<DXSkinnedVertex> vertices;
-        std::vector<std::uint32_t>   indices;
-
-        int sm_id = 0;
-        for (size_t m = 0; m < model_loader.mMeshes.size(); ++m)
-        {
-            std::vector<aiModelData::aiVertex>& aiVertices = model_loader.mMeshes[m].mVertices;
-            std::vector<UINT>& dxIndices = model_loader.mMeshes[m].mIndices;
-            std::vector<DXSkinnedVertex> dxVertieces;
-            for (size_t v = 0; v < aiVertices.size(); ++v)
-            {
-                dxVertieces.emplace_back();
-                DXSkinnedVertex& Vertex = dxVertieces.back();
-                Vertex.xmf3Position = { (float)aiVertices[v].vPosition.x, (float)aiVertices[v].vPosition.y, (float)aiVertices[v].vPosition.z };
-                Vertex.xmf2TextureUV = { (float)aiVertices[v].vTextureUV[0].x,  (float)aiVertices[v].vTextureUV[0].y }; // diffuseMap_desc + normalMap_desc + etc.texMap + ...
-                Vertex.xmf3Normal = { (float)aiVertices[v].vNormal.x, (float)aiVertices[v].vNormal.y, (float)aiVertices[v].vNormal.z };
-                Vertex.xmf3Tangent = { (float)aiVertices[v].vTangent.x, (float)aiVertices[v].vTangent.y, (float)aiVertices[v].vTangent.z };
-                for (int w = 0; w < 4; ++w)
-                {
-                    Vertex.fBoneWeights[w] = (float)aiVertices[v].fBoneWeights[w];
-                    Vertex.i32BoneIndices[w] = (int)aiVertices[v].i32BoneIndices[w];
-                }
-            }
-            vertices.insert(vertices.end(), dxVertieces.begin(), dxVertieces.end());
-            indices.insert(indices.end(), dxIndices.begin(), dxIndices.end());
-
-            SubmeshGeometry submesh;
-            submesh.IndexCount = (UINT)dxIndices.size();
-            submesh.StartIndexLocation = (UINT)(indices.size() - dxIndices.size());
-            submesh.BaseVertexLocation = (INT)(vertices.size() - dxVertieces.size());
-            auto& aabb = model_loader.mMeshes[m].mAABB;
-            submesh.Bounds.Center = {
-                (aabb.mMax.x + aabb.mMin.x) * 0.5f,
-                (aabb.mMax.y + aabb.mMin.y) * 0.5f,
-                (aabb.mMax.z + aabb.mMin.z) * 0.5f };
-            submesh.Bounds.Extents = {
-                (aabb.mMax.x - aabb.mMin.x) * 0.5f,
-                (aabb.mMax.y - aabb.mMin.y) * 0.5f,
-                (aabb.mMax.z - aabb.mMin.z) * 0.5f };
-            submesh.ParentBoneID = model_loader.mMeshes[m].mParentBoneIndex;
-
-            std::string& meshName = model_loader.mMeshes[m].mName;
-            if (meshGeo->DrawArgs.find(meshName) != meshGeo->DrawArgs.end())
-                meshName = meshName + "_" + std::to_string(sm_id++);
-            meshGeo->DrawArgs[meshName] = submesh;
-        }
-
-        const UINT vbByteSize = (UINT)vertices.size() * sizeof(DXSkinnedVertex);
-        const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint32_t);
-
-        ThrowIfFailed(D3DCreateBlob(vbByteSize, &meshGeo->VertexBufferCPU));
-        CopyMemory(meshGeo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-        ThrowIfFailed(D3DCreateBlob(ibByteSize, &meshGeo->IndexBufferCPU));
-        CopyMemory(meshGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-        meshGeo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(device,
-            commandList, vertices.data(), vbByteSize, meshGeo->VertexBufferUploader);
-
-        meshGeo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(device,
-            commandList, indices.data(), ibByteSize, meshGeo->IndexBufferUploader);
-
-        meshGeo->VertexByteStride = sizeof(DXSkinnedVertex);
-        meshGeo->VertexBufferByteSize = vbByteSize;
-        meshGeo->IndexFormat = DXGI_FORMAT_R32_UINT;
-        meshGeo->IndexBufferByteSize = ibByteSize;
-    }
-}
-
-void Scene::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)
-{
-    for (auto& subMesh_iter : Geo->DrawArgs)
-    {
-        auto& subMesh = subMesh_iter.second;
-        auto Ritem = std::make_unique<RenderItem>();
-        Ritem->Name = subMesh_iter.first;
-        Ritem->Geo = Geo;
-        Ritem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        Ritem->IndexCount = subMesh.IndexCount;
-        Ritem->StartIndexLocation = subMesh.StartIndexLocation;
-        Ritem->BaseVertexLocation = subMesh.BaseVertexLocation;
-        GenDestList[subMesh_iter.first] = std::move(Ritem);
-    }
 }
 
 void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -335,7 +130,11 @@ void Scene::UpdateSkinnedCBs(UploadBuffer<SkinnedConstants>* skinnedCB, CTimer& 
 
 void Scene::UpdateMaterialCBs(UploadBuffer<MaterialConstants>* matCB, CTimer& gt)
 {
-    for (auto& mat_iter : m_Materials)
+    if (m_MaterialsRef == nullptr) return;
+
+    auto& Materials = *m_MaterialsRef;
+
+    for (auto& mat_iter : Materials)
     {
         // Only update the cbuffer data if the constants have changed.  If the cbuffer
         // data changes, it needs to be updated for each FrameResource.

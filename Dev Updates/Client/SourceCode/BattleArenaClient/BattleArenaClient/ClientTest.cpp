@@ -218,8 +218,12 @@ void ClientTest::LoadAssets()
 
     m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), SIZE_ShadowMap, SIZE_ShadowMap);
 
+    // 반드시 외부 리소스를 먼저 생성(임포트)한 다음에 Scene을 생성해야 한다.
+    LoadExternalResource();
     BuildScene();
 
+    // Texture에 대한 SRV 생성
+    // (LoadExternalResource()를 통해 외부 리소스가 먼저 임포트 되어있어야 한다.)
     BuildDescriptorHeaps();
     BuildConstantBufferView();
 
@@ -242,8 +246,7 @@ void ClientTest::LoadAssets()
         WaitForPreviousFrame();
     }
 
-    for (auto& scene : m_Scenes)
-        scene.second->DisposeUploaders();
+    m_ResourceManager->DisposeUploaders();
 
     BuildFonts();
 }
@@ -560,39 +563,60 @@ void ClientTest::BuildPSOs()
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIPsoDesc, IID_PPV_ARGS(&m_PSOs["UILayout_Background"])));
 }
 
+void ClientTest::LoadExternalResource()
+{
+    m_ResourceManager = std::make_unique<ResourceManager>();
+    int matCB_index = 0;
+    int diffuseSrvHeap_index = 0;
+    m_ResourceManager->OnInit(m_device.Get(), m_commandList.Get(), m_BackBufferFormat, matCB_index, diffuseSrvHeap_index);
+
+    auto& AllTextures = m_ResourceManager->GetTextures();
+    for (auto& Tex_iter : AllTextures)
+        m_Textures.push_back(Tex_iter.second.get());
+
+    m_nMatCB = m_ResourceManager->m_nMatCB;
+}
+
 void ClientTest::BuildScene()
 {
-    m_Scenes["LoginScene"] = std::make_unique<LoginScene>(m_width, m_height);
-    m_Scenes["LobyScene"] = std::make_unique<LobyScene>(m_width, m_height);
+    m_Scenes["LoginScene"]    = std::make_unique<LoginScene>(m_width, m_height);
+    m_Scenes["LobyScene"]     = std::make_unique<LobyScene>(m_width, m_height);
     m_Scenes["PlayGameScene"] = std::make_unique<PlayGameScene>(m_width, m_height);
     m_Scenes["GameOverScene"] = std::make_unique<GameOverScene>(m_width, m_height);
 
-    int matCB_index = 0;
-    int diffuseSrvHeap_index = 0;
     int objCB_index = 0;
     int skinnedCB_index = 0;
     int textBatch_index = 0;
 
     m_nSKinnedCB = 0;
     m_nObjCB = 0;
-    m_nMatCB = 0;
     m_nTextBatch = 0;
     for (auto& scene_iter : m_Scenes)
     {
         auto& scene = scene_iter.second;
+        std::string scene_name = scene_iter.first;
+
+        // Set External-Resource to each Scene
+        {
+            scene->SetGeometriesRef(&(m_ResourceManager->GetGeometries()));
+            scene->SetTexturesRef(&(m_ResourceManager->GetTextures()));
+            scene->SetMaterialsRef(&(m_ResourceManager->GetMaterials()));
+            scene->SetModelSkeletonsRef(&(m_ResourceManager->GetModelSkeltons()));
+
+            RenderTargetScene target_scene = RenderTargetScene::LoginScene;
+            if      (scene_name == "LoginScene")    target_scene = RenderTargetScene::LoginScene;
+            else if (scene_name == "LobyScene")     target_scene = RenderTargetScene::LobyScene;
+            else if (scene_name == "PlayGameScene") target_scene = RenderTargetScene::PlayGameScene;
+            else if (scene_name == "GameOverScene") target_scene = RenderTargetScene::GameOverScene;
+            scene->SetRederItemsRef(&(m_ResourceManager->GetRenderItems(target_scene)));
+        }
+
         scene->OnInit(m_device.Get(), m_commandList.Get(),
-            m_BackBufferFormat,
-            matCB_index, diffuseSrvHeap_index,
             objCB_index, skinnedCB_index, textBatch_index);
 
         m_nSKinnedCB += scene->m_nSKinnedCB;
         m_nObjCB += scene->m_nObjCB;
-        m_nMatCB += scene->m_nMatCB;
         m_nTextBatch += scene->m_nTextBatch;
-
-        auto& sceneTextures = scene->GetTextures();
-        for (auto& Tex_iter : sceneTextures)
-            m_Textures.push_back(Tex_iter.second.get());
     }
 
     m_CurrSceneName = "LoginScene";
@@ -634,25 +658,25 @@ void ClientTest::OnUpdate()
     {
         m_CurrSceneName = "LoginScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
-        m_CurrScene->OnInitProperties();
+        m_CurrScene->OnInitProperties(m_Timer);
     }
     else if (m_KeyState[VK_F2] == true)
     {
         m_CurrSceneName = "LobyScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
-        m_CurrScene->OnInitProperties();
+        m_CurrScene->OnInitProperties(m_Timer);
     }
     else if (m_KeyState[VK_F3] == true)
     {
         m_CurrSceneName = "PlayGameScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
-        m_CurrScene->OnInitProperties();
+        m_CurrScene->OnInitProperties(m_Timer);
     }
     else if (m_KeyState[VK_F4] == true)
     {
         m_CurrSceneName = "GameOverScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
-        m_CurrScene->OnInitProperties();
+        m_CurrScene->OnInitProperties(m_Timer);
     }
 
     RECT ClientRect;
@@ -742,7 +766,7 @@ void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const st
     for (auto& obj : ObjLayer)
     {
         if (obj->Activated == false) continue;
-        if (obj->m_Name == "ground_grid") continue;
+        if (obj->m_Name == "SpawnStageGround") continue;
         if (obj->m_Name.find("Background") != std::string::npos) continue;
         auto Ritem = obj->m_RenderItem;
         UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
