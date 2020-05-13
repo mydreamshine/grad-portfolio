@@ -45,10 +45,10 @@
     <ClInclude Include="Vector2d.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Lobby Project\LobbyServer\LobbyServer\lobby_protocol.h">
+    <ClInclude Include="..\..\Common\PacketMgr.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\PacketMgr.h">
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

@@ -155,8 +155,8 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Lobby Project\LobbyServer\LobbyServer\lobby_protocol.h" />
     <ClInclude Include="..\..\Common\PacketMgr.h" />
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="LoadPng.h" />
     <ClInclude Include="Object.h" />

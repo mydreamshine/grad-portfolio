@@ -72,10 +72,12 @@ void NGPROOM::start()
 void NGPROOM::end()
 {
 	DeleteObjects();
+	//차후 서버단으로 이전
 	for (int i=0;i<MATCHUP_NUM;++i)
 	{
 		SOCKET tmp = clients[i]->socket;
 		clients[i]->socket = INVALID_SOCKET;
+		clients[i]->room = nullptr;
 		closesocket(tmp);
 	}
 	delete[] clients;

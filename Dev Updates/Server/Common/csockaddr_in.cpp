@@ -16,10 +16,9 @@ CSOCKADDR_IN::CSOCKADDR_IN(const char* address, short port) :
 	CSOCKADDR_IN()
 {
 	addr.sin_family = AF_INET;
-	InetPton(AF_INET, address, &addr.sin_addr);
+	inet_pton(AF_INET, address, &addr.sin_addr);
 	addr.sin_port = htons(port);
 }
-
 int* CSOCKADDR_IN::len()
 {
 	return &size;

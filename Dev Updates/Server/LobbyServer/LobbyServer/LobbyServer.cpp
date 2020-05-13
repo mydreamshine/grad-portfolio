@@ -53,7 +53,6 @@ namespace BattleArena {
 		m_listenSocket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 		m_battleSocket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 		CSOCKADDR_IN lobbyserverAddr{ INADDR_ANY, LOBBYSERVER_PORT };
-		CSOCKADDR_IN battleserverAddr{ "127.0.0.1", BATTLESERVER_PORT };
 
 		wprintf(L"Initializing ListenSocket...");
 		if (SOCKET_ERROR == ::bind(m_listenSocket, lobbyserverAddr.getSockAddr(), *lobbyserverAddr.len()))
@@ -64,6 +63,10 @@ namespace BattleArena {
 
 #ifndef BATTLE_OFFLINE
 		wprintf(L"Connecting to BattleServer...");
+		std::string battle_ip;
+		std::ifstream in("battle_ip.txt");
+		in >> battle_ip;
+		CSOCKADDR_IN battleserverAddr{ battle_ip.c_str(), BATTLESERVER_PORT };
 		while (SOCKET_ERROR == ::connect(m_battleSocket, battleserverAddr.getSockAddr(), *battleserverAddr.len()))
 			wprintf(L"\n Can't access to BattleServer... Retry...");
 		m_clients[BATTLE_KEY].socket = m_battleSocket;
@@ -241,6 +244,10 @@ namespace BattleArena {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}
+		if (isConnect(uid) == true) {
+			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
+			return;
+		}
 
 		m_clients[client].uid = uid;
 		strcpy_s(m_clients[client].id, packet->id);
@@ -337,6 +344,8 @@ namespace BattleArena {
 	void LOBBYSERVER::disconnect_client(int client)
 	{
 		std::wcout << L"[CLIENT - " << m_clients[client].id << L"] Disconnected" << std::endl;
+		if (m_clients[client].state == ST_QUEUE)
+			match_dequeue(client);
 		delete_client_table(m_clients[client].uid);
 		auto& fl = m_clients[client].friendlist;
 		for (auto i = fl.begin(); i != fl.end(); ++i) {

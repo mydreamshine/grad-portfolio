@@ -32,10 +32,12 @@ but WITHOUT ANY WARRANTY.
 #define BUF_SIZE 200
 #define BATTLESERVER_PORT 15600
 
+
+
 ScnMgr *g_ScnMgr = NULL;
 SOCKET g_socket;
 SOCKET lobbysocket;
-string SERVERIP;
+string LOBBYIP, BATTLEIP;
 int g_PrevTime;
 
 constexpr int WIDTH_BIAS = WINDOW_WIDTH / 2;
@@ -53,7 +55,7 @@ void PacketReceiver(int room_id)
 	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(BATTLESERVER_PORT);
-	InetPton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
+	InetPton(AF_INET, BATTLEIP.c_str(), &serverAddr.sin_addr);
 
 	SOCKET serverSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 	::connect(serverSocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
@@ -471,15 +473,18 @@ int main(int argc, char **argv)
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa);
 
-	ifstream in("SERVERIP.txt");
-	in >> SERVERIP;
+	ifstream in("lobby_ip.txt");
+	in >> LOBBYIP;
+	in.close();
+	in.open("battle_ip.txt");
+	in >> BATTLEIP;
 	in.close();
 
 	SOCKADDR_IN serverAddr;
 	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(LOBBYSERVER_PORT);
-	InetPton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
+	InetPton(AF_INET, LOBBYIP.c_str(), &serverAddr.sin_addr);
 
 	lobbysocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 	::connect(lobbysocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
