@@ -23,38 +23,20 @@ public:
     virtual ~Scene();
 
     virtual void OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-        DXGI_FORMAT BackBufferFormat,
-        int& matCB_index, int& diffuseSrvHeap_Index,
         int& objCB_index, int& skinnedCB_index, int& textBatch_index);
-    virtual void OnInitProperties() = 0;
+    virtual void OnInitProperties(CTimer& gt) = 0;
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
         const bool key_state[], const POINT& oldCursorPos,
         const RECT& ClientRect,
         CTimer& gt);
-    virtual void DisposeUploaders();
 
 public:
-    std::unique_ptr<MeshGeometry> BuildMeshGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-        const std::string& geoName, std::unordered_map<std::string, GeometryGenerator::MeshData>& Meshes);
-    virtual void BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) = 0;
-
-    virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList) = 0;
-    void LoadSkinnedModelData( ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-        ModelLoader& model_loader,
-        const std::string& mesh_filepath, const std::vector<std::string>& anim_filepaths,
-        std::vector<std::string>* execpt_nodes = nullptr);
-
-    virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat) = 0;
-    virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index) = 0;
-
-    // Material에 대한 지정은 이 함수 외부에서 지정해줘야 한다.
-    // (Material의 이름을 기준으로 RenderItem에 매칭시키기 때문.) => 이름으론 Material 매칭 패턴을 찾을 수가 없다.
-    void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo);
-    virtual void BuildRenderItems() = 0;
-
+    virtual void SetGeometriesRef(std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>* Geometries) { m_GeometriesRef = Geometries; }
+    virtual void SetMaterialsRef(std::unordered_map<std::string, std::unique_ptr<Material>>* Materials) { m_MaterialsRef = Materials; }
+    virtual void SetTexturesRef(std::unordered_map<std::string, std::unique_ptr<Texture>>* Textures) { m_TexturesRef = Textures; }
+    virtual void SetModelSkeletonsRef(std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* Skeletons) { m_ModelSkeltonsRef = Skeletons; }
+    virtual void SetRederItemsRef(std::unordered_map<std::string, std::unique_ptr<RenderItem>>* RenderItems) { m_AllRitemsRef = RenderItems; }
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index) = 0;
-
-    virtual void RandomCreateCharacterObject() {};
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);
@@ -76,10 +58,10 @@ public:
     const PassConstants& GetMainPassCB() { return m_MainPassCB; }
     const PassConstants& GetShadowPassCB() { return m_ShadowPassCB; }
 
-    const std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>& GetGeometries() { return m_Geometries; }
-    const std::unordered_map<std::string, std::unique_ptr<Material>>& GetMaterials() { return m_Materials; }
-    const std::unordered_map<std::string, std::unique_ptr<Texture>>& GetTextures() { return m_Textures; }
-    const std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>& GetModelSkeltons() { return m_ModelSkeltons; }
+    const std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>* GetGeometries() { return m_GeometriesRef; }
+    const std::unordered_map<std::string, std::unique_ptr<Material>>* GetMaterials() { return m_MaterialsRef; }
+    const std::unordered_map<std::string, std::unique_ptr<Texture>>* GetTextures() { return m_TexturesRef; }
+    const std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* GetModelSkeltons() { return m_ModelSkeltonsRef; }
     
     const std::vector<Object*>& GetObjRenderLayer(RenderLayer layer) { return m_ObjRenderLayer[(int)layer]; }
 
@@ -97,13 +79,13 @@ protected:
     PassConstants m_ShadowPassCB; // index 1 of pass cbuffer.
 
     // Original Resource
-    std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
-    std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
-    std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
-    std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
+    std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>* m_GeometriesRef = nullptr;
+    std::unordered_map<std::string, std::unique_ptr<Material>>* m_MaterialsRef = nullptr;
+    std::unordered_map<std::string, std::unique_ptr<Texture>>* m_TexturesRef = nullptr;
+    std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* m_ModelSkeltonsRef = nullptr;
 
     // List of all render item.
-    std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems;
+    std::unordered_map<std::string, std::unique_ptr<RenderItem>>* m_AllRitemsRef = nullptr;
 
     // Object divided by PSO.
     std::vector<Object*> m_ObjRenderLayer[(int)RenderLayer::Count];
@@ -117,7 +99,6 @@ protected:
 public:
     UINT m_nSKinnedCB = 0; // = m_CharacterObjects.size();
     UINT m_nObjCB = 0; // = m_WorldObjects.size() + m_UIObjects.size();
-    UINT m_nMatCB = 0; // = m_Materials.size();
     UINT m_nTextBatch = 0; // = sum(ui_obj->m_UIinfos.size() in m_UIObjects)
 
 protected:
@@ -152,9 +133,6 @@ protected:
         m_BaseLightDirections[2]
     };
     /////////////////////////////////////////////////
-
-public:
-    ComPtr<ID3D12Resource> m_BackBuffer = nullptr;
 };
 
 

@@ -174,7 +174,7 @@ void Player::ProcessCollision(std::vector<Object*>& WorldObjects)
 		if (obj->m_Name.find("Grass") != std::string::npos) continue; // 수풀 오브젝트일 경우 충돌처리 x
 		if (obj->m_Name.find("rock") != std::string::npos) continue; // 돌 오브젝트일 경우 충돌처리 x
 		if (obj->m_Name.find("Flower") != std::string::npos) continue; // 꽃 오브젝트일 경우 충돌처리 x
-		if (obj->m_Name.find("ground_grid") != std::string::npos) continue; // 테스트 스테이지 오브젝트일 경우 충돌처리 x
+		if (obj->m_Name.find("SpawnStageGround") != std::string::npos) continue; // 테스트 스테이지 오브젝트일 경우 충돌처리 x
 		if (obj->m_Name.find("Floor") != std::string::npos) continue; // 지면 오브젝트일 경우 충돌처리 x
 		if (obj->m_Name.find("Equipment") != std::string::npos) continue; // 장착한 아이템일 경우 충돌처리 x
 		if (obj->m_Name.find("Effect") != std::string::npos) continue; // 이펙트 오브젝트일 경우 충돌처리 x

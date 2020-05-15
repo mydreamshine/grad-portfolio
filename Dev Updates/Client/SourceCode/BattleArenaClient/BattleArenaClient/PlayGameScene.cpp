@@ -6,13 +6,9 @@ PlayGameScene::~PlayGameScene()
 }
 
 void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-    DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index,
     int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
     Scene::OnInit(device, commandList,
-        BackBufferFormat,
-        matCB_index, diffuseSrvHeap_Index,
         objCB_index, skinnedCB_index, textBatch_index);
 
     m_SpawnBound.Center = m_WorldCenter;
@@ -20,7 +16,7 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
     m_SpawnBound.Extents.z = 1243.2412f;
 }
 
-void PlayGameScene::OnInitProperties()
+void PlayGameScene::OnInitProperties(CTimer& gt)
 {
     for (auto& obj : m_CharacterObjects)
     {
@@ -74,7 +70,7 @@ void PlayGameScene::OnInitProperties()
     if (m_MainPlayer != nullptr)
     {
         m_MainPlayer->m_CurrAction = ActionType::Idle;
-        m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, m_AllRitems, m_CurrSkillObjInstanceNUM);
+        m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, *m_AllRitemsRef, m_CurrSkillObjInstanceNUM);
     }
 
     m_CurrSkillObjInstanceNUM = 0;
@@ -82,8 +78,9 @@ void PlayGameScene::OnInitProperties()
     m_LightRotationAngle = 0.0f;
 
 
+    SceneStartTime = gt.GetTotalTime();
     sec = sec2 = 0;
-    time_str = L"\n   03:00";
+    time_str = L"Time Limit\n   03:00";
     TimeLimit_sec = 180;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
@@ -101,7 +98,7 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     PlayGameScene::ProcessCollision(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
 
-    float totalTime = gt.GetTotalTime();
+    float totalTime = gt.GetTotalTime() - SceneStartTime;
     int totalTime_i = (int)totalTime;
 
     if ((totalTime_i != 0) && (totalTime_i % 5 == 0))
@@ -114,264 +111,18 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     }
 }
 
-void PlayGameScene::DisposeUploaders()
-{
-    Scene::DisposeUploaders();
-}
-
-void PlayGameScene::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
-{
-    GeometryGenerator geoGen;
-
-    // UI Position relative to DC(Device Coordinate) with origin at screen center.
-    std::unordered_map<std::string, GeometryGenerator::MeshData> UILayerBacground_Meshes;
-    UILayerBacground_Meshes["UI_Layout_GameTimeLimit"] = geoGen.CreateQuad(-50.0f, 360.0F, 100.0f, 60.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_KDA"] = geoGen.CreateQuad(-640.0f, 360.0f, 200.0f, 70.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_KillLog"] = geoGen.CreateQuad(-640.0f, 280.0f, 200.0f, 200.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_ChattingLog"] = geoGen.CreateQuad(-640.0f, 20.0f, 200.0f, 300.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_SkillList"] = geoGen.CreateQuad(-250.0f, -280.0f, 500.0f, 80.0f, 0.1f);
-    UILayerBacground_Meshes["UI_Layout_Skill1"] = geoGen.CreateQuad(-200.0f, -295.0f, 50.0f, 50.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_Skill2"] = geoGen.CreateQuad(-80.0f, -295.0f, 50.0f, 50.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_Skill3"] = geoGen.CreateQuad(30.0f, -295.0f, 50.0f, 50.0f, 0.0f);
-    UILayerBacground_Meshes["UI_Layout_Skill4"] = geoGen.CreateQuad(140.0f, -295.0f, 50.0f, 50.0f, 0.0f);
-
-    m_Geometries["PlayGameSceneUIGeo"]
-        = std::move(Scene::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UILayerBacground_Meshes));
-
-    std::unordered_map<std::string, GeometryGenerator::MeshData> StageGround_Meshes;
-    StageGround_Meshes["ground_grid"] = geoGen.CreateGrid(1000.0f, 1000.0f, 10, 10);
-    m_Geometries["GamePlayGround"]
-        = std::move(Scene::BuildMeshGeometry(device, commandList, "GamePlayGround", StageGround_Meshes));
-
-    std::unordered_map<std::string, GeometryGenerator::MeshData> EffectGeo_Meshs;
-    EffectGeo_Meshs["SkillEffect_SwordSlash_a"] = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
-    EffectGeo_Meshs["PickingEffect_CrossTarget"] = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
-    m_Geometries["GameEffectGeo"]
-        = std::move(Scene::BuildMeshGeometry(device, commandList, "GameEffectGeo", EffectGeo_Meshs));
-}
-
-void PlayGameScene::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
-{
-    ModelLoader model_loader;
-
-    std::string mesh_path = "Models/Environment/Environment.fbx";
-    std::vector<std::string> anim_paths;
-    std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-
-    mesh_path = "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
-    anim_paths = {
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Stride Walking.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Walk.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Slash.fbx" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-
-    mesh_path = "Models/Meshtint Free Knight/Meshes/Shield.fbx";
-    anim_paths.clear();
-    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-
-    mesh_path = "Models/Meshtint Free Knight/Meshes/Sword.fbx";
-    anim_paths.clear();
-    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
-    LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-}
-
-void PlayGameScene::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat)
-{
-    std::vector<std::string> material_filepaths =
-    {
-        "Models/Environment/Materials/TextureWorld.png",
-        "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga",
-        "UI/White_Transparency50.png",
-        "UI/LightGreen_Transparency50.png",
-        "UI/Effect/SwordSlash_a.png",
-        "UI/Effect/CrossTarget.png"
-    };
-
-    for (auto& texture_path : material_filepaths)
-    {
-        TextureLoader texLoader(texture_path.c_str());
-        TextureData texInfo;
-        texLoader.MoveTextureData(texInfo);
-        if (texInfo.Pixels == nullptr) continue;
-        std::vector<std::uint8_t>& Pixels = *texInfo.Pixels;
-        if (Pixels.empty()) continue;
-
-        UINT texWidth = (UINT)texInfo.Width;
-        UINT texHeight = (UINT)texInfo.Height;
-        UINT texPixelSize = texInfo.BytesPerPixel;
-
-        std::string texName;
-        getFileName(texture_path.c_str(), texName);
-        auto& tex = m_Textures[texName] = std::make_unique<Texture>();
-        tex->Name = texName;
-
-        // Describe and create a Texture2D.
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = BackBufferFormat;
-        textureDesc.Width = texWidth;
-        textureDesc.Height = texHeight;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&tex->Resource)));
-
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex->Resource.Get(), 0, 1);
-
-        // Create the GPU upload buffer.
-        ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&tex->UploadHeap)));
-
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = Pixels.data();
-        textureData.RowPitch = texWidth * texPixelSize;
-        textureData.SlicePitch = textureData.RowPitch * texHeight;
-
-        UpdateSubresources(commandList, tex->Resource.Get(), tex->UploadHeap.Get(), 0, 0, 1, &textureData);
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(tex->Resource.Get(),
-            D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-    }
-
-    // Create the non-tex texture.
-    {
-        auto& tex = m_Textures["checkerboard"] = std::make_unique<Texture>();
-        tex->Name = "checkerboard";
-
-        // Describe and create a Texture2D.
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.Width = 256;
-        textureDesc.Height = 256;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&tex->Resource)));
-
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex->Resource.Get(), 0, 1);
-
-        // Create the GPU upload buffer.
-        ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&tex->UploadHeap)));
-
-        // Copy data to the intermediate upload heap and then schedule a copy 
-        // from the upload heap to the Texture2D.
-        std::vector<UINT8> texture = GenerateTextureData();
-
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = &texture[0];
-        textureData.RowPitch = 256 * 4;
-        textureData.SlicePitch = textureData.RowPitch * 256;
-
-        UpdateSubresources(commandList, tex->Resource.Get(), tex->UploadHeap.Get(), 0, 0, 1, &textureData);
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(tex->Resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-    }
-}
-
-void PlayGameScene::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index)
-{
-    for (auto& tex_iter : m_Textures)
-    {
-        auto& tex = tex_iter.second;
-
-        auto mat = std::make_unique<Material>();
-        mat->Name = tex->Name;
-        mat->NumFramesDirty = gNumFrameResources;
-        mat->MatCBIndex = matCB_index++;
-        mat->DiffuseSrvHeapIndex = diffuseSrvHeap_Index++;
-        mat->DiffuseAlbedo = XMFLOAT4(0.88f, 0.88f, 0.88f, 1.0f);
-        mat->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
-        mat->Roughness = 0.8f;
-
-        m_Materials[mat->Name] = std::move(mat);
-    }
-    m_nMatCB = (UINT)m_Materials.size();
-}
-
-void PlayGameScene::BuildRenderItems()
-{
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["GamePlayGround"].get());
-    for (auto& subMesh : m_Geometries["GamePlayGround"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["checkerboard"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Environment"].get());
-    for (auto& subMesh : m_Geometries["Environment"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["TextureWorld"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Meshtint Free Knight"].get());
-    for (auto& subMesh : m_Geometries["Meshtint Free Knight"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Shield"].get());
-    for (auto& subMesh : m_Geometries["Shield"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["Sword"].get());
-    for (auto& subMesh : m_Geometries["Sword"]->DrawArgs)
-        m_AllRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["PlayGameSceneUIGeo"].get());
-    for (auto& subMesh_iter : m_Geometries["PlayGameSceneUIGeo"]->DrawArgs)
-    {
-        std::string subMeshName = subMesh_iter.first;
-        if (subMeshName.find("Skill") != std::string::npos)
-        {
-            if(subMeshName.find("List") != std::string::npos)
-                m_AllRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
-            else m_AllRitems[subMeshName]->Mat = m_Materials["LightGreen_Transparency50"].get();
-        }
-        else m_AllRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
-    }
-
-    Scene::BuildRenderItem(m_AllRitems, m_Geometries["GameEffectGeo"].get());
-    for (auto& subMesh_iter : m_Geometries["GameEffectGeo"]->DrawArgs)
-    {
-        std::string subMeshName = subMesh_iter.first;
-        if(subMeshName == "SkillEffect_SwordSlash_a")
-            m_AllRitems[subMeshName]->Mat = m_Materials["SwordSlash_a"].get();
-        else if(subMeshName == "PickingEffect_CrossTarget")
-            m_AllRitems[subMeshName]->Mat = m_Materials["CrossTarget"].get();
-    }
-}
-
 void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
 {
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
     ObjectManager objManager;
 
     m_MainPlayer = std::make_unique<Player>();
 
-    for (auto& Ritem_iter : m_AllRitems)
+    for (auto& Ritem_iter : AllRitems)
     {
         auto Ritem = Ritem_iter.second.get();
         if (Ritem_iter.first == "Meshtint Free Knight")
@@ -393,7 +144,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             XMFLOAT3 WorldPosition = { 17.86f, 0.0f, 0.0f };
             XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
             objManager.SetObjectComponent(newObj, objName, Ritem,
-                m_ModelSkeltons["Meshtint Free Knight"].get(),
+                ModelSkeletons["Meshtint Free Knight"].get(),
                 nullptr, &LocalRotationEuler, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
             auto& MeshBound = newObj->m_RenderItem->Geo->DrawArgs[newObj->m_RenderItem->Name].Bounds;
@@ -409,7 +160,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         }
         else if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            const UINT maxUIObject = (UINT)m_Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
+            const UINT maxUIObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
             auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
@@ -473,7 +224,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                     objManager.SetAttaching(newObj, m_MainPlayer->m_ObjectRef, "RigLPalm");
                 }
             }
-            else if (objName == "ground_grid")
+            else if (objName == "SpawnStageGround")
             {
                 XMFLOAT3 WorldPosition = { 17.86f, 5.0f, 0.0f };
                 objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
@@ -539,7 +290,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_WorldObjects[i]->Activated = false;
     }
 
-    m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, m_AllRitems, m_CurrSkillObjInstanceNUM);
+    m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, AllRitems, m_CurrSkillObjInstanceNUM);
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
@@ -549,6 +300,11 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 // character & equipment object generate test
 void PlayGameScene::RandomCreateCharacterObject()
 {
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
     ObjectManager objManager;
     Object* newCharacterObj = nullptr;
     static int CharacterCreatingNum = 1;
@@ -579,8 +335,8 @@ void PlayGameScene::RandomCreateCharacterObject()
         XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
         std::string objName = "Meshtint Free Knight - Instancing" + std::to_string(CharacterCreatingNum++);
         objManager.SetObjectComponent(newCharacterObj, objName,
-            m_AllRitems["Meshtint Free Knight"].get(),
-            m_ModelSkeltons["Meshtint Free Knight"].get(),
+            AllRitems["Meshtint Free Knight"].get(),
+            ModelSkeletons["Meshtint Free Knight"].get(),
             nullptr, &LocalRotationEuler, nullptr,
             &WorldScale, &WorldRotationEuler, &WorldPosition);
         auto& MeshBound = newCharacterObj->m_RenderItem->Geo->DrawArgs[newCharacterObj->m_RenderItem->Name].Bounds;
@@ -613,7 +369,7 @@ void PlayGameScene::RandomCreateCharacterObject()
             XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
             std::string objName = "Sword - Equipment - Instancing" + std::to_string(EquipmentCreatingNum);
             objManager.SetObjectComponent(newEquipmentObj, objName,
-                m_AllRitems["Sword"].get(), nullptr,
+                AllRitems["Sword"].get(), nullptr,
                 &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
             objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigRPalm");
         }
@@ -631,47 +387,11 @@ void PlayGameScene::RandomCreateCharacterObject()
             XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
             std::string objName = "Shield - Equipment - Instancing" + std::to_string(EquipmentCreatingNum++);
             objManager.SetObjectComponent(newEquipmentObj, objName,
-                m_AllRitems["Shield"].get(), nullptr,
+                AllRitems["Shield"].get(), nullptr,
                 &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
             objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigLPalm");
         }
     }
-}
-
-std::vector<UINT8> PlayGameScene::GenerateTextureData()
-{
-    const UINT rowPitch = 256 * 4;
-    const UINT cellPitch = rowPitch >> 4;        // The width of a cell in the checkboard texture.
-    const UINT cellHeight = 256 >> 4;    // The height of a cell in the checkerboard texture.
-    const UINT textureSize = rowPitch * 256;
-
-    std::vector<UINT8> data(textureSize);
-    UINT8* pData = &data[0];
-
-    for (UINT n = 0; n < textureSize; n += 4)
-    {
-        UINT x = n % rowPitch;
-        UINT y = n / rowPitch;
-        UINT i = x / cellPitch;
-        UINT j = y / cellHeight;
-
-        if (i % 2 == j % 2)
-        {
-            pData[n] = 0x00;        // R
-            pData[n + 1] = 0x00;    // G
-            pData[n + 2] = 0x00;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-        else
-        {
-            pData[n] = 0xff;        // R
-            pData[n + 1] = 0xff;    // G
-            pData[n + 2] = 0xff;    // B
-            pData[n + 3] = 0xff;    // A
-        }
-    }
-
-    return data;
 }
 
 void PlayGameScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -706,7 +426,7 @@ void PlayGameScene::UpdateShadowTransform(CTimer& gt)
 
 void PlayGameScene::UpdateTextInfo(CTimer& gt)
 {
-    float totalTime = gt.GetTotalTime();
+    float totalTime = gt.GetTotalTime() - SceneStartTime;
     int totalTime_i = (int)totalTime;
 
     if ((totalTime_i != 0) && (totalTime_i % 1 == 0))

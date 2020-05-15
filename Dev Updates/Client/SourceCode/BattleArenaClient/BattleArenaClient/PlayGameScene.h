@@ -8,28 +8,16 @@ public:
     virtual ~PlayGameScene();
 
     virtual void OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-        DXGI_FORMAT BackBufferFormat,
-        int& matCB_index, int& diffuseSrvHeap_Index,
         int& objCB_index, int& skinnedCB_index, int& textBatch_index);
-    virtual void OnInitProperties();
+    virtual void OnInitProperties(CTimer& gt);
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
         const bool key_state[], const POINT& oldCursorPos,
         const RECT& ClientRect,
         CTimer& gt);
-    virtual void DisposeUploaders();
 
 public:
-    virtual void BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
-    virtual void LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
-    virtual void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat);
-    virtual void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_Index);
-    virtual void BuildRenderItems();
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index);
-
-    virtual void RandomCreateCharacterObject();
-
-private:
-    std::vector<UINT8> GenerateTextureData();
+    void RandomCreateCharacterObject();
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);
@@ -58,6 +46,7 @@ private:
     std::unique_ptr<Player> m_MainPlayer = nullptr;
 
     // Time Limit Info
+    float SceneStartTime = 0.0f;
     int sec = 0;
     int sec2 = 0;
     std::wstring time_str = L"Time Limit\n   03:00";

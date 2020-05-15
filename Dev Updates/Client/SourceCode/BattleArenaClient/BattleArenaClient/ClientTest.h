@@ -2,6 +2,7 @@
 
 #include"Scene.h"
 #include "Common/FileLoader/SpriteFontLoader.h"
+#include "ResourceManager.h"
 
 class ClientTest : public DXSample
 {
@@ -26,6 +27,7 @@ private:
     void BuildShadersAndInputLayout();
     void BuildPSOs();
 
+    void LoadExternalResource();
     void BuildScene();
     // BuildFont는 ResourceUploadBatch때문에 CommandQueue가 초기화 되므로,
     // CommandQueue가 비어있고 Fence가 업데이트된 상태에서 따로 호출해줘야 한다.
@@ -91,6 +93,8 @@ private:
     // Scene별로 Font 텍스쳐 중복 생성을 방지하기 위해
     // Font는 Scene 외부에서 관리
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
+
+    std::unique_ptr<ResourceManager> m_ResourceManager = nullptr;
 
     UINT m_nSKinnedCB = 0;
     UINT m_nObjCB = 0;
