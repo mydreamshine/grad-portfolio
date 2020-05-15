@@ -16,7 +16,7 @@ using namespace std;
 
 constexpr auto FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
 constexpr auto MAX_BUFFER = 100;
-constexpr auto MAX_USER = 2;
+constexpr auto MAX_USER = 4;
 
 enum EVENT_TYPE{EV_SEND, EV_RECV, EV_UPDATE, EV_ENCODE};
 

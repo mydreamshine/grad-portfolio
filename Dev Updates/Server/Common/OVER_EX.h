@@ -2,7 +2,7 @@
 #include <WS2tcpip.h>
 
 //Extend OVERLAPPED
-constexpr auto MAX_BUFFER_SIZE = 200;
+constexpr auto MAX_BUFFER_SIZE = 256;
 
 class OVER_EX
 {

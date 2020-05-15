@@ -2,6 +2,7 @@
 #define LOBBYSERVER_PORT 15500
 #define BATTLESERVER_PORT 15600
 #define ID_LENGTH 11
+typedef char SIZE_TYPE;
 /*
 C : Client
 S : Lobby Server
@@ -12,8 +13,6 @@ ex) CS -> Client to Lobby
 	CB -> Client to Battle
 	etc...
 */
-
-
 
 enum PACKET_TYPE {
 	//Client -> Other
@@ -33,7 +32,9 @@ enum PACKET_TYPE {
 	SC_PACKET_FRIEND_STATUS,
 	BS_PACKET_RESPONSE_ROOM,
 
-	SB_PACKET_REQUEST_ROOM
+	SB_PACKET_REQUEST_ROOM,
+
+	TOTAL_PACKET_COUNT
 };
 
 //Game Modes
@@ -43,7 +44,7 @@ enum GAME_MODES {
 
 struct common_default_packet
 {
-	CHAR size;
+	SIZE_TYPE size;
 	CHAR type;
 };
 

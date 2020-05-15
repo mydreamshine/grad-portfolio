@@ -13,9 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{b8e3128b-1104-4617-a593-d5fe95e9a141}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="소스.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="NWMODULE.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\csockaddr_in.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\OVER_EX.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="PACKET_BUFFER.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -24,6 +39,18 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="NWMODULE.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CSOCKADDR_IN.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\OVER_EX.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="PACKET_BUFFER.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

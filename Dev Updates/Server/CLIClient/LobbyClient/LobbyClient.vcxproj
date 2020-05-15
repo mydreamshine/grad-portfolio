@@ -87,6 +87,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,6 +116,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,11 +125,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\csockaddr_in.cpp" />
+    <ClCompile Include="..\..\Common\OVER_EX.cpp" />
+    <ClCompile Include="NWMODULE.cpp" />
+    <ClCompile Include="PACKET_BUFFER.cpp" />
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h" />
+    <ClInclude Include="..\..\Common\CSOCKADDR_IN.h" />
+    <ClInclude Include="..\..\Common\OVER_EX.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
+    <ClInclude Include="NWMODULE.h" />
+    <ClInclude Include="PACKET_BUFFER.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
