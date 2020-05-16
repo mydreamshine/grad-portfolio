@@ -55,8 +55,8 @@ private:
 private:
     static const UINT FrameCount = 2;
 
-    DXGI_FORMAT m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-    DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT; // DXGI_FORMAT_D32_FLOAT;
+    DXGI_FORMAT m_BackBufferFormat = DXGI_FORMAT_BACKBUFFER;
+    DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_DEPTHSTENCIL; // DXGI_FORMAT_D32_FLOAT;
 
     // Pipeline objects.
     CD3DX12_VIEWPORT m_viewport;

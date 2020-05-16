@@ -806,7 +806,7 @@ void Framework::PopulateCommandList()
         dst.pResource = m_ScreenshotBuffer.Get();
         dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
         dst.PlacedFootprint.Offset = 0;
-        dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        dst.PlacedFootprint.Footprint.Format = m_BackBufferFormat;
         dst.PlacedFootprint.Footprint.Width = m_width;
         dst.PlacedFootprint.Footprint.Height = m_height;
         dst.PlacedFootprint.Footprint.Depth = 1;
