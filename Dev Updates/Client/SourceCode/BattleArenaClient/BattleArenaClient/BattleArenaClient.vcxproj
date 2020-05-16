@@ -148,7 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ClientTest.cpp">
+    <ClCompile Include="Framework.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Common\FileLoader\ModelLoader.cpp">
@@ -209,7 +209,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ClientTest.h" />
+    <ClInclude Include="Framework.h" />
     <ClInclude Include="Common\FileLoader\DDSLoader.h" />
     <ClInclude Include="Common\FileLoader\ModelLoader.h" />
     <ClInclude Include="Common\FileLoader\PngLoader.h" />

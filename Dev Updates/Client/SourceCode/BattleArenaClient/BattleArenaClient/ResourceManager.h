@@ -5,7 +5,10 @@
 #include "Common/FileLoader/TextureLoader.h"
 #include "Common/FileLoader/ModelLoader.h"
 #include "Common/Util/d3d12/GeometryGenerator.h"
+#include "Common/FileLoader/SpriteFontLoader.h"
 #include "FrameResource.h"
+
+using Microsoft::WRL::ComPtr;
 
 enum class RenderTargetScene : int
 {
@@ -22,12 +25,27 @@ public:
 	ResourceManager() = default;
 	~ResourceManager();
 
-    void OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-        DXGI_FORMAT BackBufferFormat,
-        int& matCB_index, int& diffuseSrvHeap_Index);
+    void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter);
+    void LoadPipeline();
+
+    void OnInit();
+    void OnDestroy();
     void DisposeUploaders();
+    void WaitForGPUcommandComplete();
+
+private:
+    ComPtr<ID3D12Device> m_device;
+    ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+    ComPtr<ID3D12CommandQueue> m_commandQueue;
+    ComPtr<ID3D12GraphicsCommandList> m_commandList;
+
+    ComPtr<ID3D12Fence> m_Fence;
+    HANDLE m_FenceEvent;
+    UINT64 m_FenceValue;
 
 public:
+    void LoadAsset();
+
     std::unique_ptr<MeshGeometry> BuildMeshGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         const std::string& geoName, std::unordered_map<std::string, GeometryGenerator::MeshData>& Meshes);
     void BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
@@ -42,6 +60,8 @@ public:
     void LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT BackBufferFormat);
     void BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index);
 
+    void LoadFontSprites(ID3D12Device* device, ID3D12CommandQueue* commandQueue);
+
     // Material에 대한 지정은 이 함수 외부에서 지정해줘야 한다.
     // (Material의 이름을 기준으로 RenderItem에 매칭시키기 때문.) => 이름으론 Material 매칭 패턴을 찾을 수가 없다.
     void BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo);
@@ -52,6 +72,7 @@ public:
     std::unordered_map<std::string, std::unique_ptr<Material>>& GetMaterials() { return m_Materials; }
     std::unordered_map<std::string, std::unique_ptr<Texture>>& GetTextures() { return m_Textures; }
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>& GetModelSkeltons() { return m_ModelSkeltons; }
+    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>& GetFonts() { return m_Fonts; }
 
     std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GetRenderItems(RenderTargetScene TargetScene) { return m_AllRitems[(int)TargetScene]; }
 
@@ -61,6 +82,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
+    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
 
     // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems[(int)RenderTargetScene::Count];

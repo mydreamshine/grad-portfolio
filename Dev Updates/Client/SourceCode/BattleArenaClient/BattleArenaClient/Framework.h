@@ -1,13 +1,12 @@
 #pragma once
 
 #include"Scene.h"
-#include "Common/FileLoader/SpriteFontLoader.h"
 #include "ResourceManager.h"
 
-class ClientTest : public DXSample
+class Framework : public DXSample
 {
 public:
-    ClientTest(UINT width, UINT height, std::wstring name);
+    Framework(UINT width, UINT height, std::wstring name);
 
     virtual void OnInit(HWND hwnd);
     virtual void OnUpdate();
@@ -19,7 +18,8 @@ public:
 
 private:
     void LoadPipeline();
-    void LoadAssets();
+    void LoadExternalResource();
+    void LoadAssets(ResourceManager* ExternalResource);
 
     void BuildRootSignature();
     void BuildDescriptorHeaps();
@@ -27,11 +27,10 @@ private:
     void BuildShadersAndInputLayout();
     void BuildPSOs();
 
-    void LoadExternalResource();
-    void BuildScene();
+    void BuildScene(ResourceManager* ExternalResource);
     // BuildFont는 ResourceUploadBatch때문에 CommandQueue가 초기화 되므로,
     // CommandQueue가 비어있고 Fence가 업데이트된 상태에서 따로 호출해줘야 한다.
-    void BuildFonts();
+    void BuildFontSpriteBatchs();
     void BuildFrameResources();
     
     void PopulateCommandList();
@@ -90,9 +89,12 @@ private:
     // Material의 diffuseSrvHeapIndex와 각 Scene에서의 Texture 생성 순서를 매칭하기 위해 m_Texture만 Vector로 정의
     std::vector<Texture*> m_Textures;
 
-    // Scene별로 Font 텍스쳐 중복 생성을 방지하기 위해
-    // Font는 Scene 외부에서 관리
-    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
+    // 렌더링할 텍스트별 FontSprite VertexSegment에 대한 페이지를 중복 생성하는 것을 방지하기 위해
+    // FontSpriteBatch를 렌더링할 텍스트마다 지니게 한다.
+    // 단, 이는 commandQueue가 완전히 비어있는 상태(혹은 독립적인 commandQueue)에서 생성해야 하기에,
+    // Object의 TextInfo에서는 FontSpriteBatch를 취급하진 않는다.
+    std::vector<std::unique_ptr<DirectX::SpriteBatch>> m_FontSpriteBatchs;
+    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>* m_FontsRef = nullptr;
 
     std::unique_ptr<ResourceManager> m_ResourceManager = nullptr;
 

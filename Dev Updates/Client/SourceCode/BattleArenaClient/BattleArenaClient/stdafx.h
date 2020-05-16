@@ -32,6 +32,8 @@
 
 #define WND_WIDTH 1280
 #define WND_HEIGHT 720
+#define DXGI_FORMAT_BACKBUFFER DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM
+#define DXGI_FORMAT_DEPTHSTENCIL DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT
 
 inline void getFileName(const char* str, std::string& pFileName)
 {

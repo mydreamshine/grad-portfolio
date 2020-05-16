@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "ClientTest.h"
+#include "Framework.h"
 
 const int gNumFrameResources = 3;
 
-ClientTest::ClientTest(UINT width, UINT height, std::wstring name) :
+Framework::Framework(UINT width, UINT height, std::wstring name) :
     DXSample(width, height, name),
     m_frameIndex(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -11,7 +11,7 @@ ClientTest::ClientTest(UINT width, UINT height, std::wstring name) :
 {
 }
 
-void ClientTest::OnDestroy()
+void Framework::OnDestroy()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be
     // cleaned up by the destructor.
@@ -19,9 +19,11 @@ void ClientTest::OnDestroy()
 
     for (int i = 0; i < gNumFrameResources; ++i)
         CloseHandle(m_FrameResources[i]->FenceEvent);
+
+    if (m_ResourceManager != nullptr) m_ResourceManager->OnDestroy();
 }
 
-void ClientTest::OnKeyDown(UINT8 key)
+void Framework::OnKeyDown(UINT8 key)
 {
     m_KeyState[key] = true;
     if (key == VK_RBUTTON || key == VK_LBUTTON)
@@ -33,7 +35,7 @@ void ClientTest::OnKeyDown(UINT8 key)
     }
 }
 
-void ClientTest::OnKeyUp(UINT8 key)
+void Framework::OnKeyUp(UINT8 key)
 {
     m_KeyState[key] = false;
     if (key == VK_RBUTTON || key == VK_LBUTTON)
@@ -43,18 +45,19 @@ void ClientTest::OnKeyUp(UINT8 key)
     }
 }
 
-void ClientTest::OnInit(HWND hwnd)
+void Framework::OnInit(HWND hwnd)
 {
     DXSample::OnInit(hwnd);
+    LoadExternalResource();
     LoadPipeline();
-    LoadAssets();
+    LoadAssets(m_ResourceManager.get());
 
     m_Timer.Start();
     m_Timer.Reset();
 }
 
 // Load the rendering pipeline dependencies.
-void ClientTest::LoadPipeline()
+void Framework::LoadPipeline()
 {
     UINT dxgiFactoryFlags = 0;
 
@@ -209,8 +212,15 @@ void ClientTest::LoadPipeline()
     ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 }
 
+void Framework::LoadExternalResource()
+{
+    m_ResourceManager = std::make_unique<ResourceManager>();
+    m_ResourceManager->OnInit();
+    m_ResourceManager->LoadAsset();
+}
+
 // Load the assets.
-void ClientTest::LoadAssets()
+void Framework::LoadAssets(ResourceManager* ExternalResource)
 {
     BuildRootSignature();
     BuildShadersAndInputLayout();
@@ -219,11 +229,14 @@ void ClientTest::LoadAssets()
     m_ShadowMap = std::make_unique<ShadowMap>(m_device.Get(), SIZE_ShadowMap, SIZE_ShadowMap);
 
     // 반드시 외부 리소스를 먼저 생성(임포트)한 다음에 Scene을 생성해야 한다.
-    LoadExternalResource();
-    BuildScene();
+    BuildScene(ExternalResource);
 
     // Texture에 대한 SRV 생성
     // (LoadExternalResource()를 통해 외부 리소스가 먼저 임포트 되어있어야 한다.)
+    auto& AllTextures = ExternalResource->GetTextures();
+    for (auto& Tex_iter : AllTextures)
+        m_Textures.push_back(Tex_iter.second.get());
+    m_nMatCB = ExternalResource->m_nMatCB;
     BuildDescriptorHeaps();
     BuildConstantBufferView();
 
@@ -246,13 +259,12 @@ void ClientTest::LoadAssets()
         WaitForPreviousFrame();
     }
 
-    m_ResourceManager->DisposeUploaders();
-
-    BuildFonts();
+    m_FontsRef = &(ExternalResource->GetFonts());
+    BuildFontSpriteBatchs();
 }
 
 // Create the root signature.
-void ClientTest::BuildRootSignature()
+void Framework::BuildRootSignature()
 {
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 
@@ -290,7 +302,7 @@ void ClientTest::BuildRootSignature()
     ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 }
 
-void ClientTest::BuildDescriptorHeaps()
+void Framework::BuildDescriptorHeaps()
 {
     UINT TextureCount = (UINT)m_Textures.size();
     UINT ShadowMapCount = 1;
@@ -313,7 +325,7 @@ void ClientTest::BuildDescriptorHeaps()
 // ├───┬───┬───┤ null_view(for shadow)│
 // │frame0│frame1│frame2│                      │
 // └───┴───┴───┴───────────┘
-void ClientTest::BuildConstantBufferView()
+void Framework::BuildConstantBufferView()
 {
     UINT TextureCount = (UINT)m_Textures.size();
     UINT ShadowMapCount = 1;
@@ -370,7 +382,7 @@ void ClientTest::BuildConstantBufferView()
     }
 }
 
-void ClientTest::BuildShadersAndInputLayout()
+void Framework::BuildShadersAndInputLayout()
 {
     const D3D_SHADER_MACRO skinnedDefines[] =
     {
@@ -415,7 +427,7 @@ void ClientTest::BuildShadersAndInputLayout()
     };
 }
 
-void ClientTest::BuildPSOs()
+void Framework::BuildPSOs()
 {
     D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
     transparencyBlendDesc.BlendEnable = true;
@@ -563,21 +575,7 @@ void ClientTest::BuildPSOs()
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&UIPsoDesc, IID_PPV_ARGS(&m_PSOs["UILayout_Background"])));
 }
 
-void ClientTest::LoadExternalResource()
-{
-    m_ResourceManager = std::make_unique<ResourceManager>();
-    int matCB_index = 0;
-    int diffuseSrvHeap_index = 0;
-    m_ResourceManager->OnInit(m_device.Get(), m_commandList.Get(), m_BackBufferFormat, matCB_index, diffuseSrvHeap_index);
-
-    auto& AllTextures = m_ResourceManager->GetTextures();
-    for (auto& Tex_iter : AllTextures)
-        m_Textures.push_back(Tex_iter.second.get());
-
-    m_nMatCB = m_ResourceManager->m_nMatCB;
-}
-
-void ClientTest::BuildScene()
+void Framework::BuildScene(ResourceManager* ExternalResource)
 {
     m_Scenes["LoginScene"]    = std::make_unique<LoginScene>(m_width, m_height);
     m_Scenes["LobyScene"]     = std::make_unique<LobyScene>(m_width, m_height);
@@ -598,17 +596,17 @@ void ClientTest::BuildScene()
 
         // Set External-Resource to each Scene
         {
-            scene->SetGeometriesRef(&(m_ResourceManager->GetGeometries()));
-            scene->SetTexturesRef(&(m_ResourceManager->GetTextures()));
-            scene->SetMaterialsRef(&(m_ResourceManager->GetMaterials()));
-            scene->SetModelSkeletonsRef(&(m_ResourceManager->GetModelSkeltons()));
+            scene->SetGeometriesRef(&(ExternalResource->GetGeometries()));
+            scene->SetTexturesRef(&(ExternalResource->GetTextures()));
+            scene->SetMaterialsRef(&(ExternalResource->GetMaterials()));
+            scene->SetModelSkeletonsRef(&(ExternalResource->GetModelSkeltons()));
 
             RenderTargetScene target_scene = RenderTargetScene::LoginScene;
             if      (scene_name == "LoginScene")    target_scene = RenderTargetScene::LoginScene;
             else if (scene_name == "LobyScene")     target_scene = RenderTargetScene::LobyScene;
             else if (scene_name == "PlayGameScene") target_scene = RenderTargetScene::PlayGameScene;
             else if (scene_name == "GameOverScene") target_scene = RenderTargetScene::GameOverScene;
-            scene->SetRederItemsRef(&(m_ResourceManager->GetRenderItems(target_scene)));
+            scene->SetRederItemsRef(&(ExternalResource->GetRenderItems(target_scene)));
         }
 
         scene->OnInit(m_device.Get(), m_commandList.Get(),
@@ -623,17 +621,27 @@ void ClientTest::BuildScene()
     m_CurrScene = m_Scenes["LoginScene"].get();
 }
 
-void ClientTest::BuildFonts()
+void Framework::BuildFontSpriteBatchs()
 {
     RenderTargetState rtState(m_BackBufferFormat, m_DepthStencilFormat);
-    SpriteBatchPipelineStateDescription pd(rtState);
+    SpriteBatchPipelineStateDescription psoDesc(rtState);
 
-    m_Fonts[L"맑은 고딕"]
-        = std::make_unique<DXTK_FONT>(m_device.Get(), m_commandQueue.Get(), &m_viewport,
-            pd, m_nTextBatch, L"UI/Font/맑은 고딕.spritefont");
+    // Make SpriteBatch
+    for (UINT i = 0; i < m_nTextBatch; ++i)
+    {
+        DirectX::ResourceUploadBatch SpriteBatch_upload(m_device.Get());
+        SpriteBatch_upload.Begin(); // 자체적으로 CommandAllocator와 CommadList를 생성
+
+        auto batch = std::make_unique<DirectX::SpriteBatch>(m_device.Get(), SpriteBatch_upload, psoDesc, &m_viewport);
+
+        auto uploadResourcesFinished = SpriteBatch_upload.End(m_commandQueue.Get()); // CommadList 실행 및 FenceEvent 발생
+        uploadResourcesFinished.wait();
+
+        m_FontSpriteBatchs.push_back(std::move(batch));
+    }
 }
 
-void ClientTest::BuildFrameResources()
+void Framework::BuildFrameResources()
 {
     UINT PassCount = 2; // Common Render Pass + Shadow Render Pass
     UINT ObjectCount = m_nObjCB;
@@ -650,7 +658,7 @@ void ClientTest::BuildFrameResources()
 }
 
 // Update frame-based values.
-void ClientTest::OnUpdate()
+void Framework::OnUpdate()
 {
     m_Timer.Tick(0.0f);
 
@@ -685,7 +693,7 @@ void ClientTest::OnUpdate()
 }
 
 // Render the scene.
-void ClientTest::OnRender()
+void Framework::OnRender()
 {
     // Record all the commands we need to render the scene into the command list.
     PopulateCommandList();
@@ -700,7 +708,7 @@ void ClientTest::OnRender()
     WaitForPreviousFrame();
 }
 
-void ClientTest::PopulateCommandList()
+void Framework::PopulateCommandList()
 {
     auto cmdListAlloc = m_CurrFrameResource->CmdListAlloc;
 
@@ -753,7 +761,7 @@ void ClientTest::PopulateCommandList()
     ThrowIfFailed(m_commandList->Close());
 }
 
-void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer)
+void Framework::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer)
 {
     UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     UINT skinnedCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(SkinnedConstants));
@@ -808,7 +816,7 @@ void ClientTest::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const st
     }
 }
 
-void ClientTest::DrawSceneToShadowMap()
+void Framework::DrawSceneToShadowMap()
 {
     m_commandList->RSSetViewports(1, &m_ShadowMap->Viewport());
     m_commandList->RSSetScissorRects(1, &m_ShadowMap->ScissorRect());
@@ -845,7 +853,7 @@ void ClientTest::DrawSceneToShadowMap()
         D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 
-void ClientTest::DrawSceneToBackBuffer()
+void Framework::DrawSceneToBackBuffer()
 {
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -882,7 +890,7 @@ void ClientTest::DrawSceneToBackBuffer()
     DrawSceneToUI();
 }
 
-void ClientTest::DrawSceneToUI()
+void Framework::DrawSceneToUI()
 {
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
@@ -899,18 +907,19 @@ void ClientTest::DrawSceneToUI()
             {
                 auto ui_info = ui_info_iter.second.get();
 
-                auto font_iter = m_Fonts.find(ui_info->m_FontName);
-                if (font_iter != m_Fonts.end())
+                auto font_iter = m_FontsRef->find(ui_info->m_FontName);
+                if (font_iter != m_FontsRef->end())
                 {
                     auto font_render = font_iter->second.get();
-                    font_render->DrawString(m_commandList.Get(), ui_info->TextBatchIndex, ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
+                    auto TextBatch = m_FontSpriteBatchs[ui_info->TextBatchIndex].get();
+                    font_render->DrawString(m_commandList.Get(), TextBatch, ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
                 }
             }
         }
     }
 }
 
-void ClientTest::DrawSceneToBackground()
+void Framework::DrawSceneToBackground()
 {
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
@@ -970,7 +979,7 @@ void ClientTest::DrawSceneToBackground()
     }
 }
 
-void ClientTest::WaitForPreviousFrame()
+void Framework::WaitForPreviousFrame()
 {
     // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
     // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
@@ -996,7 +1005,7 @@ void ClientTest::WaitForPreviousFrame()
     m_CurrFrameResourceIndex = (m_CurrFrameResourceIndex + 1) % gNumFrameResources;
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> ClientTest::GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> Framework::GetStaticSamplers()
 {
     // 그래픽 응용 프로그램이 사용하는 표본추출기의 수는 그리 많지 않으므로,
     // 미리 만들어서 루트 시그니처에 포함시켜 둔다.

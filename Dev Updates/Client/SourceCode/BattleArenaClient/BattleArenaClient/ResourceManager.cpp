@@ -8,17 +8,80 @@ ResourceManager::~ResourceManager()
 {
 }
 
-void ResourceManager::OnInit(
-    ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
-    DXGI_FORMAT BackBufferFormat,
-    int& matCB_index, int& diffuseSrvHeap_Index)
+void ResourceManager::GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 {
-    // 아래 메소드 순서는 반드시 지켜져야 한다.
-    ResourceManager::BuildShapeGeometry(device, commandList);
-    ResourceManager::LoadSkinnedModels(device, commandList);
-    ResourceManager::LoadTextures(device, commandList, BackBufferFormat);
-    ResourceManager::BuildMaterials(matCB_index, diffuseSrvHeap_Index);
-    ResourceManager::BuildRenderItems();
+    ComPtr<IDXGIAdapter1> adapter;
+    *ppAdapter = nullptr;
+
+    for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            // Don't select the Basic Render Driver adapter.
+            // If you want a software adapter, pass in "/warp" on the command line.
+            continue;
+        }
+
+        // Check to see if the adapter supports Direct3D 12, but don't create the
+        // actual device yet.
+        if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+        {
+            break;
+        }
+    }
+
+    *ppAdapter = adapter.Detach();
+}
+
+void ResourceManager::LoadPipeline()
+{
+    UINT dxgiFactoryFlags = 0;
+
+#if defined(_DEBUG)
+    // Enable the debug layer (requires the Graphics Tools "optional feature").
+    // NOTE: Enabling the debug layer after device creation will invalidate the active device.
+    {
+        ComPtr<ID3D12Debug> debugController;
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+        {
+            debugController->EnableDebugLayer();
+
+            // Enable additional debug layers.
+            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+        }
+    }
+#endif
+    ComPtr<IDXGIFactory4> factory;
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+
+    ComPtr<IDXGIAdapter1> hardwareAdapter;
+    GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+
+    ThrowIfFailed(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+
+    // Describe and create the command queue.
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+    ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+}
+
+void ResourceManager::OnInit()
+{
+    ResourceManager::LoadPipeline();
+}
+
+void ResourceManager::OnDestroy()
+{
+    ResourceManager::WaitForGPUcommandComplete();
+
+    CloseHandle(m_FenceEvent);
 }
 
 void ResourceManager::DisposeUploaders()
@@ -28,6 +91,51 @@ void ResourceManager::DisposeUploaders()
 
     for (auto& tex_iter : m_Textures)
         tex_iter.second->UploadHeap = nullptr;
+}
+
+void ResourceManager::WaitForGPUcommandComplete()
+{
+    // Signal and increment the fence value.
+    const UINT64 fenceVal = m_FenceValue;
+    ThrowIfFailed(m_commandQueue->Signal(m_Fence.Get(), fenceVal));
+    const UINT64 nextFenceVal = m_FenceValue++;
+
+    // Wait until the previous frame is finished.
+    if (m_Fence->GetCompletedValue() < nextFenceVal)
+    {
+        ThrowIfFailed(m_Fence->SetEventOnCompletion(nextFenceVal, m_FenceEvent));
+        WaitForSingleObject(m_FenceEvent, INFINITE);
+    }
+}
+
+void ResourceManager::LoadAsset()
+{
+    int matCB_index = 0;
+    int diffuseSrvHeap_Index = 0;
+
+    // 아래 메소드 순서는 반드시 지켜져야 한다.
+    ResourceManager::BuildShapeGeometry(m_device.Get(), m_commandList.Get());
+    ResourceManager::LoadSkinnedModels(m_device.Get(), m_commandList.Get());
+    ResourceManager::LoadTextures(m_device.Get(), m_commandList.Get(), DXGI_FORMAT_BACKBUFFER);
+    ResourceManager::BuildMaterials(matCB_index, diffuseSrvHeap_Index);
+    ResourceManager::BuildRenderItems();
+
+    ThrowIfFailed(m_commandList->Close());
+    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // Cpu-Gpu Sync
+    {
+        m_FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
+        m_FenceValue = 1;
+
+        ResourceManager::WaitForGPUcommandComplete();
+    }
+
+    ResourceManager::LoadFontSprites(m_device.Get(), m_commandQueue.Get());
+
+    ResourceManager::DisposeUploaders();
 }
 
 std::unique_ptr<MeshGeometry> ResourceManager::BuildMeshGeometry(
@@ -500,6 +608,12 @@ void ResourceManager::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index
     }
 
     m_nMatCB = (UINT)m_Materials.size();
+}
+
+void ResourceManager::LoadFontSprites(ID3D12Device* device, ID3D12CommandQueue* commandQueue)
+{
+    m_Fonts[L"맑은 고딕"]
+        = std::make_unique<DXTK_FONT>(device, commandQueue, L"UI/Font/맑은 고딕.spritefont");
 }
 
 void ResourceManager::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)
