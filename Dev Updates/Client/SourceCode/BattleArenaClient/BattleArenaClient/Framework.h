@@ -6,19 +6,22 @@
 class Framework : public DXSample
 {
 public:
+    Framework() = default;
     Framework(UINT width, UINT height, std::wstring name);
+    virtual ~Framework();
 
-    virtual void OnInit(HWND hwnd);
-    virtual void OnUpdate();
+    virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource);
+    virtual void OnUpdate(RECT* pClientRect = nullptr);
     virtual void OnRender();
     virtual void OnDestroy();
 
-    virtual void OnKeyDown(UINT8 key);
-    virtual void OnKeyUp(UINT8 key);
+    virtual void OnKeyDown(UINT8 key, POINT* OldCursorPos = nullptr);
+    virtual void OnKeyUp(UINT8 key, POINT* OldCursorPos = nullptr);
+
+    BYTE* GetFrameData();
 
 private:
     void LoadPipeline();
-    void LoadExternalResource();
     void LoadAssets(ResourceManager* ExternalResource);
 
     void BuildRootSignature();
@@ -43,6 +46,11 @@ private:
     void WaitForPreviousFrame();
 
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
+
+private:
+    ComPtr<ID3D12Resource> m_ScreenshotBuffer = nullptr;
+    std::unique_ptr<BYTE[]> m_FrameData = nullptr;
+    UINT m_FrameDataLength = 0;
 
 private:
     static const UINT FrameCount = 2;
@@ -95,8 +103,6 @@ private:
     // Object의 TextInfo에서는 FontSpriteBatch를 취급하진 않는다.
     std::vector<std::unique_ptr<DirectX::SpriteBatch>> m_FontSpriteBatchs;
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>* m_FontsRef = nullptr;
-
-    std::unique_ptr<ResourceManager> m_ResourceManager = nullptr;
 
     UINT m_nSKinnedCB = 0;
     UINT m_nObjCB = 0;

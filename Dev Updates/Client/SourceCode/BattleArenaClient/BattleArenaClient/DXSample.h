@@ -6,17 +6,18 @@
 class DXSample
 {
 public:
+    DXSample() = default;
     DXSample(UINT width, UINT height, std::wstring name);
     virtual ~DXSample();
 
-    virtual void OnInit(HWND hwnd) { m_hwnd = hwnd; }
-    virtual void OnUpdate() = 0;
+    virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name);
+    virtual void OnUpdate(RECT* pClientRect = nullptr) = 0;
     virtual void OnRender() = 0;
     virtual void OnDestroy() = 0;
 
     // Samples override the event handlers to handle specific messages.
-    virtual void OnKeyDown(UINT8 /*key*/)   {}
-    virtual void OnKeyUp(UINT8 /*key*/)     {}
+    virtual void OnKeyDown(UINT8 key, POINT* OldCursorPos = nullptr)   {}
+    virtual void OnKeyUp(UINT8 key, POINT* OldCursorPos = nullptr)     {}
 
     // Accessors.
     UINT GetWidth() const           { return m_width; }
@@ -30,6 +31,7 @@ protected:
     void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter);
     void SetCustomWindowText(LPCWSTR text);
 
+    bool m_hasWindow = true;
     HWND m_hwnd;
 
     // Viewport dimensions.

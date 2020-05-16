@@ -11,6 +11,10 @@ Framework::Framework(UINT width, UINT height, std::wstring name) :
 {
 }
 
+Framework::~Framework()
+{
+}
+
 void Framework::OnDestroy()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be
@@ -19,38 +23,37 @@ void Framework::OnDestroy()
 
     for (int i = 0; i < gNumFrameResources; ++i)
         CloseHandle(m_FrameResources[i]->FenceEvent);
-
-    if (m_ResourceManager != nullptr) m_ResourceManager->OnDestroy();
 }
 
-void Framework::OnKeyDown(UINT8 key)
+void Framework::OnKeyDown(UINT8 key, POINT* OldCursorPos)
 {
     m_KeyState[key] = true;
-    if (key == VK_RBUTTON || key == VK_LBUTTON)
-    {
-        //마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
-        ::SetCapture(m_hwnd);
-        ::GetCursorPos(&m_OldCursorPos);
-        ::ScreenToClient(m_hwnd, &m_OldCursorPos);
-    }
+    if (OldCursorPos != nullptr) m_OldCursorPos = *OldCursorPos;
 }
 
-void Framework::OnKeyUp(UINT8 key)
+void Framework::OnKeyUp(UINT8 key, POINT* OldCursorPos)
 {
     m_KeyState[key] = false;
-    if (key == VK_RBUTTON || key == VK_LBUTTON)
-    {
-        //마우스 캡쳐를 해제한다.
-        ::ReleaseCapture();
-    }
 }
 
-void Framework::OnInit(HWND hwnd)
+BYTE* Framework::GetFrameData()
 {
-    DXSample::OnInit(hwnd);
-    LoadExternalResource();
+    D3D12_RANGE d3dReadRange = { 0, 0 };
+    UINT8* pBufferDataBegin = NULL;
+    m_ScreenshotBuffer->Map(0, &d3dReadRange, (void**)&pBufferDataBegin);
+    memcpy(m_FrameData.get(), pBufferDataBegin, m_FrameDataLength);
+    m_ScreenshotBuffer->Unmap(0, NULL);
+    return m_FrameData.get();
+}
+
+void Framework::OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource)
+{
+    DXSample::OnInit(hwnd, width, height, name);
+    m_frameIndex = 0;
+    m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+    m_scissorRect = CD3DX12_RECT(0, 0, static_cast<LONG>(width), static_cast<LONG>(height));
     LoadPipeline();
-    LoadAssets(m_ResourceManager.get());
+    LoadAssets(ExternalResource);
 
     m_Timer.Start();
     m_Timer.Reset();
@@ -109,31 +112,34 @@ void Framework::LoadPipeline()
 
     ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
 
-    // Describe and create the swap chain.
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = m_width;
-    swapChainDesc.Height = m_height;
-    swapChainDesc.Format = m_BackBufferFormat;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.SampleDesc.Count = 1;
+    if (m_hasWindow == true)
+    {
+        // Describe and create the swap chain.
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.BufferCount = FrameCount;
+        swapChainDesc.Width = m_width;
+        swapChainDesc.Height = m_height;
+        swapChainDesc.Format = m_BackBufferFormat;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.SampleDesc.Count = 1;
 
-    ComPtr<IDXGISwapChain1> swapChain;
-    ThrowIfFailed(factory->CreateSwapChainForHwnd(
-        m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-        Win32Application::GetHwnd(),
-        &swapChainDesc,
-        nullptr,
-        nullptr,
-        &swapChain
+        ComPtr<IDXGISwapChain1> swapChain;
+        ThrowIfFailed(factory->CreateSwapChainForHwnd(
+            m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+            m_hwnd,
+            &swapChainDesc,
+            nullptr,
+            nullptr,
+            &swapChain
         ));
 
-    // This app does not support fullscreen transitions.
-    ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+        // This app does not support fullscreen transitions.
+        ThrowIfFailed(factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
-    ThrowIfFailed(swapChain.As(&m_swapChain));
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+        ThrowIfFailed(swapChain.As(&m_swapChain));
+        m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    }
 
     // Create rtv & dsv descriptor heaps.
     {
@@ -165,7 +171,34 @@ void Framework::LoadPipeline()
         // Create a RTV for each frame.
         for (UINT n = 0; n < FrameCount; n++)
         {
-            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+            if (m_hasWindow == true)
+            {
+                ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+            }
+            else // Create Render Target Frame
+            {
+                CD3DX12_RESOURCE_DESC RenderTargetDesc(
+                    D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                    65536,
+                    static_cast<UINT>(WND_WIDTH),
+                    static_cast<UINT>(WND_HEIGHT),
+                    1,
+                    1,
+                    m_BackBufferFormat,
+                    1,
+                    0,
+                    D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                    D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+                //d3dResourceInitialStates = D3D12_RESOURCE_STATE_COPY_DEST;
+                HRESULT hResult = m_device->CreateCommittedResource(
+                    &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+                    D3D12_HEAP_FLAG_NONE,
+                    &RenderTargetDesc,
+                    D3D12_RESOURCE_STATE_GENERIC_READ,
+                    NULL,
+                    IID_PPV_ARGS(&m_renderTargets[n]));
+            }
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
             rtvHandle.Offset(1, m_rtvDescriptorSize);
         }
@@ -206,17 +239,26 @@ void Framework::LoadPipeline()
         // ShadowMap 객체에서 이루어진다.
     }
 
+    // Create the scree shot buffer
+    {
+        CoInitialize(NULL);
+        m_FrameDataLength = m_width * m_height * 4;
+        
+        ThrowIfFailed(m_device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(m_FrameDataLength),
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            nullptr,
+            IID_PPV_ARGS(&m_ScreenshotBuffer)));
+
+        m_FrameData = std::make_unique<BYTE[]>(m_FrameDataLength);
+    }
+
     ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 
     // Create the command list.
     ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
-}
-
-void Framework::LoadExternalResource()
-{
-    m_ResourceManager = std::make_unique<ResourceManager>();
-    m_ResourceManager->OnInit();
-    m_ResourceManager->LoadAsset();
 }
 
 // Load the assets.
@@ -658,7 +700,7 @@ void Framework::BuildFrameResources()
 }
 
 // Update frame-based values.
-void Framework::OnUpdate()
+void Framework::OnUpdate(RECT* pClientRect)
 {
     m_Timer.Tick(0.0f);
 
@@ -688,7 +730,8 @@ void Framework::OnUpdate()
     }
 
     RECT ClientRect;
-    ::GetClientRect(m_hwnd, &ClientRect);
+    if (pClientRect != nullptr) ClientRect = *pClientRect;
+    else ClientRect = { 0, 0, (LONG)m_width, (LONG)m_height };
     m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_KeyState, m_OldCursorPos, ClientRect, m_Timer);
 }
 
@@ -703,7 +746,7 @@ void Framework::OnRender()
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // Present the frame.
-    ThrowIfFailed(m_swapChain->Present(1, 0));
+    if(m_hasWindow == true) ThrowIfFailed(m_swapChain->Present(1, 0));
 
     WaitForPreviousFrame();
 }
@@ -752,6 +795,31 @@ void Framework::PopulateCommandList()
         m_commandList->SetGraphicsRootDescriptorTable(5, m_ShadowMap->Srv());
 
         DrawSceneToBackBuffer();
+    }
+
+    // Frame capture
+    {
+        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+            D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+        D3D12_TEXTURE_COPY_LOCATION dst, src;
+        dst.pResource = m_ScreenshotBuffer.Get();
+        dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        dst.PlacedFootprint.Offset = 0;
+        dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        dst.PlacedFootprint.Footprint.Width = m_width;
+        dst.PlacedFootprint.Footprint.Height = m_height;
+        dst.PlacedFootprint.Footprint.Depth = 1;
+        dst.PlacedFootprint.Footprint.RowPitch = m_width * 4;
+
+        src.pResource = m_renderTargets[m_frameIndex].Get();
+        src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        src.SubresourceIndex = 0;
+
+        m_commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+        m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+            D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
     }
 
     // Indicate that the back buffer will now be used to present.
@@ -1001,7 +1069,7 @@ void Framework::WaitForPreviousFrame()
         WaitForSingleObject(m_CurrFrameResource->FenceEvent, INFINITE);
     }
 
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    if (m_hasWindow == true) m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
     m_CurrFrameResourceIndex = (m_CurrFrameResourceIndex + 1) % gNumFrameResources;
 }
 
