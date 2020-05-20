@@ -17,6 +17,7 @@
 #include <array>
 #include <wrl.h>
 #include <shellapi.h>
+#include <codecvt>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -30,8 +31,8 @@
 #pragma comment(lib, "Common/Util/libpng/lib/x64/Release/libpng16.lib")
 #endif
 
-#define WND_WIDTH 1280
-#define WND_HEIGHT 720
+#define WND_WIDTH 640
+#define WND_HEIGHT 480
 #define DXGI_FORMAT_BACKBUFFER DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM
 #define DXGI_FORMAT_DEPTHSTENCIL DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT
 

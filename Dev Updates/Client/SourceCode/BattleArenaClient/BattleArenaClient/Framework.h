@@ -7,10 +7,11 @@ class Framework : public DXSample
 {
 public:
     Framework() = default;
-    Framework(UINT width, UINT height, std::wstring name);
+    Framework(UINT width, UINT height, std::wstring name, std::string* additionalAssetPath = nullptr);
     virtual ~Framework();
 
-    virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource);
+    virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource, std::string* additionalAssetPath = nullptr);
+    void OnInitAllSceneProperties();
     virtual void OnUpdate(RECT* pClientRect = nullptr);
     virtual void OnRender();
     virtual void OnDestroy();
@@ -35,7 +36,7 @@ private:
     // CommandQueue가 비어있고 Fence가 업데이트된 상태에서 따로 호출해줘야 한다.
     void BuildFontSpriteBatchs();
     void BuildFrameResources();
-    
+
     void PopulateCommandList();
     void DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer);
     void DrawSceneToShadowMap();
@@ -46,6 +47,9 @@ private:
     void WaitForPreviousFrame();
 
     std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
+
+private:
+    std::string m_additionalAssetPath;
 
 private:
     ComPtr<ID3D12Resource> m_ScreenshotBuffer = nullptr;

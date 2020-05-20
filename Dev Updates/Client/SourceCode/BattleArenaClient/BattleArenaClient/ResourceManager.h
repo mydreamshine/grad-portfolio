@@ -22,8 +22,8 @@ enum class RenderTargetScene : int
 class ResourceManager
 {
 public:
-	ResourceManager() = default;
-	~ResourceManager();
+    ResourceManager() = default;
+    ~ResourceManager();
 
     void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter);
     void LoadPipeline();
@@ -34,17 +34,20 @@ public:
     void WaitForGPUcommandComplete();
 
 private:
-    ComPtr<ID3D12Device> m_device;
-    ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-    ComPtr<ID3D12CommandQueue> m_commandQueue;
-    ComPtr<ID3D12GraphicsCommandList> m_commandList;
+    ComPtr<ID3D12Device> m_device = nullptr;
+    ComPtr<ID3D12CommandAllocator> m_commandAllocator = nullptr;
+    ComPtr<ID3D12CommandQueue> m_commandQueue = nullptr;
+    ComPtr<ID3D12GraphicsCommandList> m_commandList = nullptr;
 
-    ComPtr<ID3D12Fence> m_Fence;
-    HANDLE m_FenceEvent;
-    UINT64 m_FenceValue;
+    ComPtr<ID3D12Fence> m_Fence = nullptr;
+    HANDLE m_FenceEvent = NULL;
+    UINT64 m_FenceValue = 0;
+
+private:
+    std::string m_additionalAssetPath;
 
 public:
-    void LoadAsset();
+    void LoadAsset(std::string* additionalAssetPath = nullptr);
 
     std::unique_ptr<MeshGeometry> BuildMeshGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
         const std::string& geoName, std::unordered_map<std::string, GeometryGenerator::MeshData>& Meshes);

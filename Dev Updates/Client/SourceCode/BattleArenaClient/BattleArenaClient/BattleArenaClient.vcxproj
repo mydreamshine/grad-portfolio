@@ -105,11 +105,16 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAsWinRT>false</CompileAsWinRT>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -137,6 +142,9 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAsWinRT>false</CompileAsWinRT>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -145,6 +153,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -194,6 +204,8 @@
     <ClCompile Include="LoginScene.cpp" />
     <ClCompile Include="Main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Player.cpp" />

@@ -1,0 +1,324 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Streaming">
+      <UniqueIdentifier>{b069b90c-06c4-479a-bfa1-bb57f4eaec5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{19cdd1e5-e6f2-41c1-88d7-9728a02978c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client">
+      <UniqueIdentifier>{d7f7dadc-03bc-43bb-a8e3-e638b1b4682d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utilities">
+      <UniqueIdentifier>{39cd0754-a57a-4b29-b121-ac324142bea0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utilities\ffmpeg">
+      <UniqueIdentifier>{935392e2-f5bd-46a0-81cb-7b2fba0d4bf7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Streaming\encoder">
+      <UniqueIdentifier>{b34aca08-d3a7-4221-8e83-5d1ea5640343}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Header Files">
+      <UniqueIdentifier>{68bd6cf6-55c3-4632-92bd-0f00c819bf35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Source Files">
+      <UniqueIdentifier>{ab66ec73-f87b-42d8-ac97-40463fb040a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common">
+      <UniqueIdentifier>{baefd921-3ccd-4a99-a6a3-fe94f739a7bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\FileLoaders">
+      <UniqueIdentifier>{49cbc4ff-b666-430c-b907-17c4841fc1c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Timer">
+      <UniqueIdentifier>{31bda145-96a7-406c-a575-ea90ed3aeb42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Utilities">
+      <UniqueIdentifier>{4c39b391-2f8e-4b18-a1b9-7c271d3c9cd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Utilities\assimp">
+      <UniqueIdentifier>{06138e4a-0900-4645-a658-43a0047eeca6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Utilities\d3d12">
+      <UniqueIdentifier>{dec7d8ae-45f0-481c-9ea2-3e018e80d3ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Utilities\DirectXTK">
+      <UniqueIdentifier>{8fb4d708-536d-40cd-b088-a987493d6b36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\Common\Utilities\libpng">
+      <UniqueIdentifier>{201f4efa-694a-46e7-a0de-85f6d0981959}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="encoder\encoder.cpp">
+      <Filter>Streaming\encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="ID_POOLER.cpp">
+      <Filter>Streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="source.cpp">
+      <Filter>Streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.cpp">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\d3dUtil.cpp">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\GeometryGenerator.cpp">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\MathHelper.cpp">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\ShadowMap.cpp">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\BinaryReader.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\CommonStates.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDSTextureLoader.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DescriptorHeap.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DirectXHelpers.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\GraphicsMemory.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LinearAllocator.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\pch.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SimpleMath.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteBatch.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteFont.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\VertexTypes.cpp">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.cpp">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.cpp">
+      <Filter>Client\Common\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSample.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Player.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\PlayGameScene.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Ray.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ResourceManager.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="encoder\encoder.h">
+      <Filter>Streaming\encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="Global_Config.h">
+      <Filter>Streaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ID_POOLER.h">
+      <Filter>Streaming</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\d3dUtil.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\GeometryGenerator.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\MathHelper.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\ShadowMap.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\UploadBuffer.h">
+      <Filter>Client\Common\Utilities\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\AlignedNew.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\BinaryReader.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\CommonStates.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\d3dx12.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDS.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDSTextureLoader.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DescriptorHeap.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DirectXHelpers.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\GraphicsMemory.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LinearAllocator.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LoaderHelpers.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\pch.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\PlatformHelpers.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\RenderTargetState.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SharedResourcePool.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SimpleMath.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteBatch.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteFont.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\VertexTypes.h">
+      <Filter>Client\Common\Utilities\DirectXTK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\DDSLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\PngLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\SpriteFontLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\TextureLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\TgaLoader.h">
+      <Filter>Client\Common\FileLoaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.h">
+      <Filter>Client\Common\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\d3dx12.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSample.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSampleHelper.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Player.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\PlayGameScene.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Ray.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ResourceManager.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

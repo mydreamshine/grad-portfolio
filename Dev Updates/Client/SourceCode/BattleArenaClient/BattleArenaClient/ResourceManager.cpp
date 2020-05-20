@@ -108,8 +108,9 @@ void ResourceManager::WaitForGPUcommandComplete()
     }
 }
 
-void ResourceManager::LoadAsset()
+void ResourceManager::LoadAsset(std::string* additionalAssetPath)
 {
+    if (additionalAssetPath != nullptr) m_additionalAssetPath = *additionalAssetPath;
     int matCB_index = 0;
     int diffuseSrvHeap_Index = 0;
 
@@ -226,6 +227,8 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     float wnd_bottom = -wnd_top;
     float wnd_right = wnd_width / 2;
     float wnd_left = -wnd_right;
+    float wnd_x_factor = (float)WND_WIDTH / 1280.0f;
+    float wnd_y_factor = (float)WND_HEIGHT / 720.0f;
 
 
     // UI Position relative to DC(Device Coordinate) with origin at screen center.
@@ -234,8 +237,8 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
         Meshes["UI_Layout_LoginSceneBackground"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.0f);
-        Meshes["UI_Layout_IdBox"] = geoGen.CreateQuad(-100.0f, -100, 200.0f, 75.0f, 0.0f);
-        Meshes["UI_Layout_PasswordBox"] = geoGen.CreateQuad(-100.0f, -205.0f, 200.0f, 75.0f, 0.0f);
+        Meshes["UI_Layout_IdBox"]                = geoGen.CreateQuad(-100.0f * wnd_x_factor, -100.0f * wnd_y_factor, 200.0f * wnd_x_factor, 75.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_PasswordBox"]          = geoGen.CreateQuad(-100.0f * wnd_x_factor, -205.0f * wnd_y_factor, 200.0f * wnd_x_factor, 75.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["LoginSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "LoginSceneUIGeo", Meshes));
@@ -244,15 +247,15 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // LobyScene UI Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
-        Meshes["UI_Layout_LobySceneBackground"]            = geoGen.CreateQuad(-640.0f,  360.0f, 1280.0f, 720.0f, 0.0f);
-        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f,  228.0f, 200.0f,  300.0f, 0.0f);
-        Meshes["UI_Layout_MatchWaiting"]                   = geoGen.CreateQuad(-600.0f, -105.0f, 200.0f,  60.0f,  0.0f);
-        Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-600.0f, -197.9f, 200.0f,  100.0f, 0.0f);
-        Meshes["UI_Layout_LobyCharacterName"]              = geoGen.CreateQuad(-100.0f, -212.9f, 200.0f,  70.0f,  0.0f);
-        Meshes["UI_Layout_CharacterSelection_LeftButton"]  = geoGen.CreateQuad(-192.0f, -212.9f, 70.0f,   70.0f,  0.0f);
-        Meshes["UI_Layout_CharacterSelection_RightButton"] = geoGen.CreateQuad( 122.0f, -212.9f, 70.0f,   70.0f,  0.0f);
-        Meshes["UI_Layout_LobyUserInfo"]                   = geoGen.CreateQuad( 400.0f,  320.0f, 200.0f,  60.0f,  0.0f);
-        Meshes["UI_Layout_LobyCharacterDescrition"]        = geoGen.CreateQuad( 400.0f,  137.5f, 200.0f,  275.0f, 0.0f);
+        Meshes["UI_Layout_LobySceneBackground"]            = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor,  228.0f * wnd_y_factor,  200.0f * wnd_x_factor, 300.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_MatchWaiting"]                   = geoGen.CreateQuad(-600.0f * wnd_x_factor, -105.0f * wnd_y_factor,  200.0f * wnd_x_factor,  60.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor, -197.9f * wnd_y_factor,  200.0f * wnd_x_factor, 100.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyCharacterName"]              = geoGen.CreateQuad(-100.0f * wnd_x_factor, -212.9f * wnd_y_factor,  200.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_CharacterSelection_LeftButton"]  = geoGen.CreateQuad(-192.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_CharacterSelection_RightButton"] = geoGen.CreateQuad( 122.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyUserInfo"]                   = geoGen.CreateQuad( 400.0f * wnd_x_factor,  320.0f * wnd_y_factor,  200.0f * wnd_x_factor,  60.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyCharacterDescrition"]        = geoGen.CreateQuad( 400.0f * wnd_x_factor,  137.5f * wnd_y_factor,  200.0f * wnd_x_factor, 275.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["LobySceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "LobySceneUIGeo", Meshes));
@@ -261,15 +264,15 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // PlayGameScene Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> UILayerBacground_Meshes;
-        UILayerBacground_Meshes["UI_Layout_GameTimeLimit"] = geoGen.CreateQuad(-50.0f,   360.0F, 100.0f, 60.0f,  0.0f);
-        UILayerBacground_Meshes["UI_Layout_KDA"]           = geoGen.CreateQuad(-640.0f,  360.0f, 200.0f, 70.0f,  0.0f);
-        UILayerBacground_Meshes["UI_Layout_KillLog"]       = geoGen.CreateQuad(-640.0f,  280.0f, 200.0f, 200.0f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_ChattingLog"]   = geoGen.CreateQuad(-640.0f,  20.0f,  200.0f, 300.0f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_SkillList"]     = geoGen.CreateQuad(-250.0f, -280.0f, 500.0f, 80.0f,  0.1f);
-        UILayerBacground_Meshes["UI_Layout_Skill1"]        = geoGen.CreateQuad(-200.0f, -295.0f, 50.0f,  50.0f,  0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill2"]        = geoGen.CreateQuad(-80.0f,  -295.0f, 50.0f,  50.0f,  0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill3"]        = geoGen.CreateQuad(30.0f,   -295.0f, 50.0f,  50.0f,  0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill4"]        = geoGen.CreateQuad(140.0f,  -295.0f, 50.0f,  50.0f,  0.0f);
+        UILayerBacground_Meshes["UI_Layout_GameTimeLimit"] = geoGen.CreateQuad( -50.0f * wnd_x_factor * 1.4f,  360.0f * wnd_y_factor, 100.0f * wnd_x_factor * 1.4f,  60.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_KDA"]           = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 200.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_KillLog"]       = geoGen.CreateQuad(-640.0f * wnd_x_factor,  280.0f * wnd_y_factor, 200.0f * wnd_x_factor, 200.0f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_ChattingLog"]   = geoGen.CreateQuad(-640.0f * wnd_x_factor,   20.0f * wnd_y_factor, 200.0f * wnd_x_factor, 300.0f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_SkillList"]     = geoGen.CreateQuad(-250.0f * wnd_x_factor * 1.4f, -280.0f * wnd_y_factor, 500.0f * wnd_x_factor * 1.4f,  80.0f * wnd_y_factor, 0.1f);
+        UILayerBacground_Meshes["UI_Layout_Skill1"]        = geoGen.CreateQuad(-200.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_Skill2"]        = geoGen.CreateQuad( -80.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_Skill3"]        = geoGen.CreateQuad(  30.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_Skill4"]        = geoGen.CreateQuad( 140.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
 
         m_Geometries["PlayGameSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UILayerBacground_Meshes));
@@ -289,10 +292,10 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // GameOverScene UI Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
-        Meshes["UI_Layout_GameOverBackground"] = geoGen.CreateQuad(-640.0f,  360.0f, 1280.0f, 720.0f, 0.0f);
-        Meshes["UI_Layout_GameOverInfo"]       = geoGen.CreateQuad(-550.0f,  270.0f, 320.0f,  380.0f, 0.0f);
-        Meshes["UI_Layout_GameOverResult"]     = geoGen.CreateQuad(-85.0f,   340.0f, 170.0f,  70.0f,  0.0f);
-        Meshes["UI_Layout_ReturnMainMenu"]     = geoGen.CreateQuad(-100.0f, -210.0f, 200.0f,  80.0f,  0.0f);
+        Meshes["UI_Layout_GameOverBackground"] = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameOverInfo"]       = geoGen.CreateQuad(-550.0f * wnd_x_factor,  270.0f * wnd_y_factor,  320.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameOverResult"]     = geoGen.CreateQuad( -85.0f * wnd_x_factor,  340.0f * wnd_y_factor,  170.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_ReturnMainMenu"]     = geoGen.CreateQuad(-100.0f * wnd_x_factor, -210.0f * wnd_y_factor,  200.0f * wnd_x_factor,  80.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["GameOverSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "GameOverSceneUIGeo", Meshes));
@@ -399,27 +402,27 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
 {
     ModelLoader model_loader;
 
-    std::string mesh_path = "Models/Environment/Environment.fbx";
+    std::string mesh_path = m_additionalAssetPath + "Models/Environment/Environment.fbx";
     std::vector<std::string> anim_paths;
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
 
-    mesh_path = "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
+    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
     anim_paths = {
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Stride Walking.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Walk.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Slash.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Impact.fbx",
-        "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Death.fbx" };
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Stride Walking.fbx",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Walk.fbx",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Slash.fbx",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Impact.fbx",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Death.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
 
-    mesh_path = "Models/Meshtint Free Knight/Meshes/Shield.fbx";
+    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshes/Shield.fbx";
     anim_paths.clear();
     execptProcessing_file_nodes = { "PreRotation", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
 
-    mesh_path = "Models/Meshtint Free Knight/Meshes/Sword.fbx";
+    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshes/Sword.fbx";
     anim_paths.clear();
     execptProcessing_file_nodes = { "PreRotation", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
@@ -465,19 +468,19 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
 {
     std::vector<std::string> texture_filepaths =
     {
-        "UI/Layout/background_test.tga",
-        "UI/Layout/Background_SubTitle.png",
-        "UI/Layout/Background_SkullPattern.png",
-        "UI/Layout/id_input_box_layout_test.tga",
-        "UI/Layout/password_input_box_layout_test.tga",
-        "UI/Layout/LeftButton.png",
-        "UI/Layout/RightButton.png",
-        "UI/Layout/White_Transparency50.png",
-        "UI/Layout/LightGreen_Transparency50.png",
-        "UI/Effect/SwordSlash_a.png",
-        "UI/Effect/CrossTarget.png",
-        "Models/Environment/Materials/TextureWorld.png",
-        "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga"
+        m_additionalAssetPath + "UI/Layout/background_test.tga",
+        m_additionalAssetPath + "UI/Layout/Background_SubTitle.png",
+        m_additionalAssetPath + "UI/Layout/Background_SkullPattern.png",
+        m_additionalAssetPath + "UI/Layout/id_input_box_layout_test.tga",
+        m_additionalAssetPath + "UI/Layout/password_input_box_layout_test.tga",
+        m_additionalAssetPath + "UI/Layout/LeftButton.png",
+        m_additionalAssetPath + "UI/Layout/RightButton.png",
+        m_additionalAssetPath + "UI/Layout/White_Transparency50.png",
+        m_additionalAssetPath + "UI/Layout/LightGreen_Transparency50.png",
+        m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
+        m_additionalAssetPath + "UI/Effect/CrossTarget.png",
+        m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
+        m_additionalAssetPath + "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga"
     };
 
     for (auto& texture_path : texture_filepaths)
@@ -612,8 +615,10 @@ void ResourceManager::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index
 
 void ResourceManager::LoadFontSprites(ID3D12Device* device, ID3D12CommandQueue* commandQueue)
 {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring additionalAssetPath = converter.from_bytes(m_additionalAssetPath.c_str());
     m_Fonts[L"¸¼Àº °íµñ"]
-        = std::make_unique<DXTK_FONT>(device, commandQueue, L"UI/Font/¸¼Àº °íµñ.spritefont");
+        = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ.spritefont");
 }
 
 void ResourceManager::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)

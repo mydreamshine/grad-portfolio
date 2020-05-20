@@ -10,6 +10,7 @@
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
+//int main()
 {
     std::unique_ptr<ResourceManager> resoruceManager = std::make_unique<ResourceManager>();
     resoruceManager->OnInit();
@@ -19,9 +20,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     HWND hWnd = Win32Application::CreateWND(sample.get(), hInstance, WND_WIDTH, WND_HEIGHT, L"Client Test");
     sample->OnInit(hWnd, WND_WIDTH, WND_HEIGHT, L"Client Test", resoruceManager.get());
 
-    Framework dummySamples[4];
+    /*Framework dummySamples[4];
     for (int i = 0; i < 4; ++i)
-        dummySamples[i].OnInit(0, WND_WIDTH, WND_HEIGHT, L"Dummy Framework" + std::to_wstring(i), resoruceManager.get());
+        dummySamples[i].OnInit(0, WND_WIDTH, WND_HEIGHT, L"Dummy Framework" + std::to_wstring(i), resoruceManager.get());*/
 
     int ret_num = Win32Application::Run(nCmdShow);
 

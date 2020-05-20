@@ -3,12 +3,13 @@
 
 const int gNumFrameResources = 3;
 
-Framework::Framework(UINT width, UINT height, std::wstring name) :
+Framework::Framework(UINT width, UINT height, std::wstring name, std::string* additionalAssetPath) :
     DXSample(width, height, name),
     m_frameIndex(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height))
 {
+    if (additionalAssetPath != nullptr) m_additionalAssetPath = *additionalAssetPath;
 }
 
 Framework::~Framework()
@@ -46,9 +47,10 @@ BYTE* Framework::GetFrameData()
     return m_FrameData.get();
 }
 
-void Framework::OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource)
+void Framework::OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource, std::string* additionalAssetPath)
 {
     DXSample::OnInit(hwnd, width, height, name);
+    if (additionalAssetPath != nullptr) m_additionalAssetPath = *additionalAssetPath;
     m_frameIndex = 0;
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
     m_scissorRect = CD3DX12_RECT(0, 0, static_cast<LONG>(width), static_cast<LONG>(height));
@@ -57,6 +59,15 @@ void Framework::OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, Re
 
     m_Timer.Start();
     m_Timer.Reset();
+}
+
+void Framework::OnInitAllSceneProperties()
+{
+    for (auto& scene_iter : m_Scenes)
+    {
+        auto scene = scene_iter.second.get();
+        scene->OnInitProperties(m_Timer);
+    }
 }
 
 // Load the rendering pipeline dependencies.
@@ -438,17 +449,20 @@ void Framework::BuildShadersAndInputLayout()
         NULL, NULL
     };
 
-    m_Shaders["standardVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "VS", "vs_5_1");
-    m_Shaders["skinnedVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", skinnedDefines, "VS", "vs_5_1");
-    m_Shaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "PS", "ps_5_1");
-    m_Shaders["TransparentPS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", alphaTestDefines, "PS", "ps_5_1");
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring additionalAssetPath = converter.from_bytes(m_additionalAssetPath.c_str());
 
-    m_Shaders["shadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "VS", "vs_5_1");
-    m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
-    m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
+    m_Shaders["standardVS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Default.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["skinnedVS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Default.hlsl", skinnedDefines, "VS", "vs_5_1");
+    m_Shaders["opaquePS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Default.hlsl", nullptr, "PS", "ps_5_1");
+    m_Shaders["TransparentPS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Default.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
-    m_Shaders["UILayout_Background_VS"] = d3dUtil::CompileShader(L"Shaders/UILayout_Background.hlsl", nullptr, "VS", "vs_5_1");
-    m_Shaders["UILayout_Background_PS"] = d3dUtil::CompileShader(L"Shaders/UILayout_Background.hlsl", alphaTestDefines, "PS", "ps_5_1");
+    m_Shaders["shadowVS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Shadows.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["skinnedShadowVS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Shadows.hlsl", skinnedDefines, "VS", "vs_5_1");
+    m_Shaders["shadowOpaquePS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/Shadows.hlsl", nullptr, "PS", "ps_5_1");
+
+    m_Shaders["UILayout_Background_VS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/UILayout_Background.hlsl", nullptr, "VS", "vs_5_1");
+    m_Shaders["UILayout_Background_PS"] = d3dUtil::CompileShader(additionalAssetPath + L"Shaders/UILayout_Background.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
     m_InputLayout =
     {
@@ -659,8 +673,8 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
         m_nTextBatch += scene->m_nTextBatch;
     }
 
-    m_CurrSceneName = "LoginScene";
-    m_CurrScene = m_Scenes["LoginScene"].get();
+    m_CurrSceneName = "PlayGameScene";
+    m_CurrScene = m_Scenes["PlayGameScene"].get();
 }
 
 void Framework::BuildFontSpriteBatchs()

@@ -181,7 +181,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             text_info->TextBatchIndex = textBatch_index++;
 
             if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit";
-            else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0    D: 0    A: 0";
+            else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0  D: 0  A: 0";
             else if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
             else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
             //else if (objName == "UI_Layout_SkillList");

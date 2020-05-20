@@ -106,8 +106,8 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             text_info->TextBatchIndex = textBatch_index++;
 
             if (objName == "UI_Layout_LobyChattingLog") text_info->m_Text = L"Chatting Log";
-            else if (objName == "UI_Layout_MatchWaiting")      text_info->m_Text = L"Match Waiting Info";
-            else if (objName == "UI_Layout_GameStartButton")  text_info->m_Text = L"Game Start Button";
+            else if (objName == "UI_Layout_MatchWaiting")      text_info->m_Text = L"Match Waiting\n      Info";
+            else if (objName == "UI_Layout_GameStartButton")  text_info->m_Text = L"Game Start\n   Button";
             else if (objName == "UI_Layout_LobyCharacterName")  text_info->m_Text = L"Character Name";
             //else if (objName == "UI_Layout_CharacterSelection_Left");
             //else if (objName == "UI_Layout_CharacterSelection_Right");

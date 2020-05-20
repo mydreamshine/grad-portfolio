@@ -139,8 +139,8 @@ void Scene::UpdateMaterialCBs(UploadBuffer<MaterialConstants>* matCB, CTimer& gt
         // Only update the cbuffer data if the constants have changed.  If the cbuffer
         // data changes, it needs to be updated for each FrameResource.
         Material* mat = mat_iter.second.get();
-        if (mat->NumFramesDirty > 0)
-        {
+        //if (mat->NumFramesDirty > 0)
+        //{
             XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
 
             MaterialConstants matConstants;
@@ -153,7 +153,7 @@ void Scene::UpdateMaterialCBs(UploadBuffer<MaterialConstants>* matCB, CTimer& gt
 
             // Next FrameResource need to be updated too.
             mat->NumFramesDirty--;
-        }
+        //}
     }
 }
 
