@@ -244,6 +244,7 @@
     <ClInclude Include="encoder\encoder.h" />
     <ClInclude Include="Global_Config.h" />
     <ClInclude Include="ID_POOLER.h" />
+    <ClInclude Include="packet_struct.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -4,6 +4,7 @@
 #include <WS2tcpip.h>
 #include <string>
 #include <thread>
+#include "packet_struct.h"
 
 #ifndef CLEANUP_H
 #define CLEANUP_H
@@ -180,10 +181,10 @@ void RecvFunc()
 		}
 	}
 }
+
 void event_loop()
 {
 	SDL_Event e;
-	char keycode;
 	while (true)
 	{
 		while (SDL_PollEvent(&e))
@@ -194,47 +195,97 @@ void event_loop()
 				if(e.key.repeat == 0)
 				switch (e.key.keysym.sym)
 				{
-				case SDLK_UP:
-					keycode = 0;
-					send(serverSocket, &keycode, sizeof(char), 0);
-					break;
-
-				case SDLK_DOWN:
-					keycode = 1;
-					send(serverSocket, &keycode, sizeof(char), 0);
-					break;
-				case SDLK_LEFT:
-					keycode = 4;
-					send(serverSocket, &keycode, sizeof(char), 0);
-					break;
-				case SDLK_RIGHT:
-					keycode = 5;
-					send(serverSocket, &keycode, sizeof(char), 0);
+				case SDLK_w:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_W;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
 				}
+				case SDLK_s:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_S;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_a:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_A;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_d:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_D;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				}
 				break;
-
+			case SDL_MOUSEBUTTONDOWN:
+				if (e.button.button == SDL_BUTTON_LEFT)
+				{
+					POINT oldMouseCursor = { e.motion.x, e.motion.y };
+					tss_packet_mouse_button_down packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_MOUSE_LBUTTON_DOWN;
+					packet.x = oldMouseCursor.x;
+					packet.y = oldMouseCursor.y;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+				}
+				break;
+			case SDL_MOUSEBUTTONUP:
+				if (e.button.button == SDL_BUTTON_LEFT)
+				{
+					tss_packet_mouse_button_up packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_MOUSE_LBUTTON_UP;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+				}
+				break;
 			case SDL_KEYUP:
 				if (e.key.repeat == 0)
 				switch (e.key.keysym.sym)
 				{
-				case SDLK_UP:
-					keycode = 2;
-					send(serverSocket, &keycode, sizeof(char), 0);
+				case SDLK_w:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_W;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
-
-				case SDLK_DOWN:
-					keycode = 3;
-					send(serverSocket, &keycode, sizeof(char), 0);
+				}
+				case SDLK_s:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_S;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
-				case SDLK_LEFT:
-					keycode = 6;
-					send(serverSocket, &keycode, sizeof(char), 0);
+				}
+				case SDLK_a:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_A;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
-				case SDLK_RIGHT:
-					keycode = 7;
-					send(serverSocket, &keycode, sizeof(char), 0);
+				}
+				case SDLK_d:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_D;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
+				}
 				}
 				break;
 
@@ -306,4 +357,6 @@ int main(int, char**) {
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+
+	return 0;
 }

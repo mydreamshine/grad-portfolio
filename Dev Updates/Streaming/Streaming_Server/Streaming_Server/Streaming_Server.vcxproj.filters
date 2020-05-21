@@ -320,5 +320,8 @@
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.h">
       <Filter>Client\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="packet_struct.h">
+      <Filter>Streaming</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

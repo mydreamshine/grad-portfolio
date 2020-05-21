@@ -11,6 +11,7 @@
 #include <vector>
 #include "stdafx.h"
 #include "Global_Config.h"
+#include "packet_struct.h"
 #include "ID_POOLER.h"
 #include "Framework.h"
 #include "encoder/encoder.h"
@@ -105,32 +106,42 @@ void SendFramePacket(int client, BYTE* frame)
 }
 void ProcessPacket(int client, void* packet) 
 {
-	char data = *(char*)packet;
-	switch (data)
+	unsigned char packet_type = ((char*)packet)[1];
+	switch (packet_type)
 	{
-	case 0:
+	case TSS_KEYDOWN_W:
 		clients[client].GameFramework.OnKeyDown(0x57); // W
 		break;
-	case 1:
+	case TSS_KEYDOWN_S:
 		clients[client].GameFramework.OnKeyDown(0x53); // S
 		break;
-	case 2:
+	case TSS_KEYUP_W:
 		clients[client].GameFramework.OnKeyUp(0x57); // W
 		break;
-	case 3:
+	case TSS_KEYUP_S:
 		clients[client].GameFramework.OnKeyUp(0x53); // S
 		break;
-	case 4:
+	case TSS_KEYDOWN_A:
 		clients[client].GameFramework.OnKeyDown(0x41); // A
 		break;
-	case 5:
+	case TSS_KEYDOWN_D:
 		clients[client].GameFramework.OnKeyDown(0x44); // D
 		break;
-	case 6:
+	case TSS_KEYUP_A:
 		clients[client].GameFramework.OnKeyUp(0x41); // A
 		break;
-	case 7:
+	case TSS_KEYUP_D:
 		clients[client].GameFramework.OnKeyUp(0x44); // D
+		break;
+	case TSS_MOUSE_LBUTTON_DOWN:
+	{
+		tss_packet_mouse_button_down* mouse_button_down_packet = reinterpret_cast<tss_packet_mouse_button_down*>(packet);
+		POINT OldCursorPos = { mouse_button_down_packet->x, mouse_button_down_packet->y };
+		clients[client].GameFramework.OnKeyDown(0x01, &OldCursorPos); // VK_LBUTTON
+		break;
+	}
+	case TSS_MOUSE_LBUTTON_UP:
+		clients[client].GameFramework.OnKeyUp(0x01); // VK_LBUTTON
 		break;
 	}
 };
