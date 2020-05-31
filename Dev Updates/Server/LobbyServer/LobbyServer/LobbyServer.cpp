@@ -72,6 +72,7 @@ namespace BattleArena {
 		m_clients[BATTLE_KEY].socket = m_battleSocket;
 		m_clients[BATTLE_KEY].state = ST_IDLE;
 		m_clients[BATTLE_KEY].recv_over.init();
+		m_clients[BATTLE_KEY].recv_over.set_event(EV_BATTLE);
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_battleSocket), m_iocp, BATTLE_KEY, 0);
 		m_clients[BATTLE_KEY].set_recv();
 		wprintf(L" Done.\n");
@@ -98,6 +99,7 @@ namespace BattleArena {
 			m_clients[new_id].socket = clientSocket;
 			m_clients[new_id].state = ST_IDLE;
 			m_clients[new_id].recv_over.init();
+			m_clients[new_id].recv_over.set_event(EV_CLIENT);
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_clients[new_id].socket), m_iocp, new_id, 0);
 			std::wcout << L"[CLIENT - " << new_id << L"] Accept" << std::endl;
 			m_clients[new_id].set_recv();
@@ -122,8 +124,13 @@ namespace BattleArena {
 			DWORD client = static_cast<DWORD>(key);
 			switch (over_ex->event_type())
 			{
-			case EV_RECV:
-				process_packet(client, over_ex->data());
+			case EV_CLIENT:
+				process_client_packet(client, over_ex->data());
+				m_clients[client].set_recv();
+				break;
+
+			case EV_BATTLE:
+				process_battle_packet(client, over_ex->data());
 				m_clients[client].set_recv();
 				break;
 
@@ -183,7 +190,7 @@ namespace BattleArena {
 	}
 	
 
-	void LOBBYSERVER::process_packet(DWORD client, void* buffer)
+	void LOBBYSERVER::process_client_packet(DWORD client, void* buffer)
 	{
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
 		switch (packet->type)
@@ -213,16 +220,28 @@ namespace BattleArena {
 			match_dequeue(client);
 			break;
 
-		case BS_PACKET_RESPONSE_ROOM:
-			process_packet_response_room(buffer);
-			break;
-
 		default:
 			printf("[CLIENT %d] - Unknown Packet\n", client);
 			while (true);
 			break;
 		}
 	}
+	void LOBBYSERVER::process_battle_packet(DWORD client, void* buffer)
+	{
+		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
+		switch (packet->type)
+		{
+		case BS_PACKET_RESPONSE_ROOM:
+			process_packet_response_room(buffer);
+			break;
+
+		default:
+			printf("[Battle] - Unknown Packet\n");
+			while (true);
+			break;
+		}
+	}
+
 	void LOBBYSERVER::process_packet_response_room(void* buffer)
 	{
 		bs_packet_response_room* packet = reinterpret_cast<bs_packet_response_room*>(buffer);
@@ -244,7 +263,7 @@ namespace BattleArena {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}
-		if (isConnect(uid) == true) {
+		if (isConnect(uid) != -1) {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}

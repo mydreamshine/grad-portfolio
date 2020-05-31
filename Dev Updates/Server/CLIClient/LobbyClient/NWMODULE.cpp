@@ -93,6 +93,7 @@ void NWMODULE<T>::packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_
 template<class T>
 void NWMODULE<T>::process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer)
 {
+	closesocket(socket);
 	socket = INVALID_SOCKET;
 	buffer.d_packet.clear();
 	buffer.c_lock.lock();
@@ -169,6 +170,21 @@ void NWMODULE<T>::RecvLobbyThread()
 }
 
 template <class T>
+void NWMODULE<T>::RecvBattleThread()
+{
+	size_t received_size = 0;
+	while (true)
+	{
+		received_size = recv(battle_socket, battle_over.data(), MAX_BUFFER_SIZE, 0);
+		if (received_size == 0 || received_size == SOCKET_ERROR) {
+			cout << "[Connection Closed]" << endl;
+			return;
+		}
+		packet_drain(battle_buffer, battle_over.data(), received_size);
+	}
+}
+
+template <class T>
 NWMODULE<T>::NWMODULE(T& MainModule, HANDLE iocp) : 
 	iocp(iocp),
 	lobby_socket(INVALID_SOCKET),
@@ -176,9 +192,9 @@ NWMODULE<T>::NWMODULE(T& MainModule, HANDLE iocp) :
 	MainModule(MainModule),
 	lobby_buffer(sizeof(SIZE_TYPE))
 {
-	callbacks.reserve(TOTAL_PACKET_COUNT);
-	for (int i=0 ;i<TOTAL_PACKET_COUNT;++i)
-		callbacks.emplace_back([a = i](T&){printf("ENROLL LOBBY PACKET TYPE %d\n", a);});
+	callbacks.reserve(SC_PACKET_COUNT);
+	for (int i = 0; i < SC_PACKET_COUNT; ++i)
+		callbacks.emplace_back([a = i](T&) {printf("ENROLL LOBBY PACKET TYPE %d\n", a); });
 	InitWSA();
 }
 
@@ -191,7 +207,7 @@ NWMODULE<T>::~NWMODULE()
 }
 
 template <class T>
-bool NWMODULE<T>::connect_lobby(int key)
+bool NWMODULE<T>::connect_lobby(int iocp_key)
 {
 	bool retval = connect_server(lobby_socket, "127.0.0.1", LOBBYSERVER_PORT);
 	if (false == retval) return retval;
@@ -199,7 +215,7 @@ bool NWMODULE<T>::connect_lobby(int key)
 	if (INVALID_HANDLE_VALUE == iocp)
 		threads.emplace_back(&NWMODULE<T>::RecvLobbyThread, this);
 	else {
-		CreateIoCompletionPort(reinterpret_cast<HANDLE>(lobby_socket), iocp, key, 0);
+		CreateIoCompletionPort(reinterpret_cast<HANDLE>(lobby_socket), iocp, iocp_key, 0);
 		//WSARecv()
 	} // WSARecv 설정, 소켓등록
 
@@ -209,24 +225,43 @@ bool NWMODULE<T>::connect_lobby(int key)
 template<class T>
 void NWMODULE<T>::disconnect_lobby()
 {
-	closesocket(lobby_socket);
+	SOCKET tmp = lobby_socket;
+	lobby_socket = INVALID_SOCKET;
+	closesocket(tmp);
 }
 
 template <class T>
-bool NWMODULE<T>::connect_battle()
+bool NWMODULE<T>::connect_battle(int iocp_key)
 {
 	bool retval = connect_server(battle_socket, "127.0.0.1", BATTLESERVER_PORT);
+	if (false == retval) return retval;
+
+	if (INVALID_HANDLE_VALUE == iocp)
+		threads.emplace_back(&NWMODULE<T>::RecvBattleThread, this);
+	else {
+		CreateIoCompletionPort(reinterpret_cast<HANDLE>(battle_socket), iocp, iocp_key, 0);
+		//WSARecv()
+	} // WSARecv 설정, 소켓등록
+
 	return retval;
 }
 
-template <class T>
-void NWMODULE<T>::request_login()
+template<class T>
+void NWMODULE<T>::disconnect_battle()
 {
-	string id{"test001"};
+	SOCKET tmp = battle_socket;
+	battle_socket = INVALID_SOCKET;
+	closesocket(tmp);
+}
+
+template <class T>
+void NWMODULE<T>::request_login(const char* id)
+{
+	string s_id {id};
 	cs_packet_request_login packet;
 	packet.cdp.size = sizeof(cs_packet_request_login);
 	packet.cdp.type = CS_PACKET_REQUEST_LOGIN;
-	strcpy_s(packet.id, ID_LENGTH-1, id.c_str());
+	strcpy_s(packet.id, ID_LENGTH-1, s_id.c_str());
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
@@ -263,10 +298,16 @@ void NWMODULE<T>::match_dequeue()
 }
 
 template <class T>
-void NWMODULE<T>::enroll_callback(int packet_type, function<void(T&)> callback)
+void NWMODULE<T>::enroll_lobby_callback(int packet_type, function<void(T&)> callback)
 {
 	if (callback == nullptr) return;
-	callbacks[packet_type] = callback;
+	lobby_callbacks[packet_type] = callback;
+}
+template <class T>
+void NWMODULE<T>::enroll_battle_callback(int packet_type, function<void(T&)> callback)
+{
+	if (callback == nullptr) return;
+	battle_callbacks[packet_type] = callback;
 }
 
 template<class T>
@@ -277,12 +318,29 @@ void NWMODULE<T>::notify_lobby_recv(size_t length)
 	else {
 		packet_drain(lobby_buffer, lobby_over.data(), length);
 		//recv 한번 더
+		/*DWORD flag = 0;
+		lobby_over.reset();
+		WSARecv(lobby_socket, lobby_over.buffer, 1, nullptr, &flag, lobby_over.overlapped(), nullptr);*/
+	}
+}
+template<class T>
+void NWMODULE<T>::notify_battle_recv(size_t length)
+{
+	if (length == 0 || length == SOCKET_ERROR)
+		process_disconnect(battle_socket, battle_buffer);
+	else {
+		packet_drain(battle_buffer, batle_over.data(), length);
+		//recv 한번 더
+		/*DWORD flag = 0;
+		lobby_over.reset();
+		WSARecv(lobby_socket, lobby_over.buffer, 1, nullptr, &flag, lobby_over.overlapped(), nullptr);*/
 	}
 }
 
 template<class T>
 void NWMODULE<T>::update()
 {
+	//Lobby Update
 	lobby_buffer.CompletetoProcess();
 	const char* packet_pos = lobby_buffer.p_packet.data;
 	size_t packet_length = lobby_buffer.p_packet.len;
@@ -295,5 +353,18 @@ void NWMODULE<T>::update()
 		packet_length -= packet_size;
 		packet_pos += packet_size;
 	}
-}
 
+	//Battle Update
+	battle_buffer.CompletetoProcess();
+	packet_pos = battle_buffer.p_packet.data;
+	packet_length = battle_buffer.p_packet.len;
+	packet_size = 0;
+	while (packet_length > 0)
+	{
+		const common_default_packet* packet = reinterpret_cast<const common_default_packet*>(packet_pos);
+		packet_size = packet->size;
+		process_battle_packet(packet->type, packet_pos);
+		packet_length -= packet_size;
+		packet_pos += packet_size;
+	}
+}

@@ -25,7 +25,7 @@ namespace BattleArena {
 	constexpr auto BATTLE_KEY = MAX_USER;
 	constexpr auto MATCHUP_NUM = 3;
 
-	enum EVENT_TYPE {EV_RECV, EV_SEND, EV_BATTLE};
+	enum EVENT_TYPE {EV_CLIENT, EV_SEND, EV_BATTLE};
 	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY };
 
 	class CLIENT
@@ -103,7 +103,8 @@ namespace BattleArena {
 		void send_packet_room_info(int client, int room_id);
 		void send_packet_request_room(char mode);
 		void send_packet_friend_status(int client, int who, int status);
-		void process_packet(DWORD client, void* packet);
+		void process_client_packet(DWORD client, void* packet);
+		void process_battle_packet(DWORD client, void* packet);
 		void process_packet_response_room(void* buffer);
 		void process_packet_login(int client, void* buffer);
 		void process_packet_request_friend(int client, void* buffer);
