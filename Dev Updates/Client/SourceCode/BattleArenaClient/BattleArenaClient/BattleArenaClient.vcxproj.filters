@@ -33,11 +33,11 @@
     <Filter Include="Common\Utilities\DirectXTK\srcinc">
       <UniqueIdentifier>{4720696f-53bd-42f3-866e-7788bade0f29}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common\Utilities\libpng">
+      <UniqueIdentifier>{0b4bbf80-f5dc-4e7e-8060-1445d32b5a40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ClientTest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DXSample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -140,12 +140,12 @@
     <ClCompile Include="ResourceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Framework.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Win32Application.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ClientTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="d3dx12.h">
@@ -287,6 +287,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Framework.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -11,7 +11,7 @@
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/SpriteFontLoader.h"
 
-#define MAX_WORLD_OBJECT 2000
+#define MAX_WORLD_OBJECT 1024
 #define MAX_CHARACTER_OBJECT 100
 
 // rel. UI

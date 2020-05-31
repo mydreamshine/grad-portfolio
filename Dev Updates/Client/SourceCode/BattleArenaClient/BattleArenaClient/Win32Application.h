@@ -7,7 +7,8 @@ class DXSample;
 class Win32Application
 {
 public:
-    static int Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow);
+    static HWND CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT width, UINT height, std::wstring name);
+    static int Run(int nCmdShow);
     static HWND GetHwnd() { return m_hwnd; }
 
 protected:

@@ -3,7 +3,7 @@
 
 HWND Win32Application::m_hwnd = nullptr;
 
-int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
+HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT width, UINT height, std::wstring name)
 {
     // Parse the command line parameters
     int argc;
@@ -21,7 +21,7 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
     windowClass.lpszClassName = L"DXSampleClass";
     RegisterClassEx(&windowClass);
 
-    RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
+    RECT windowRect = { 0, 0, static_cast<LONG>(WND_WIDTH), static_cast<LONG>(WND_HEIGHT) };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
     // Create the window and store a handle to it.
@@ -38,9 +38,11 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         hInstance,
         pSample);
 
-    // Initialize the sample. OnInit is defined in each child-implementation of DXSample.
-    pSample->OnInit(m_hwnd);
+    return m_hwnd;
+}
 
+int Win32Application::Run(int nCmdShow)
+{
     ShowWindow(m_hwnd, nCmdShow);
 
     // Main sample loop.
@@ -55,8 +57,6 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         }
     }
 
-    pSample->OnDestroy();
-
     // Return this part of the WM_QUIT message to Windows.
     return static_cast<char>(msg.wParam);
 }
@@ -65,6 +65,7 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     DXSample* pSample = reinterpret_cast<DXSample*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+    static bool ChangeWndSize = false;
 
     switch (message)
     {
@@ -79,29 +80,50 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
     case WM_KEYDOWN:
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
-        if (message == WM_LBUTTONDOWN) wParam = VK_LBUTTON;
-        else if (message == WM_RBUTTONDOWN) wParam = VK_RBUTTON;
-        if (pSample)
+        if (message == WM_LBUTTONDOWN || message == WM_RBUTTONDOWN)
         {
-            pSample->OnKeyDown(static_cast<UINT8>(wParam));
+            if (message == WM_LBUTTONDOWN) wParam = VK_LBUTTON;
+            else if (message == WM_RBUTTONDOWN) wParam = VK_RBUTTON;
+            POINT OldCursorPos;
+            ::SetCapture(m_hwnd);
+            ::GetCursorPos(&OldCursorPos);
+            ::ScreenToClient(m_hwnd, &OldCursorPos);
+
+            if (pSample) pSample->OnKeyDown(static_cast<UINT8>(wParam), &OldCursorPos);
+        }
+        else
+        {
+            if (pSample) pSample->OnKeyDown(static_cast<UINT8>(wParam));
         }
         return 0;
 
     case WM_KEYUP:
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
-        if (pSample)
+        if (message == WM_LBUTTONUP || message == WM_RBUTTONUP)
         {
             if (message == WM_LBUTTONUP) wParam = VK_LBUTTON;
             else if (message == WM_RBUTTONUP) wParam = VK_RBUTTON;
-            pSample->OnKeyUp(static_cast<UINT8>(wParam));
+            //마우스 캡쳐를 해제한다.
+            ::ReleaseCapture();
         }
+        if (pSample) pSample->OnKeyUp(static_cast<UINT8>(wParam));
+        return 0;
+
+    case WM_SIZE:
+        ChangeWndSize = true;
         return 0;
 
     case WM_PAINT:
         if (pSample)
         {
-            pSample->OnUpdate();
+            if (ChangeWndSize == true)
+            {
+                RECT ClientRect;
+                ::GetClientRect(m_hwnd, &ClientRect);
+                pSample->OnUpdate(&ClientRect);
+            }
+            else pSample->OnUpdate();
             pSample->OnRender();
         }
         return 0;

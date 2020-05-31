@@ -1,2 +1,0 @@
-C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Streaming\Streaming_Server\x64\Debug\Streaming_Server.exe
-C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Streaming\Streaming_Server\x64\Debug\Streaming_Server.pdb

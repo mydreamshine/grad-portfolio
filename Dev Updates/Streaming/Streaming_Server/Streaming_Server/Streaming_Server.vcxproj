@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{B19D1690-D5CE-4C30-8540-F96E5F48A914}</ProjectGuid>
+    <RootNamespace>StreamingServer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>Common\Util\ffmpeg\include;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DisableSpecificWarnings>4819;</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>Common\Util\ffmpeg\lib;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DisableSpecificWarnings>4819;</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>Common\Util\ffmpeg\include;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>d3d12.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>Common\Util\ffmpeg\lib;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\d3dUtil.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\GeometryGenerator.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\MathHelper.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\ShadowMap.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\BinaryReader.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\CommonStates.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDSTextureLoader.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DescriptorHeap.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DirectXHelpers.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\GraphicsMemory.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LinearAllocator.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\pch.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SimpleMath.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteBatch.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteFont.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\VertexTypes.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSample.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Player.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\PlayGameScene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Ray.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ResourceManager.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.cpp" />
+    <ClCompile Include="encoder\encoder.cpp" />
+    <ClCompile Include="ID_POOLER.cpp" />
+    <ClCompile Include="source.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\DDSLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\PngLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\SpriteFontLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\TextureLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\TgaLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\d3dUtil.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\GeometryGenerator.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\MathHelper.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\ShadowMap.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\UploadBuffer.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\AlignedNew.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\BinaryReader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\CommonStates.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\d3dx12.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDS.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DDSTextureLoader.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DescriptorHeap.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\DirectXHelpers.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\GraphicsMemory.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LinearAllocator.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\LoaderHelpers.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\pch.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\PlatformHelpers.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\RenderTargetState.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\ResourceUploadBatch.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SharedResourcePool.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SimpleMath.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteBatch.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\SpriteFont.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\DirectXTK12_srcinc\VertexTypes.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\d3dx12.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSample.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\DXSampleHelper.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Player.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\PlayGameScene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Ray.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ResourceManager.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.h" />
+    <ClInclude Include="encoder\encoder.h" />
+    <ClInclude Include="Global_Config.h" />
+    <ClInclude Include="ID_POOLER.h" />
+    <ClInclude Include="packet_struct.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

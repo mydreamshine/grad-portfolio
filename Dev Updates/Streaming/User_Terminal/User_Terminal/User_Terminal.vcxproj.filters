@@ -26,5 +26,8 @@
     <ClInclude Include="DECODER.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="packet_struct.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
