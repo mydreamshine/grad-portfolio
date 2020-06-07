@@ -3,6 +3,8 @@
 #define BATTLESERVER_PORT 15600
 #define ID_LENGTH 11
 typedef char SIZE_TYPE;
+
+#pragma pack(push, 1)
 /*
 C : Client
 S : Lobby Server
@@ -45,6 +47,30 @@ enum SB_PACKET {
 enum BS_PACKET {
 	BS_PACKET_RESPONSE_ROOM,
 	BS_PACKET_COUNT
+};
+
+enum CB_PAKCET {
+	//CLIENT TO SERVER
+	CB_KEYUP,                //플레이어 키보드 입력(UP), cs_key_info 구조체 사용
+	CB_KEYDOWN,              //플레이어 키보드 입력(DOWN), cs_key_info 구조체 사용
+	CB_ATTACK,                //플레이어의 공격, cs_attack 구조체 사용
+	CB_PACKET_COUNT
+};
+
+enum BC_PACKET {
+	//SERVER TO CLIENT
+	BC_PLAYER_UID,           //플레이어 UID 통보, sc_player_uid 구조체 사용
+	BC_CREATE_PLAYER,        //플레이어 생성(리스폰), sc_create_player 구조체 사용
+	BC_CREATE_BULLET,        //총알 생성, sc_create_bullet 구조체 사용
+	BC_DESTROY_PLAYER,       //플레이어 파괴(죽음), sc_destroy_player 구조체 사용
+	BC_DESTROY_BULLET,       //총알 오브젝트 파괴, sc_destroy_bullet 구조체 사용
+	BC_PLAYER_INFO,          //유저의 위치정보 패킷, sc_player_info 구조체 사용
+	BC_BULLET_INFO,          //총알의 위치정보 패킷, sc_bullet_info 구조체 사용
+	BC_HIT,                  //플레이어 타격, sc_hit 구조체 사용
+	BC_GAME_START,           //게임 시작, default_packet 구조체 사용
+	BC_GAME_END,             //게임 종료, default_packet 구조체 사용
+
+	BC_PACKET_COUNT
 };
 
 //Game Modes
@@ -108,3 +134,90 @@ struct cb_packet_request_login
 	common_default_packet cdp;
 	int room_id;
 };
+
+struct bc_player_uid
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;   //플레이어의 UID
+};
+
+struct bc_create_player
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //생성될 플레이어의 UID
+	char hero;      //생성될 HERO 타입
+	int hp;         //체력
+	float pos[3];   //위치 벡터
+	float rot[3];   //방향 벡터 - Degree
+};
+
+struct bc_create_bullet
+{
+	SIZE_TYPE size;
+	char type;
+	char shooter;   //쏜 사람
+	char uid;       //생성될 총알의 UID
+	float pos[3];   //위치 벡터
+	float rot[3];   //방향 벡터 - Degree
+};
+
+struct bc_destroy_player
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID의 플레이어 사망
+};
+
+struct bc_destroy_bullet
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID의 총알 파괴
+};
+
+struct bc_player_info
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID 플레이어 위치정보
+	float pos[3];   //위치 벡터
+	float rot[3];   //방향 벡터 - Degree
+};
+
+struct bc_bullet_info
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID 총알의 위치정보
+	float pos[3];   //위치 벡터
+	float rot[3];   //방향 벡터 - Degree
+};
+
+struct bc_hit
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID 플레이어의 피격
+	int damage;     //데미지
+};
+
+
+struct cb_key_info
+{
+	SIZE_TYPE size;
+	char type;      //CS_KEYUP, CS_KEYDOWN
+	char uid;       //해당 UID 플레이어 키 입력
+	char key;       //키(ASCII)
+};
+
+struct cb_attack
+{
+	SIZE_TYPE size;
+	char type;
+	char uid;       //해당 UID 플레이어의 공격
+	float dir[3];   //Normalize된 공격방향
+};
+
+#pragma pack(pop)

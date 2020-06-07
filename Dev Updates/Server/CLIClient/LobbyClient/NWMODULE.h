@@ -15,7 +15,10 @@
 using namespace std;
 
 
-
+/**
+*@brief class for communicate battle and lobby server.
+*@author Gurnwoo Kim
+*/
 template <class T>
 class NWMODULE
 {

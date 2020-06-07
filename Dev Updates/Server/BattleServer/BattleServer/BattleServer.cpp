@@ -149,19 +149,19 @@ namespace BattleArena {
 
 			case EV_UPDATE:
 			{
-				//Template Error
-				duration<float>fElapsedTime {high_resolution_clock::now() - m_Rooms[key]->last_update_time};
+				duration<float> fElapsedTime { high_resolution_clock::now() - m_Rooms[key]->last_update_time };
 				wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
+				//if game is done.
 				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
-					ROOM* tmp = m_Rooms[key];
+					delete m_Rooms[key];
 					m_Rooms[key] = nullptr;
-					delete tmp;
 					set_empty_room(key);
 				}
+				//else push next update event
 				else add_event(static_cast<int>(key), EV_UPDATE, UPDATE_INTERVAL);
 			}
-			delete over_ex;
+				delete over_ex;
 				break;
 
 			case EV_SEND:
@@ -278,9 +278,9 @@ namespace BattleArena {
 			cb_packet_request_login* packet = reinterpret_cast<cb_packet_request_login*>(buffer);
 			client->recv_over.set_event(EV_RECV);
 			client->room = m_Rooms[packet->room_id];
+			//if all users are Connected, Start Game
 			if (true == m_Rooms[packet->room_id]->regist(client)) {
 				wprintf(L"[ROOM %d] - GAME START\n", packet->room_id);
-				//All user COnnected, Start Game
 				m_Rooms[packet->room_id]->last_update_time = high_resolution_clock::now();
 				m_Rooms[packet->room_id]->start();
 				add_event(packet->room_id, EV_UPDATE, UPDATE_INTERVAL);

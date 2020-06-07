@@ -17,7 +17,6 @@
 
 namespace BattleArena {
 	constexpr auto MAX_ROOM = 100;
-	//constexpr auto MATCHUP_NUM = 2;
 	constexpr auto UPDATE_INTERVAL = 30; //ms
 
 	void error_display(const char* msg, int err_no);

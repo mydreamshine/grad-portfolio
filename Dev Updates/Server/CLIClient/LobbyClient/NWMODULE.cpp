@@ -22,6 +22,9 @@ void NWMODULE<T>::error_display(const char* msg, int err_no)
 	while (true);
 }
 
+/**
+*@brief Initializing WSA environment.
+*/
 template <class T>
 void NWMODULE<T>::InitWSA()
 {
@@ -30,6 +33,10 @@ void NWMODULE<T>::InitWSA()
 		error_display("Error at WSAStartup()", WSAGetLastError());
 }
 
+/**
+*@brief send default type packet to lobby.
+*@param type : packet type.
+*/
 template <class T>
 void NWMODULE<T>::send_default_packet(int type)
 {
@@ -39,6 +46,13 @@ void NWMODULE<T>::send_default_packet(int type)
 	send(lobby_socket, reinterpret_cast<const char*>(&cdp), cdp.size, 0);
 }
 
+/**
+*@brief connect to server.
+*@param socket : return with new socket.
+*@param address : address to connecting server. ex) 192.168.0.1
+*@param port : server port with big-endian.
+*@return success or not.
+*/
 template <class T>
 bool NWMODULE<T>::connect_server(SOCKET& socket, const char* address, const short port)
 {
@@ -56,6 +70,12 @@ bool NWMODULE<T>::connect_server(SOCKET& socket, const char* address, const shor
 	return true;
 }
 
+/**
+*@brief read and make complete packet from buffer after recv and save to packet_buffer.
+*@param packet_buffer : complete packet will save to this.
+*@param buffer : buffer that need to drain.
+*@param len : received data length.
+*/
 template<class T>
 void NWMODULE<T>::packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_t len)
 {
@@ -90,6 +110,11 @@ void NWMODULE<T>::packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_
 	lobby_buffer.SavedtoComplete();
 }
 
+/**
+*@brief process disconnect to socket and clear packet_buffer.
+*@param socket : socket that want to disconnect.
+*@param buffer : packet_buffer that want to disconnect.
+*/
 template<class T>
 void NWMODULE<T>::process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer)
 {
@@ -101,6 +126,11 @@ void NWMODULE<T>::process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer)
 	buffer.c_lock.unlock();
 }
 
+/**
+*@brief process lobby packet.
+*@param type : packets type.
+*@param buffer : packets data.
+*/
 template <class T>
 void NWMODULE<T>::process_lobby_packet(int packet_type, const void* buffer)
 {
@@ -154,6 +184,9 @@ void NWMODULE<T>::process_lobby_packet(int packet_type, const void* buffer)
 	//}
 }
 
+/**
+*@brief if there's no iocp, make recv thread for continous recv from lobby.
+*/
 template <class T>
 void NWMODULE<T>::RecvLobbyThread()
 {
@@ -169,6 +202,9 @@ void NWMODULE<T>::RecvLobbyThread()
 	}
 }
 
+/**
+*@brief if there's no iocp, make recv thread for continous recv from battle.
+*/
 template <class T>
 void NWMODULE<T>::RecvBattleThread()
 {
@@ -206,6 +242,11 @@ NWMODULE<T>::~NWMODULE()
 	WSACleanup();
 }
 
+/**
+*@brief connect to lobby.
+*@param iocp_key : key for iocp. if there's no iocp handle, no need.
+*@return bool that connection is estalished or not.
+*/
 template <class T>
 bool NWMODULE<T>::connect_lobby(int iocp_key)
 {
@@ -222,6 +263,9 @@ bool NWMODULE<T>::connect_lobby(int iocp_key)
 	return retval;
 }
 
+/**
+*@brief disconnect from lobby.
+*/
 template<class T>
 void NWMODULE<T>::disconnect_lobby()
 {
@@ -230,6 +274,11 @@ void NWMODULE<T>::disconnect_lobby()
 	closesocket(tmp);
 }
 
+/**
+*@brief connect to battle.
+*@param iocp_key : key for iocp. if there's no iocp handle, no need.
+*@return bool that connection is estalished or not.
+*/
 template <class T>
 bool NWMODULE<T>::connect_battle(int iocp_key)
 {
@@ -246,6 +295,9 @@ bool NWMODULE<T>::connect_battle(int iocp_key)
 	return retval;
 }
 
+/**
+*@brief disconnect from battle.
+*/
 template<class T>
 void NWMODULE<T>::disconnect_battle()
 {
@@ -254,6 +306,10 @@ void NWMODULE<T>::disconnect_battle()
 	closesocket(tmp);
 }
 
+/**
+*@brief request login to lobby.
+*@param id : login id. max 10.
+*/
 template <class T>
 void NWMODULE<T>::request_login(const char* id)
 {
@@ -265,6 +321,10 @@ void NWMODULE<T>::request_login(const char* id)
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
+/**
+*@brief request add friend to lobby.
+*@param id : login id. max 10.
+*/
 template <class T>
 void NWMODULE<T>::add_friend(const char* id)
 {
@@ -275,6 +335,10 @@ void NWMODULE<T>::add_friend(const char* id)
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
+/**
+*@brief answer accepting friend request to lobby.
+*@param id : login id. max 10.
+*/
 template <class T>
 void NWMODULE<T>::accept_friend(const char* id)
 {
@@ -285,31 +349,50 @@ void NWMODULE<T>::accept_friend(const char* id)
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
+/**
+*@brief reqeust client enqueue match_make pool to lobby.
+*/
 template <class T>
 void NWMODULE<T>::match_enqueue()
 {
 	send_default_packet(CS_PACKET_MATCH_ENQUEUE);
 }
 
+/**
+*@brief reqeust client dequeue match_make pool to lobby.
+*/
 template <class T>
 void NWMODULE<T>::match_dequeue()
 {
 	send_default_packet(CS_PACKET_MATCH_DEQUEUE);
 }
 
+/**
+*@brief enroll lobby packets callback.
+*@param packet_type : target packet.
+*@param callback : when packet_type arrived, this callback will execute.
+*/
 template <class T>
 void NWMODULE<T>::enroll_lobby_callback(int packet_type, function<void(T&)> callback)
 {
 	if (callback == nullptr) return;
 	lobby_callbacks[packet_type] = callback;
 }
+/**
+*@brief enroll battle packets callback.
+*@param packet_type : target packet.
+*@param callback : when packet_type arrived, this callback will execute.
+*/
 template <class T>
 void NWMODULE<T>::enroll_battle_callback(int packet_type, function<void(T&)> callback)
 {
 	if (callback == nullptr) return;
 	battle_callbacks[packet_type] = callback;
 }
-
+/**
+*@brief notify recv from lobby. - iocp env.
+*@param length : received data length.
+*/
 template<class T>
 void NWMODULE<T>::notify_lobby_recv(size_t length)
 {
@@ -323,6 +406,10 @@ void NWMODULE<T>::notify_lobby_recv(size_t length)
 		WSARecv(lobby_socket, lobby_over.buffer, 1, nullptr, &flag, lobby_over.overlapped(), nullptr);*/
 	}
 }
+/**
+*@brief notify recv from battle. - iocp env.
+*@param length : received data length.
+*/
 template<class T>
 void NWMODULE<T>::notify_battle_recv(size_t length)
 {
@@ -337,6 +424,9 @@ void NWMODULE<T>::notify_battle_recv(size_t length)
 	}
 }
 
+/**
+*@brief update packets to client. call before main logic.
+*/
 template<class T>
 void NWMODULE<T>::update()
 {
