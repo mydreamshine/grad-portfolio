@@ -133,7 +133,6 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h" />
     <ClInclude Include="..\..\Common\CLIENT.h" />
     <ClInclude Include="..\..\Common\CSOCKADDR_IN.h" />
     <ClInclude Include="..\..\Common\EVENT.h" />

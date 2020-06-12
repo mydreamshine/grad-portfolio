@@ -2,20 +2,28 @@
 #include "OVER_EX.h"
 
 class ROOM;
+/**
+@brief Client class for battle server.
+@author Gurnwoo Kim
+*/
 class CLIENT
 {
 public:
-	OVER_EX recv_over{};
-	SOCKET socket{ INVALID_SOCKET };
-	ROOM* room{ nullptr };
+	OVER_EX recv_over{}; ///< OVERRAPPED Wrapping class for IOCP.
+	SOCKET socket{ INVALID_SOCKET }; ///< socket for client.
+	ROOM* room{ nullptr }; ///< room where the clients connect.
 
-	int id{ 0 };
-	char savedPacket[200]{};
-	size_t saved_size{ 0 };
-	size_t need_size{ 4 };
+	int id{ 0 }; ///< id
+	char savedPacket[200]{}; ///< packet buffer.
+	size_t saved_size{ 0 }; ///< packet buffer data.
+	size_t need_size{ 4 }; ///< packet buffer data.
 
 	CLIENT() {};
 	~CLIENT() {};
+
+	/**
+	@brief set recv on iocp env.
+	*/
 	void set_recv();
 	void error_display(const char* msg, int err_no);
 };

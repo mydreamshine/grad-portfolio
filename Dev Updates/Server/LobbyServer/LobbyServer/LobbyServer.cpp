@@ -43,8 +43,8 @@ namespace BattleArena {
 	}
 
 	/**
-	*@brief Initializing WSA environment.
-	*@details init wsa, iocp handle, socket, bind, listen.
+	@brief Initializing WSA environment.
+	@details init wsa, iocp handle, socket, bind, listen.
 	*/
 	void LOBBYSERVER::InitWSA()
 	{
@@ -85,8 +85,8 @@ namespace BattleArena {
 #endif
 	}
 	/**
-	*@brief Initializing Threads.
-	*@details init threads for iocp.
+	@brief Initializing Threads.
+	@details init threads for iocp.
 	*/
 	void LOBBYSERVER::InitThreads()
 	{
@@ -96,8 +96,8 @@ namespace BattleArena {
 		wprintf(L" Done.\n");
 	}
 	/**
-	*@brief Run server.
-	*@details server start accepting clients.
+	@brief Run server.
+	@details server start accepting clients.
 	*/
 	void LOBBYSERVER::Run()
 	{
@@ -118,8 +118,8 @@ namespace BattleArena {
 		}
 	}
 	/**
-	*@brief function for iocp threads.
-	*@details process iocp events - recv, send, packet processing.
+	@brief function for iocp threads.
+	@details process iocp events - recv, send, packet processing.
 	*/
 	void LOBBYSERVER::do_worker()
 	{
@@ -163,9 +163,9 @@ namespace BattleArena {
 	}
 
 	/**
-	*@brief send packet to client.
-	*@param client : index for client.
-	*@param buff : void* pointing packet.
+	@brief send packet to client.
+	@param client index for client.
+	@param buff void* pointing packet.
 	*/
 	void LOBBYSERVER::send_packet(int client, void* buff)
 	{
@@ -173,9 +173,9 @@ namespace BattleArena {
 		WSASend(m_clients[client].socket, send_over->buffer(), 1, 0, 0, send_over->overlapped(), 0);
 	}
 	/**
-	*@brief send default type packet to client.
-	*@param client : index for client.
-	*@param type : packet type.
+	@brief send default type packet to client.
+	@param client index for client.
+	@param type packet type.
 	*/
 	void LOBBYSERVER::send_packet_default(int client, int type)
 	{
@@ -185,9 +185,9 @@ namespace BattleArena {
 		send_packet(client, &cdp);
 	}
 	/**
-*@brief notify client to connect battle server with room_id
-*@param client : index for client.
-*@param room_id : key for connecting battle server.
+@brief notify client to connect battle server with room_id
+@param client index for client.
+@param room_id key for connecting battle server.
 */
 	void LOBBYSERVER::send_packet_room_info(int client, int room_id)
 	{
@@ -198,8 +198,8 @@ namespace BattleArena {
 		send_packet(client, &mri);
 	}
 	/**
-*@brief request room to battle server.
-*@param mode : requesting room type.
+@brief request room to battle server.
+@param mode requesting room type.
 */
 	void LOBBYSERVER::send_packet_request_room(char mode)
 	{
@@ -209,11 +209,12 @@ namespace BattleArena {
 		packet.mode = mode;
 		send_packet(BATTLE_KEY, &packet);
 	}
+
 	/**
-*@brief notify client that friends status is changed.
-*@param client : index for client.
-*@param who : index for client who changed status.
-*@param status : change to this status.
+@brief notify client that friends status is changed.
+@param client index for client.
+@param who index for client who changed status.
+@param status change to this status.
 */
 	void LOBBYSERVER::send_packet_friend_status(int client, int who, int status)
 	{
@@ -231,9 +232,9 @@ namespace BattleArena {
 	}
 	
 	/**
-*@brief process clients packet.
-*@param client : index for client.
-*@param buffer : buffer that need to processing.
+@brief process clients packet.
+@param client index for client.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_client_packet(DWORD client, void* buffer)
 	{
@@ -272,9 +273,9 @@ namespace BattleArena {
 		}
 	}
 	/**
-*@brief process battle server packet.
-*@param client : index for client. - will deprecated.
-*@param buffer : buffer that need to processing.
+@brief process battle server packet.
+@param client index for client. - will deprecated.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_battle_packet(DWORD client, void* buffer)
 	{
@@ -292,8 +293,8 @@ namespace BattleArena {
 		}
 	}
 	/**
-*@brief process response room packet.
-*@param buffer : buffer that need to processing.
+@brief process response room packet.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_packet_response_room(void* buffer)
 	{
@@ -309,9 +310,9 @@ namespace BattleArena {
 		waiterLock.unlock();
 	}
 	/**
-*@brief process clients login.
-*@param client : index for client.
-*@param buffer : buffer that need to processing.
+@brief process clients login.
+@param client index for client.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_packet_login(int client, void* buffer)
 	{
@@ -340,9 +341,9 @@ namespace BattleArena {
 		}
 	}
 	/**
-*@brief process add friend request.
-*@param client : index for client.
-*@param buffer : buffer that need to processing.
+@brief process add friend request.
+@param client index for client.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_packet_request_friend(int client, void* buffer)
 	{
@@ -356,9 +357,9 @@ namespace BattleArena {
 			send_packet(receiver, buffer);
 	}
 	/**
-*@brief process answer for add friend request.
-*@param client : index for client.
-*@param buffer : buffer that need to processing.
+@brief process answer for add friend request.
+@param client index for client.
+@param buffer buffer that need to processing.
 */
 	void LOBBYSERVER::process_packet_accept_friend(int client, void* buffer)
 	{
@@ -372,8 +373,8 @@ namespace BattleArena {
 		send_packet_friend_status(friends, client, FRIEND_ONLINE);
 	}
 	/**
-*@brief enqueue client to match pool.
-*@param client : index for client.
+@brief enqueue client to match pool.
+@param client index for client.
 */
 	void LOBBYSERVER::match_enqueue(DWORD client)
 	{
@@ -392,8 +393,8 @@ namespace BattleArena {
 		wprintf(L"]\n");
 	}
 	/**
-*@brief dequeue client to match pool.
-*@param client : index for client.
+@brief dequeue client to match pool.
+@param client index for client.
 */
 	void LOBBYSERVER::match_dequeue(DWORD client)
 	{
@@ -412,7 +413,7 @@ namespace BattleArena {
 		wprintf(L"]\n");
 	}
 	/**
-*@brief match-making function.
+@brief match-making function.
 */
 	void LOBBYSERVER::match_make()
 	{
@@ -439,8 +440,8 @@ namespace BattleArena {
 		else queueLock.unlock();
 	}
 	/**
-*@brief process clients disconnect.
-*@param client : index for client.
+@brief process clients disconnect.
+@param client index for client.
 */
 	void LOBBYSERVER::disconnect_client(int client)
 	{
@@ -459,9 +460,9 @@ namespace BattleArena {
 		m_clients[client].socket = INVALID_SOCKET;
 	}
 	/**
-*@brief insert client to client_table
-*@param uid : uid for client.
-*@param client : index for clinet.
+@brief insert client to client_table
+@param uid uid for client.
+@param client index for clinet.
 */
 	void LOBBYSERVER::insert_client_table(int uid, int client)
 	{
@@ -470,8 +471,8 @@ namespace BattleArena {
 		client_table_lock.unlock();
 	}
 	/**
-*@brief delete client from client_table
-*@param uid : uid for client.
+@brief delete client from client_table
+@param uid uid for client.
 */
 	void LOBBYSERVER::delete_client_table(int uid)
 	{
@@ -480,9 +481,9 @@ namespace BattleArena {
 		client_table_lock.unlock();
 	}
 	/**
-*@brief return clients index if uid is connected.
-*@param uid : uid for client.
-*@return clients index. if client is not connected, return -1.
+@brief return clients index if uid is connected.
+@param uid uid for client.
+@return clients index. if client is not connected, return -1.
 */
 	int LOBBYSERVER::isConnect(int uid)
 	{
@@ -494,9 +495,9 @@ namespace BattleArena {
 		return -1;
 	}
 	/**
-*@brief return clients index if uid is connected.
-*@param id : id for client.
-*@return clients index. if client is not connected, return -1.
+@brief return clients index if uid is connected.
+@param id id for client.
+@return clients index. if client is not connected, return -1.
 */
 	int LOBBYSERVER::isConnect(const char* id)
 	{

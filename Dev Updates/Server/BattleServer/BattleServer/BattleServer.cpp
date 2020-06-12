@@ -204,7 +204,7 @@ namespace BattleArena {
 			PostQueuedCompletionStatus(m_iocp, 1, p_ev.obj_id, over_ex->overlapped());
 		}
 	}
-	void BATTLESERVER::add_timer(EVENT<EVENT_TYPE>& ev) {
+	void BATTLESERVER::add_timer(EVENT& ev) {
 		timer_lock.lock();
 		timer_queue.push(ev);
 		timer_lock.unlock();

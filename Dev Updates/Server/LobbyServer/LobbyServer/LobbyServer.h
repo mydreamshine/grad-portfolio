@@ -29,9 +29,9 @@ namespace BattleArena {
 	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY }; /// client status, ST_QUEUE : client get queued, ST_IDLE : client do nothing, ST_PLAY : playing game.
 
 /**
-*@brief Class for Client
-*@details this class have client information. socket, state, uid, id, friends
-*@author Gurnwoo Kim
+@brief Class for Client
+@details this class have client information. socket, state, uid, id, friends
+@author Gurnwoo Kim
 */
 	class CLIENT
 	{
@@ -45,8 +45,8 @@ namespace BattleArena {
 		std::set<int> friendlist; ///< clients friend list, ONLY index for client_table, show ONLY ONLINE friends
 
 		/**
-		*@brief set client socket to recv
-		*@details init overlapped struct with 0, and start async recv.
+		@brief set client socket to recv
+		@details init overlapped struct with 0, and start async recv.
 		*/
 		void set_recv()
 		{
@@ -59,9 +59,10 @@ namespace BattleArena {
 					error_display("Error at WSARecv()", err_no);
 			}
 		}
+		
 		/**
-		*@brief Function for error_display while socket communication.
-		*@details will display error with WSAGetLastError() and process will stop that position.
+		@brief Function for error_display while socket communication.
+		@details will display error with WSAGetLastError() and process will stop that position.
 		*/
 		void error_display(const char* msg, int err_no)
 		{
@@ -80,9 +81,9 @@ namespace BattleArena {
 	};
 
 /**
-*@brief Class for client who Wait matchs(after matchmaking, before match)
-*@details group for match-maked client. after match making, there's a short term, because battle server and lobby server communicate for initiating new match. 
-*@author Gurnwoo Kim
+@brief Class for client who Wait matchs(after matchmaking, before match)
+@details group for match-maked client. after match making, there's a short term, because battle server and lobby server communicate for initiating new match. 
+@author Gurnwoo Kim
 */
 	struct ROOM_WAITER
 	{
@@ -90,16 +91,20 @@ namespace BattleArena {
 	};
 
 /**
-*@brief Lobby Server Class
-*@details Process communication func - login, friends, match making...
-*@author Gurnwoo Kim
+@brief Lobby Server Class
+@details Process communication func - login, friends, match making...
+@author Gurnwoo Kim
 */
 	class LOBBYSERVER
 	{
 	public:
 		LOBBYSERVER();
 		~LOBBYSERVER();
-		void Run(); ///< run server.
+
+		/**
+		@brief Run Server. Server start accepting clients.
+		*/
+		void Run();
 
 	private:
 		std::vector<std::thread> m_threads; ///< threads for server.

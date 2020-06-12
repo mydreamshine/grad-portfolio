@@ -53,9 +53,6 @@
     <ClInclude Include="lobby_protocol.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\CLIENT.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
