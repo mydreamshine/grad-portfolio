@@ -38,14 +38,24 @@ void LobyScene::OnInitProperties(CTimer& gt)
     m_LightRotationAngle = 0.0f;
 
     camAngle = -90.0f * (MathHelper::Pi / 180.0f);
+
+    ChattingList.clear();
+    UserInfo_UserName.clear();
+    UserInfo_UserRank = 0;
+
+    SelectedCharacterType = CHARACTER_TYPE::NON;
+
+    ChattingMode = false;
+    MouseLeftButtonClick = false;
 }
 
 void LobyScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     const bool key_state[], const POINT& oldCursorPos,
     const RECT& ClientRect,
-    CTimer& gt)
+    CTimer& gt,
+    std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
 void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
@@ -57,7 +67,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
 
     ObjectManager objManager;
-    const UINT maxUIObject = (UINT)Geometries["LobySceneUIGeo"]->DrawArgs.size();
+    const UINT maxUILayOutObject = (UINT)Geometries["LobySceneUIGeo"]->DrawArgs.size();
     for (auto& Ritem_iter : AllRitems)
     {
         auto Ritem = Ritem_iter.second.get();
@@ -87,7 +97,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
         }
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
@@ -96,22 +106,20 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             if (objName.find("CharacterSelection") != std::string::npos) continue;
             if (objName.find("Background") != std::string::npos) continue;
 
-            newObj->m_UIinfos[objName] = std::make_unique<TextInfo>();
-            auto text_info = newObj->m_UIinfos[objName].get();
+            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+            auto text_info = newObj->m_Textinfo.get();
+            newLayoutTextObj->m_Name = "Text" + objName;
             text_info->m_FontName = L"¸¼Àº °íµñ";
             text_info->m_TextColor = DirectX::Colors::Blue;
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
             text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
             text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
-            text_info->TextBatchIndex = textBatch_index++;
 
             if (objName == "UI_Layout_LobyChattingLog") text_info->m_Text = L"Chatting Log";
             else if (objName == "UI_Layout_MatchWaiting")      text_info->m_Text = L"Match Waiting\n      Info";
             else if (objName == "UI_Layout_GameStartButton")  text_info->m_Text = L"Game Start\n   Button";
             else if (objName == "UI_Layout_LobyCharacterName")  text_info->m_Text = L"Character Name";
-            //else if (objName == "UI_Layout_CharacterSelection_Left");
-            //else if (objName == "UI_Layout_CharacterSelection_Right");
-            else if (objName == "UI_Layout_LobyUserInfo")  text_info->m_Text = L"User NickName:\nUser Rank:";
+            else if (objName == "UI_Layout_LobyUserInfo")  text_info->m_Text = L"NickName:\nRank:";
             else if (objName == "UI_Layout_LobyCharacterDescrition")  text_info->m_Text = L"Chracter Info\n(Name, HP, etc.)";
         }
     }
@@ -143,9 +151,9 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             m_WorldObjects[i]->Activated = false;
     }
 
-    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
+    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
-    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
+    m_nTextBatch = (UINT)m_TextObjects.size();
 }
 
 void LobyScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -178,6 +186,106 @@ void LobyScene::UpdateShadowTransform(CTimer& gt)
     Scene::UpdateShadowTransform(gt);
 }
 
+void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
+{
+    ObjectManager ObjManager;
+    Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingLog");
+    Object* UserInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyUserInfo");
+    Object* CharacterInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterDescrition");
+    Object* SelectedCharacterNameObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterName");
+    Object* MatchWaitingInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_MatchWaiting");
+
+    // Update Chatting Text
+    {
+        auto& ChattingLog = ChattingLogObject->m_Textinfo->m_Text;
+        ChattingLog.clear();
+
+        if (ChattingMode == true)
+        {
+            int EmptyChatLine = 10;
+            for (auto& ChatLine : ChattingList)
+            {
+                ChattingLog += ChatLine;
+                if (--EmptyChatLine == 0) break;
+                else ChattingLog += L'\n';
+            }
+        }
+    }
+
+    auto& UserInfo = UserInfoObject->m_Textinfo->m_Text;
+    UserInfo = L"UserName: " + UserInfo_UserName + L'\n';
+    UserInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank);
+
+    auto& CharacterInfo = CharacterInfoObject->m_Textinfo->m_Text;
+    auto& SelectedCharacterName = SelectedCharacterNameObject->m_Textinfo->m_Text;
+    switch (SelectedCharacterType)
+    {
+    case CHARACTER_TYPE::WARRIOR:
+        SelectedCharacterName = L"Warrior";
+        CharacterInfo = L"Name: Warrior\n";
+        CharacterInfo += L"HP: 100\n";
+        CharacterInfo += L"Damage: 30\n";
+        CharacterInfo += L"Movement Speed: 1.0\n";
+        CharacterInfo += L"Attack Speed: 1.0\n";
+        CharacterInfo += L"Skill Name: Sword Wave\n";
+        CharacterInfo += L"Skill Desc: Shoot 3 SwordWaves ahead.\n";
+        CharacterInfo += L"Skill CoolTime: 4 seconds.";
+        break;
+    case CHARACTER_TYPE::BERSERKER:
+        SelectedCharacterName = L"Berserker";
+        CharacterInfo  = L"Name: Berserker\n";
+        CharacterInfo += L"HP: 150\n";
+        CharacterInfo += L"Damage: 40\n";
+        CharacterInfo += L"Movement Speed: 1.0\n";
+        CharacterInfo += L"Attack Speed: 0.6\n";
+        CharacterInfo += L"Skill Name: Fury Roar";
+        CharacterInfo += L"Skill Desc: Movement & Attack speed\n  are multiplied(x2) for 8 seconds.";
+        CharacterInfo += L"Skill CoolTime: 10 seconds.";
+        break;
+    case CHARACTER_TYPE::ASSASSIN:
+        SelectedCharacterName = L"Assassin";
+        CharacterInfo  = L"Name: Assassin\n";
+        CharacterInfo += L"HP: 100\n";
+        CharacterInfo += L"Damage: 30\n";
+        CharacterInfo += L"Movement Speed: 1.4\n";
+        CharacterInfo += L"Attack Speed: 1.2\n";
+        CharacterInfo += L"Skill Name: Stealth";
+        CharacterInfo += L"Skill Desc: Stealth for 7 seconds.";
+        CharacterInfo += L"Skill CoolTime: 12 seconds.";
+        break;
+    case CHARACTER_TYPE::PRIEST:
+        SelectedCharacterName = L"Priest";
+        CharacterInfo  = L"Name: Priest\n";
+        CharacterInfo += L"HP: 80\n";
+        CharacterInfo += L"Damage: 15\n";
+        CharacterInfo += L"Movement Speed: 0.8\n";
+        CharacterInfo += L"Attack Speed: 0.8\n";
+        CharacterInfo += L"Skill Name: Holy Area";
+        CharacterInfo += L"Skill Desc: Creates a holy area\n  that restores 15 health every 1 sec\n  for 10 sec.";
+        CharacterInfo += L"Skill CoolTime: 12 seconds.";
+        break;
+    case CHARACTER_TYPE::NON:
+        SelectedCharacterName = L"Non";
+        CharacterInfo  = L"Name: Non\n";
+        CharacterInfo += L"HP: Non\n";
+        CharacterInfo += L"Damage: Non\n";
+        CharacterInfo += L"Movement Speed: Non\n";
+        CharacterInfo += L"Attack Speed: Non\n";
+        CharacterInfo += L"Skill Name: Non";
+        CharacterInfo += L"Skill Desc: Non";
+        CharacterInfo += L"Skill CoolTime: Non";
+        break;
+    }
+
+    auto MatchWaitingInfo = MatchWaitingInfoObject->m_Textinfo->m_Text;
+    if (StartMatching == true) MatchWaitingInfo = L"Game Matching...";
+    else
+    {
+        if (MatchWaitingInfo.empty() != true) MatchWaitingInfo.clear();
+    }
+
+}
+
 void LobyScene::AnimateLights(CTimer& gt)
 {
     float deg2rad = MathHelper::Pi / 180.0f;
@@ -192,7 +300,7 @@ void LobyScene::AnimateLights(CTimer& gt)
     }
 }
 
-void LobyScene::AnimateSkeletons(CTimer& gt)
+void LobyScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     for (auto& obj : m_CharacterObjects)
     {
@@ -229,6 +337,18 @@ void LobyScene::AnimateCameras(CTimer& gt)
     m_MainCamera.UpdateViewMatrix();
 }
 
-void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
+void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+}
+
+void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)
+{
+    UserInfo_UserName = UserName;
+    UserInfo_UserRank = UserRank;
+}
+
+void LobyScene::SetChatLog(std::wstring UserName, std::wstring Message)
+{
+    if (ChattingList.size() == MaxChatLog) ChattingList.pop_back();
+    ChattingList.push_back(L"[" + UserName + L"]: " + Message);
 }

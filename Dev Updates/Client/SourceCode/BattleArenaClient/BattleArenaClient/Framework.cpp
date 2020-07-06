@@ -47,6 +47,86 @@ BYTE* Framework::GetFrameData()
     return m_FrameData.get();
 }
 
+void Framework::ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events)
+{
+    std::unique_ptr<EVENT> Event = nullptr;
+    while (Events.size() != 0)
+    {
+        Event = std::move(Events.front());
+        Events.pop();
+        Framework::ProcessEvent(*Event);
+        Event = nullptr;
+    }
+}
+
+void Framework::ProcessEvent(EVENT& Event)
+{
+    Scene* Event_Act_Place = nullptr;
+    if      (Event.Act_Place == FEP_LOGIN_SCENE)    Event_Act_Place = m_Scenes["LoginScene"].get();
+    else if (Event.Act_Place == FEP_LOBY_SCENE)     Event_Act_Place = m_Scenes["LobyScene"].get();
+    else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) Event_Act_Place = m_Scenes["PlayGameScene"].get();
+    else if (Event.Act_Place == FEP_GAMEOVER_SCENE) Event_Act_Place = m_Scenes["GameOverScene"].get();
+    else
+    {
+        MessageBox(NULL, L"Unknown Event Actvation Place.", L"Event Error", MB_OK);
+        while (true);
+    }
+
+    switch (Event.Command)
+    {
+    case FEC_SPAWN_CHARACTER                     :
+    case FEC_SPAWN_SKILL_OBJ_SWORD_WAVES         :
+    case FEC_SPAWN_SKILL_OBJ_HOLY_AREA           :
+    case FEC_SPAWN_SKILL_EFFECT_OBJ_HEAL         :
+    case FEC_SPAWN_SKILL_EFFECT_OBJ_ROAR         :
+    case FEC_SPAWN_SKILL_EFFECT_OBJ_STEALTH_SMOKE:
+    case FEC_SPAWN_POISON_GAS                    :
+    {
+        // Create Character
+        // Create World Object
+        // Create Skill Effect Object
+        // Return Object Ref (해당 오브젝트의 속성값을 바꿀 수 있도록, 아니면 Create 메소드를 호출할 때 파라미터로 전달.)
+        break;
+    }
+    case FEC_DEACTIVATE_OBJ:
+    {
+        // DeActivate Object (Find Object in All Object List by CE_ID)
+        break;
+    }
+    case FEC_SET_TRANSFORM_WORLD_OBJECT:
+    case FEC_SET_CHARACTER_ATTACK_MOTION:
+    case FEC_SET_CHARACTER_BE_ATTACKED_MOTION:
+    case FEC_SET_CHARACTER_DEAD_MOTION:
+    case FEC_SET_CHARACTER_SWORD_WAVE_MOTION:
+    case FEC_SET_CHARACTER_HEAL_MOTION:
+    case FEC_SET_ROAR_MOTION:
+    case FEC_ACTIVE_CHARACTER_STEALTH_MODE:
+    case FEC_DEACTIVE_CHARACTER_STEALTH_MODE:
+    {
+        // Find Object by CE_ID
+        // Update Object Property
+        break;
+    }
+    case FEC_SET_USER_INFO:
+    case FEC_SET_KDA_SCORE:
+    case FEC_SET_KILL_LOG:
+    case FEC_SET_CHAT_LOG:
+    case FEC_SET_GAME_PLAY_TIME_LIMIT:
+    case FEC_SET_SKILL_INFO:
+    case FEC_SET_CHARACTER_HP:
+    case FEC_SET_MATCH_STATISTIC_INFO:
+    {
+        // Find_UI_Object by CE_ID or Obj_Name
+        // Update UI info
+        break;
+    }
+    default:
+        MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
+        while (true);
+        break;
+    }
+}
+
 void Framework::OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource, std::string* additionalAssetPath)
 {
     DXSample::OnInit(hwnd, width, height, name);
@@ -714,7 +794,7 @@ void Framework::BuildFrameResources()
 }
 
 // Update frame-based values.
-void Framework::OnUpdate(RECT* pClientRect)
+void Framework::OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RECT* pClientRect)
 {
     m_Timer.Tick(0.0f);
 

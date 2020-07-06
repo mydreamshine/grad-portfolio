@@ -13,11 +13,11 @@ public:
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
         const bool key_state[], const POINT& oldCursorPos,
         const RECT& ClientRect,
-        CTimer& gt);
+        CTimer& gt,
+        std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 public:
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index);
-    void RandomCreateCharacterObject();
 
 public:
     virtual void UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt);
@@ -26,31 +26,70 @@ public:
     virtual void UpdateMainPassCB(UploadBuffer<PassConstants>* passCB, CTimer& gt);
     virtual void UpdateShadowPassCB(UploadBuffer<PassConstants>* passCB, ShadowMap* shadow_map, CTimer& gt);
     virtual void UpdateShadowTransform(CTimer& gt);
-    virtual void UpdateTextInfo(CTimer& gt);
+    virtual void UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateLights(CTimer& gt);
-    virtual void AnimateSkeletons(CTimer& gt);
+    virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateCameras(CTimer& gt);
-    void AnimateWorldObjectsTransform(CTimer& gt);
+    void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 public:
-    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt);
+    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     void ProcessCollision(CTimer& gt);
+
+public:
+    ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
+    // Control Element ID, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnCharacter(int New_CE_ID, CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Control Element ID, Attack Order(Chracter Type), Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Control Element ID, Skill Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnSkillObject(int New_CE_ID, SKILL_TYPE SkillType, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Effect Type, Transform(Position)
+    void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position);
+    // Control Element ID, Transform(Scale, RotationEuler, Position)
+    void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Control Element ID, MotionType, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
+    void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType = SKILL_TYPE::NON);
+    // Control Element ID, Player State
+    void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState);
+    // Deactivated Poison Gas Area
+    //void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea);
+    // Control Element ID
+    void DeActivateObject(int CE_ID);
+
+    // Count Score(Kill, Death, Assistance)
+    void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance);
+    // Do_UserName, Target_UserName
+    void SetKillLog(std::wstring Do_UserName, std::wstring Target_UserName);
+    // UserName, Message
+    void SetChatLog(std::wstring UserName, std::wstring Message);
+    // Remaining Sec
+    void SetGamePlayTimeLimit(unsigned int Sec);
+    // Remaining HP
+    void SetPlayerHP(int CE_ID, int HP);
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
-    UINT m_CurrSkillObjInstanceNUM = 0;
-    DirectX::XMFLOAT3 m_WorldCenter = { 0.0f, 0.0f, 0.0f };
-    DirectX::BoundingBox m_SpawnBound;
+    const UINT m_MaxTextObject = 9;
+    UINT       m_EffectInstancingNum = 0;
 
-    std::unique_ptr<Player> m_MainPlayer = nullptr;
+    Player* m_MainPlayer = nullptr;
+    std::unordered_map<int, std::unique_ptr<Player>> m_Players;
 
-    // Time Limit Info
-    float SceneStartTime = 0.0f;
-    int sec = 0;
-    int sec2 = 0;
-    std::wstring time_str = L"Time Limit\n   03:00";
-    UINT TimeLimit_sec = 180;
+    int GameInfo_CountKill = 0;
+    int GameInfo_CountDeath = 0;
+    int GameInfo_CountAssistance = 0;
+
+    const size_t MaxKillLog = 10;
+    const size_t MaxChatLog = 20;
+    std::list<std::wstring> KillLogList;
+    std::list<std::wstring> ChattingList;
+
+    unsigned int TimeLimit_Sec = 0;
+
+    bool ChattingMode = false;
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,

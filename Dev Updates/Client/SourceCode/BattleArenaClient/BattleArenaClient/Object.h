@@ -14,7 +14,7 @@
 #define MAX_WORLD_OBJECT 1024
 #define MAX_CHARACTER_OBJECT 100
 
-// rel. UI
+// rel. Text
 struct TextInfo
 {
 	std::wstring m_FontName;
@@ -204,8 +204,8 @@ struct Object
 	std::unique_ptr<TransformInfo> m_TransformInfo = nullptr;
 	// rel. SkinnedConstants
 	std::unique_ptr<SkeletonInfo> m_SkeletonInfo = nullptr;
-	// rel. UI (only used in UI Object)
-	std::unordered_map<std::string, std::unique_ptr<TextInfo>> m_UIinfos;
+	// rel. Text (only used in Text Object)
+	std::unique_ptr<TextInfo> m_Textinfo = nullptr;
 
 	// rel. MaterialConstants
 	// Ritem에 대해선 인스턴싱을 하지 않으므로
@@ -217,6 +217,15 @@ struct Object
 	float DeActivatedTime = 0.0f;
 	float DeActivatedDecrease = 0.0f;
 	bool DisappearForDeAcTime = false; // DeActivatedTime동안 Alpha값이 서서히 줄어들게 하는 플래그
+
+	// Control Element ID
+	// 오브젝트를 컨트롤하기 위한 고유 식별자
+	int m_CE_ID = 0xFFFFFFFF;
+
+	OBJECT_PROPENSITY Propensity = OBJECT_PROPENSITY::NON;
+	CHARACTER_TYPE    CharacterType = CHARACTER_TYPE::NON;
+	PLAYER_STATE      PlayerState = PLAYER_STATE::NON;
+	int HP = 100;
 
 	bool ProcessSelfDeActivate(CTimer& gt);
 };
@@ -264,6 +273,33 @@ private:
 		return retObj;
 	}
 public:
+	Object* FindObjectName(std::vector<Object*>& SearchList, std::string SearchName)
+	{
+		Object* retObj = nullptr;
+		for (auto& obj : SearchList)
+		{
+			if (obj->m_Name == SearchName)
+			{
+				retObj = obj;
+				break;
+			}
+		}
+		return retObj;
+	}
+
+	Object* FindObjectCE_ID(std::vector<Object*>& SearchList, int Search_CE_ID)
+	{
+		Object* retObj = nullptr;
+		for (auto& obj : SearchList)
+		{
+			if (obj->m_CE_ID == Search_CE_ID)
+			{
+				retObj = obj;
+				break;
+			}
+		}
+		return retObj;
+	}
 	// 캐릭터 오브젝트는 월드오브젝트이면서 동시에 Skinned 오브젝트이므로
 	// FindDeactiveObject를 월드오브젝트리스트에서 찾는다.
 	Object* FindDeactiveCharacterObject(
@@ -302,12 +338,20 @@ public:
 		return ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::nonCharacterObj);
 	}
 
-	Object* FindDeactiveUIObject(
+	Object* FindDeactiveUILayOutObject(
 		std::vector<std::unique_ptr<Object>>& AllObjects,
-		std::vector<Object*>& UIObjects,
-		const UINT MaxUIObj)
+		std::vector<Object*>& UILayOutObjects,
+		const UINT MaxUILayOutObj)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, UIObjects, MaxUIObj, OBJ_TYPE::nonCharacterObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, UILayOutObjects, MaxUILayOutObj, OBJ_TYPE::nonCharacterObj);
+	}
+
+	Object* FindDeactiveTextObject(
+		std::vector<std::unique_ptr<Object>>& AllObjects,
+		std::vector<Object*>& TextObjects,
+		const UINT MaxTextObj)
+	{
+		return ObjectManager::FindDeactiveObject(AllObjects, TextObjects, MaxTextObj, OBJ_TYPE::nonCharacterObj);
 	}
 
 	bool SetAttaching(Object* Source, Object* Dest, const std::string& AttachingTargetBoneName)
@@ -434,20 +478,39 @@ public:
 		return retObj;
 	}
 
-	Object* CreateUIObject(
+	Object* CreateUILayOutObject(
 		int objCB_index,
 		std::vector<std::unique_ptr<Object>>& AllObjects,
-		std::vector<Object*>& UIObjects,
-		const UINT MaxUIObj)
+		std::vector<Object*>& UILayOutObjects,
+		const UINT MaxUILayOutObj)
 	{
-		Object* retObj = ObjectManager::FindDeactiveUIObject(
+		Object* retObj = ObjectManager::FindDeactiveUILayOutObject(
 			AllObjects,
-			UIObjects, MaxUIObj);
+			UILayOutObjects, MaxUILayOutObj);
 
 		if (retObj != nullptr)
 		{
 			retObj->m_TransformInfo = std::make_unique<TransformInfo>();
 			retObj->m_TransformInfo->ObjCBIndex = objCB_index;
+		}
+
+		return retObj;
+	}
+
+	Object* CreateTextObject(
+		int textBatch_index,
+		std::vector<std::unique_ptr<Object>>& AllObjects,
+		std::vector<Object*>& TextObjects,
+		const UINT MaxTextObj)
+	{
+		Object* retObj = ObjectManager::FindDeactiveTextObject(
+			AllObjects,
+			TextObjects, MaxTextObj);
+
+		if (retObj != nullptr)
+		{
+			retObj->m_Textinfo = std::make_unique<TextInfo>();
+			retObj->m_Textinfo->TextBatchIndex = textBatch_index;
 		}
 
 		return retObj;
@@ -468,10 +531,7 @@ public:
 			obj->m_TransformInfo->Init();
 		if (obj->m_SkeletonInfo != nullptr)
 			obj->m_SkeletonInfo->Init();
-		if (obj->m_UIinfos.empty() != true)
-		{
-			for (auto& textInfo_iter : obj->m_UIinfos)
-				textInfo_iter.second->Init();
-		}
+		if (obj->m_Textinfo != nullptr)
+			obj->m_Textinfo->Init();
 	}
 };

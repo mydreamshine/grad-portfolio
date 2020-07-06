@@ -56,17 +56,30 @@ namespace aiModelData
 		bool  PickUp = false;
 	};
 
+	enum class AnimActionType
+	{
+		Idle, Walk, Attack, Impact,	Dieing, SkillPose, FreeMotion, Count
+	};
+
 	struct AnimInfo
 	{
 		std::string CurrPlayingAnimName;
+
 		std::vector<aiMatrix4x4> CurrAnimJointTransforms;
 		std::vector<aiMatrix4x4> OffsetJointTransforms;
+
 		float CurrAnimTimePos = 0.0f;
+
 		std::unordered_map<std::string, AnimNotify> AnimTimeLineNotifys;
+
 		bool CurrAnimIsLoop = false;
 		bool CurrAnimIsStop = true;
 		bool CurrAnimIsPause = false;
 		bool CurrAnimDurationIsOnceDone = false;
+
+		std::vector<std::string> Actions[(int)AnimActionType::Count];
+		AnimActionType CurrPlayingAction = AnimActionType::Idle;
+
 
 		void Init()
 		{
@@ -79,6 +92,27 @@ namespace aiModelData
 			CurrAnimIsPause = false;
 			CurrAnimDurationIsOnceDone = false;
 			AnimTimeLineNotifys.clear();
+			for (auto& ActionNames : Actions)
+				ActionNames.clear();
+		}
+
+		void SetAction(const std::string& AnimName, AnimActionType ActionType)
+		{
+			size_t CountAction = Actions[(int)ActionType].size();
+			if (CountAction > 0)
+			{
+				bool AlreadyExist = false;
+				for (auto& ActionName : Actions[(int)ActionType])
+				{
+					if (ActionName == AnimName)
+					{
+						AlreadyExist = true;
+						break;
+					}
+				}
+				if (AlreadyExist == false) Actions[(int)ActionType].emplace_back(AnimName);
+			}
+			else Actions[(int)ActionType].emplace_back(AnimName);
 		}
 
 		void AnimTimeLineNotifyInit(const std::string& AnimName)
@@ -140,6 +174,49 @@ namespace aiModelData
 			else isSetted = true;
 
 			return CurrAnimDurationIsOnceDone;
+		}
+
+		void AnimPlay(const AnimActionType& ActionType, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimPlay(AnimName);
+		}
+		void AnimStop(const AnimActionType& ActionType, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimStop(AnimName);
+		}
+		void AnimResume(const AnimActionType& ActionType, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimResume(AnimName);
+		}
+		void AnimPause(const AnimActionType& ActionType, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimPause(AnimName);
+		}
+		void AnimLoop(const AnimActionType& ActionType, bool isLooping = true, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimLoop(AnimName, isLooping);
+		}
+		void AnimIsPlaying(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimIsPlaying(AnimName, isSetted);
+		}
+		void AnimOnceDone(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
+		{
+			if (Actions[(int)ActionType].size() == 0) return;
+			std::string AnimName = Actions[(int)ActionType][IndexAction];
+			AnimInfo::AnimOnceDone(AnimName, isSetted);
 		}
 
 		void SetAnimTimeLineNotify(const std::string& notify_name, float notify_timePos)
@@ -334,6 +411,15 @@ namespace aiModelData
 		{
 			int BoneID = aiSkeleton::FindJointIndex(JointName);
 			if (BoneID != -1) mJoints[BoneID].AddAnimation(AnimName, newAnimation);
+		}
+
+		void GetAnimationList_Name(std::set<std::string>& AnimNameList)
+		{
+			for (auto& Joint : mJoints)
+			{
+				for (auto& Anim_iter : Joint.mAnimations)
+					AnimNameList.insert(Anim_iter.first);
+			}
 		}
 
 		void UpdateAnimationTransforms(AnimInfo& Anim_info, float deltaTime)
