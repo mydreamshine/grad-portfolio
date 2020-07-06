@@ -11,6 +11,7 @@ Recv 쓰레드에서는 지속적으로 클라이언트의 패킷을 받고 packet_vector에 저장
 
 #define SERVER_PORT 15600
 #define MAX_BUFFER_SIZE 1500
+#define MAX_USER 5
 
 #include <iostream>
 #include <WS2tcpip.h>
@@ -52,7 +53,9 @@ public:
 SOCKET listen_socket;
 SOCKET client_sock;
 atomic_int cur_user;
+atomic_int uid_pool;
 HANDLE update_flag;
+HANDLE accept_flag;
 
 mutex packet_lock;
 PACKET_VECTOR packet_vector; //수신 스레드와 게임 로직 간 공유되는 패킷 리스트
@@ -63,6 +66,8 @@ PACKET_VECTOR packets; //처리해야할 패킷 리스트 - 로직 시작 전 packet_vector에서
 PACKET_VECTOR event_data; //전송될 이벤트 패킷(플레이어 힛, 리스폰 등)
 PACKET_VECTOR info_data; //전송될 위치정보 패킷
 
+mutex socket_lock;
+map<int, SOCKET> sockets;
 map<int, HERO> m_heros;
 map<int, BULLET> m_bullets;
 int bullet_uid;
@@ -192,6 +197,43 @@ void recvFunc()
 	SOCKADDR_IN clientAddr;
 	int addrlen = sizeof(SOCKADDR_IN);
 
+	while (true) {
+		//클라이언트 접속
+		if (cur_user == MAX_USER) {
+			WaitForSingleObject(accept_flag, INFINITE);
+			ResetEvent(accept_flag);
+		}
+
+		client_sock = accept(listen_socket, reinterpret_cast<SOCKADDR*>(&clientAddr), &addrlen);
+		if (client_sock == INVALID_SOCKET) {
+			err_display("accept()");
+			break;
+		}
+
+		int uid = uid_pool++;
+
+		printf("Player Accept\n");
+
+		m_heros.emplace(make_pair(uid, HERO{}));
+		printf("Send UID - %d\n", uid);
+		send_player_uid(uid);
+
+		float pos[3] = { 0, 0, 0 };
+		float rot[3] = { 0, 0, 0 };
+		send_create_player(uid, pos, rot);
+		printf("Send Create Player - %d\n", uid);
+		SetEvent(update_flag);
+		//Done.
+
+		socket_lock.lock();
+		sockets.emplace(make_pair(uid, client_sock));
+		socket_lock.unlock();
+
+		thread t{ recvThread, client_sock, uid };
+		t.detach();
+	}
+}
+void recvThread(SOCKET client_sock, int uid) {
 	//패킷 데이터
 	PACKET_VECTOR dummy_packet_vector;
 	int retval;
@@ -202,78 +244,54 @@ void recvFunc()
 	char savedPacket[MAX_BUFFER_SIZE];
 	char* buf_pos = NULL;
 
+	//패킷 처리
 	while (true) {
-		//클라이언트 접속
-		client_sock = accept(listen_socket, reinterpret_cast<SOCKADDR*>(&clientAddr), &addrlen);
-		if (client_sock == INVALID_SOCKET) {
-			err_display("accept()");
-			break;
-		}
-
-		//접속 시 상태 Initialize
-		m_heros.clear();
-		m_bullets.clear();
-		bullet_uid = 0;
-		cur_user = 1;
-
-		printf("Player Accept\n");
-
-		m_heros.emplace(make_pair(1, HERO{}));
-		printf("Send UID - 1\n");
-		send_player_uid(1);
-
-		float pos[3] = { 0, 0, 0 };
-		float rot[3] = { 0, 0, 0 };
-		send_create_player(1, pos, rot);
-		printf("Send Create Player - 1\n");
-		SetEvent(update_flag);
-		//Done.
-
-		//패킷 처리
-		while (true) {
-			retval = recv(client_sock, buffer, MAX_BUFFER_SIZE, 0);
-			if (retval == 0 || retval == SOCKET_ERROR)
-			{
-				need_size = 0;
-				saved_size = 0;
-				dummy_packet_vector.clear();
-				//유저 종료
-				cur_user = 0;
-				closesocket(client_sock);
-				client_sock = INVALID_SOCKET;
-				printf("Player Disconnected\n");
-				break;
-			}
-
-			buf_pos = buffer;
-			while (retval > 0)
-			{
-				if (need_size == 0) need_size = *buf_pos; // 모든 사이즈 패킷이 char라는 가정 하에
-				if (retval + saved_size >= need_size) {
-					int copy_size = (need_size - saved_size);
-					memcpy(savedPacket + saved_size, buf_pos, copy_size);
-
-					//패킷 완성
-					dummy_packet_vector.emplace_back(savedPacket, need_size);
-
-					buf_pos += copy_size;
-					retval -= copy_size;
-					saved_size = 0;
-					need_size = 0;
-				}
-				else {
-					memcpy(savedPacket + saved_size, buf_pos, retval);
-					saved_size += retval;
-					retval = 0;
-				}
-			}
-
-			//Insert DummyVector To Real Vector
-			packet_lock.lock();
-			packet_vector.emplace_back(dummy_packet_vector.data, dummy_packet_vector.len);
-			packet_lock.unlock();
+		retval = recv(client_sock, buffer, MAX_BUFFER_SIZE, 0);
+		if (retval == 0 || retval == SOCKET_ERROR)
+		{
+			need_size = 0;
+			saved_size = 0;
 			dummy_packet_vector.clear();
+
+			socket_lock.lock();
+			sockets.erase(uid);
+			socket_lock.unlock();
+
+			//유저 종료
+			cur_user = 0;
+			closesocket(client_sock);
+			printf("Player Disconnected\n");
+			return;
 		}
+
+		buf_pos = buffer;
+		while (retval > 0)
+		{
+			if (need_size == 0) need_size = *buf_pos; // 모든 사이즈 패킷이 char라는 가정 하에
+			if (retval + saved_size >= need_size) {
+				int copy_size = (need_size - saved_size);
+				memcpy(savedPacket + saved_size, buf_pos, copy_size);
+
+				//패킷 완성
+				dummy_packet_vector.emplace_back(savedPacket, need_size);
+
+				buf_pos += copy_size;
+				retval -= copy_size;
+				saved_size = 0;
+				need_size = 0;
+			}
+			else {
+				memcpy(savedPacket + saved_size, buf_pos, retval);
+				saved_size += retval;
+				retval = 0;
+			}
+		}
+
+		//Insert DummyVector To Real Vector
+		packet_lock.lock();
+		packet_vector.emplace_back(dummy_packet_vector.data, dummy_packet_vector.len);
+		packet_lock.unlock();
+		dummy_packet_vector.clear();
 	}
 }
 
@@ -402,7 +420,12 @@ void send_game_state()
 		}
 	}
 	event_data.emplace_back(info_data.data, info_data.len);
-	send(client_sock, (const char*)event_data.data, event_data.len, 0);
+
+	socket_lock.lock();
+	for (auto& p : sockets) {
+		send(p.second, (const char*)event_data.data, event_data.len, 0);
+	}
+	socket_lock.unlock();
 
 	info_data.clear();
 	event_data.clear();
@@ -445,6 +468,7 @@ int main()
 	loadMap("map.txt");
 
 	update_flag = CreateEvent(NULL, true, false, NULL);
+	accept_flag = CreateEvent(NULL, true, false, NULL);
 
 	vector<thread> threads;
 	threads.emplace_back(recvFunc);
@@ -458,6 +482,10 @@ int main()
 			WaitForSingleObject(update_flag, INFINITE);
 			ResetEvent(update_flag);
 			timer.reset();
+
+			m_heros.clear();
+			m_bullets.clear();
+			bullet_uid = 0;
 		}
 
 		//실제 로직

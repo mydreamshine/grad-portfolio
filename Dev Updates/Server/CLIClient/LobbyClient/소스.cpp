@@ -140,12 +140,12 @@ int main()
 	testfunc a;
 	NWMODULE<testfunc> nw(a);
 	
-	nw.enroll_callback(6, &testfunc::login_ok);
-	nw.enroll_callback(8, &testfunc::enque);
-	nw.enroll_callback(9, &testfunc::deque);
+	nw.enroll_lobby_callback(SC_PACKET_LOGIN_OK, &testfunc::login_ok);
+	nw.enroll_lobby_callback(SC_PACKET_MATCH_ENQUEUE, &testfunc::enque);
+	nw.enroll_lobby_callback(SC_PACKET_MATCH_DEQUEUE, &testfunc::deque);
 
 	nw.connect_lobby(0);
-	nw.request_login();
+	nw.request_login("test001");
 
 	cout << "[CLI CLIENT]" << endl;
 
@@ -170,6 +170,8 @@ int main()
 			else if (token[0] == "/help") {
 				print_help();
 			}
+			else if (token[0] == "/quit")
+				nw.disconnect_lobby();
 		}
 		nw.update();
 	}

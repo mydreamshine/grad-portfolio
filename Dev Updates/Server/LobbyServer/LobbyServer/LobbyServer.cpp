@@ -6,7 +6,7 @@
 
 namespace BattleArena {
 	//DB
-	thread_local DBMANAGER DBManager{};
+	thread_local DBMANAGER DBManager{}; ///< class for query to DB for each threads.
 
 	void LOBBYSERVER::error_display(const char* msg, int err_no)
 	{
@@ -42,6 +42,10 @@ namespace BattleArena {
 		WSACleanup();
 	}
 
+	/**
+	@brief Initializing WSA environment.
+	@details init wsa, iocp handle, socket, bind, listen.
+	*/
 	void LOBBYSERVER::InitWSA()
 	{
 		WSADATA wsa;
@@ -72,6 +76,7 @@ namespace BattleArena {
 		m_clients[BATTLE_KEY].socket = m_battleSocket;
 		m_clients[BATTLE_KEY].state = ST_IDLE;
 		m_clients[BATTLE_KEY].recv_over.init();
+		m_clients[BATTLE_KEY].recv_over.set_event(EV_BATTLE);
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_battleSocket), m_iocp, BATTLE_KEY, 0);
 		m_clients[BATTLE_KEY].set_recv();
 		wprintf(L" Done.\n");
@@ -79,6 +84,10 @@ namespace BattleArena {
 		wprintf(L"[BATTLE_OFFLINE MODE]\n");
 #endif
 	}
+	/**
+	@brief Initializing Threads.
+	@details init threads for iocp.
+	*/
 	void LOBBYSERVER::InitThreads()
 	{
 		wprintf(L"Initializing Threads...");
@@ -86,6 +95,10 @@ namespace BattleArena {
 			m_threads.emplace_back(&LOBBYSERVER::do_worker, this);
 		wprintf(L" Done.\n");
 	}
+	/**
+	@brief Run server.
+	@details server start accepting clients.
+	*/
 	void LOBBYSERVER::Run()
 	{
 		CSOCKADDR_IN clientAddr{};
@@ -98,11 +111,16 @@ namespace BattleArena {
 			m_clients[new_id].socket = clientSocket;
 			m_clients[new_id].state = ST_IDLE;
 			m_clients[new_id].recv_over.init();
+			m_clients[new_id].recv_over.set_event(EV_CLIENT);
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_clients[new_id].socket), m_iocp, new_id, 0);
 			std::wcout << L"[CLIENT - " << new_id << L"] Accept" << std::endl;
 			m_clients[new_id].set_recv();
 		}
 	}
+	/**
+	@brief function for iocp threads.
+	@details process iocp events - recv, send, packet processing.
+	*/
 	void LOBBYSERVER::do_worker()
 	{
 		DBManager.init();
@@ -122,8 +140,13 @@ namespace BattleArena {
 			DWORD client = static_cast<DWORD>(key);
 			switch (over_ex->event_type())
 			{
-			case EV_RECV:
-				process_packet(client, over_ex->data());
+			case EV_CLIENT:
+				process_client_packet(client, over_ex->data());
+				m_clients[client].set_recv();
+				break;
+
+			case EV_BATTLE:
+				process_battle_packet(client, over_ex->data());
 				m_clients[client].set_recv();
 				break;
 
@@ -139,18 +162,33 @@ namespace BattleArena {
 		}
 	}
 
+	/**
+	@brief send packet to client.
+	@param client index for client.
+	@param buff void* pointing packet.
+	*/
 	void LOBBYSERVER::send_packet(int client, void* buff)
 	{
 		OVER_EX* send_over = new OVER_EX{EV_SEND, buff};
 		WSASend(m_clients[client].socket, send_over->buffer(), 1, 0, 0, send_over->overlapped(), 0);
 	}
-	void LOBBYSERVER::send_packet_default(int client, int TYPE)
+	/**
+	@brief send default type packet to client.
+	@param client index for client.
+	@param type packet type.
+	*/
+	void LOBBYSERVER::send_packet_default(int client, int type)
 	{
 		common_default_packet cdp;
 		cdp.size = sizeof(cdp);
-		cdp.type = TYPE;
+		cdp.type = type;
 		send_packet(client, &cdp);
 	}
+	/**
+@brief notify client to connect battle server with room_id
+@param client index for client.
+@param room_id key for connecting battle server.
+*/
 	void LOBBYSERVER::send_packet_room_info(int client, int room_id)
 	{
 		sc_packet_match_room_info mri;
@@ -159,6 +197,10 @@ namespace BattleArena {
 		mri.room_id = room_id;
 		send_packet(client, &mri);
 	}
+	/**
+@brief request room to battle server.
+@param mode requesting room type.
+*/
 	void LOBBYSERVER::send_packet_request_room(char mode)
 	{
 		sb_packet_request_room packet;
@@ -167,6 +209,13 @@ namespace BattleArena {
 		packet.mode = mode;
 		send_packet(BATTLE_KEY, &packet);
 	}
+
+	/**
+@brief notify client that friends status is changed.
+@param client index for client.
+@param who index for client who changed status.
+@param status change to this status.
+*/
 	void LOBBYSERVER::send_packet_friend_status(int client, int who, int status)
 	{
 		if (status == FRIEND_ONLINE)
@@ -182,8 +231,12 @@ namespace BattleArena {
 		send_packet(client, &packet);
 	}
 	
-
-	void LOBBYSERVER::process_packet(DWORD client, void* buffer)
+	/**
+@brief process clients packet.
+@param client index for client.
+@param buffer buffer that need to processing.
+*/
+	void LOBBYSERVER::process_client_packet(DWORD client, void* buffer)
 	{
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
 		switch (packet->type)
@@ -213,16 +266,36 @@ namespace BattleArena {
 			match_dequeue(client);
 			break;
 
-		case BS_PACKET_RESPONSE_ROOM:
-			process_packet_response_room(buffer);
-			break;
-
 		default:
 			printf("[CLIENT %d] - Unknown Packet\n", client);
 			while (true);
 			break;
 		}
 	}
+	/**
+@brief process battle server packet.
+@param client index for client. - will deprecated.
+@param buffer buffer that need to processing.
+*/
+	void LOBBYSERVER::process_battle_packet(DWORD client, void* buffer)
+	{
+		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
+		switch (packet->type)
+		{
+		case BS_PACKET_RESPONSE_ROOM:
+			process_packet_response_room(buffer);
+			break;
+
+		default:
+			printf("[Battle] - Unknown Packet\n");
+			while (true);
+			break;
+		}
+	}
+	/**
+@brief process response room packet.
+@param buffer buffer that need to processing.
+*/
 	void LOBBYSERVER::process_packet_response_room(void* buffer)
 	{
 		bs_packet_response_room* packet = reinterpret_cast<bs_packet_response_room*>(buffer);
@@ -236,6 +309,11 @@ namespace BattleArena {
 		m_waiters.erase(w);
 		waiterLock.unlock();
 	}
+	/**
+@brief process clients login.
+@param client index for client.
+@param buffer buffer that need to processing.
+*/
 	void LOBBYSERVER::process_packet_login(int client, void* buffer)
 	{
 		cs_packet_request_login* packet = reinterpret_cast<cs_packet_request_login*>(buffer);
@@ -244,7 +322,7 @@ namespace BattleArena {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}
-		if (isConnect(uid) == true) {
+		if (isConnect(uid) != -1) {
 			send_packet_default(client, SC_PACKET_LOGIN_FAIL);
 			return;
 		}
@@ -262,6 +340,11 @@ namespace BattleArena {
 			}
 		}
 	}
+	/**
+@brief process add friend request.
+@param client index for client.
+@param buffer buffer that need to processing.
+*/
 	void LOBBYSERVER::process_packet_request_friend(int client, void* buffer)
 	{
 		cs_packet_request_friend* packet = reinterpret_cast<cs_packet_request_friend*>(buffer);
@@ -273,6 +356,11 @@ namespace BattleArena {
 		if (receiver != -1)
 			send_packet(receiver, buffer);
 	}
+	/**
+@brief process answer for add friend request.
+@param client index for client.
+@param buffer buffer that need to processing.
+*/
 	void LOBBYSERVER::process_packet_accept_friend(int client, void* buffer)
 	{
 		cs_packet_accept_friend* packet = reinterpret_cast<cs_packet_accept_friend*>(buffer);
@@ -284,7 +372,10 @@ namespace BattleArena {
 		send_packet_friend_status(client, friends, FRIEND_ONLINE);
 		send_packet_friend_status(friends, client, FRIEND_ONLINE);
 	}
-	
+	/**
+@brief enqueue client to match pool.
+@param client index for client.
+*/
 	void LOBBYSERVER::match_enqueue(DWORD client)
 	{
 		queueLock.lock();
@@ -301,6 +392,10 @@ namespace BattleArena {
 			wprintf(L"%d ", *i);
 		wprintf(L"]\n");
 	}
+	/**
+@brief dequeue client to match pool.
+@param client index for client.
+*/
 	void LOBBYSERVER::match_dequeue(DWORD client)
 	{
 		queueLock.lock();
@@ -317,6 +412,9 @@ namespace BattleArena {
 			wprintf(L"%d ", *i);
 		wprintf(L"]\n");
 	}
+	/**
+@brief match-making function.
+*/
 	void LOBBYSERVER::match_make()
 	{
 		queueLock.lock();
@@ -341,6 +439,10 @@ namespace BattleArena {
 		}
 		else queueLock.unlock();
 	}
+	/**
+@brief process clients disconnect.
+@param client index for client.
+*/
 	void LOBBYSERVER::disconnect_client(int client)
 	{
 		std::wcout << L"[CLIENT - " << m_clients[client].id << L"] Disconnected" << std::endl;
@@ -357,18 +459,32 @@ namespace BattleArena {
 		m_clients[client].friendlist.clear();
 		m_clients[client].socket = INVALID_SOCKET;
 	}
+	/**
+@brief insert client to client_table
+@param uid uid for client.
+@param client index for clinet.
+*/
 	void LOBBYSERVER::insert_client_table(int uid, int client)
 	{
 		client_table_lock.lock();
 		client_table.emplace(std::make_pair(uid, client));
 		client_table_lock.unlock();
 	}
+	/**
+@brief delete client from client_table
+@param uid uid for client.
+*/
 	void LOBBYSERVER::delete_client_table(int uid)
 	{
 		client_table_lock.lock();
 		client_table.erase(uid);
 		client_table_lock.unlock();
 	}
+	/**
+@brief return clients index if uid is connected.
+@param uid uid for client.
+@return clients index. if client is not connected, return -1.
+*/
 	int LOBBYSERVER::isConnect(int uid)
 	{
 		client_table_lock.lock();
@@ -378,6 +494,11 @@ namespace BattleArena {
 			return cpy[uid];
 		return -1;
 	}
+	/**
+@brief return clients index if uid is connected.
+@param id id for client.
+@return clients index. if client is not connected, return -1.
+*/
 	int LOBBYSERVER::isConnect(const char* id)
 	{
 		int uid = DBManager.get_uid(id);

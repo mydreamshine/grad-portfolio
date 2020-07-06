@@ -20,25 +20,34 @@
 
 
 namespace BattleArena {
-	constexpr auto MAX_BUFFER_SIZE = 200;
-	constexpr auto MAX_USER = 100;
-	constexpr auto BATTLE_KEY = MAX_USER;
-	constexpr auto MATCHUP_NUM = 3;
+	constexpr auto MAX_BUFFER_SIZE = 200; /// max buffer size for socket communication
+	constexpr auto MAX_USER = 100; /// max user count that lobby server can hold
+	constexpr auto BATTLE_KEY = MAX_USER; /// last index for battle server
+	constexpr auto MATCHUP_NUM = 3; /// will deprecated. at least count for match-making.
 
-	enum EVENT_TYPE {EV_RECV, EV_SEND, EV_BATTLE};
-	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY };
+	enum EVENT_TYPE {EV_CLIENT, EV_SEND, EV_BATTLE}; /// iocp events, EV_CLIENT : recv from clients, EV_SEND : send is done, EV_BATTLE : recv from battle server
+	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY }; /// client status, ST_QUEUE : client get queued, ST_IDLE : client do nothing, ST_PLAY : playing game.
 
+/**
+@brief Class for Client
+@details this class have client information. socket, state, uid, id, friends
+@author Gurnwoo Kim
+*/
 	class CLIENT
 	{
 	public:
-		OVER_EX recv_over{};
-		SOCKET socket{ INVALID_SOCKET };
-		CL_STATE state{ ST_IDLE };
+		OVER_EX recv_over{}; ///< struct for async communication.
+		SOCKET socket{ INVALID_SOCKET }; ///< socket for communication.
+		CL_STATE state{ ST_IDLE }; ///< client status.
 
-		int uid;
-		char id[ID_LENGTH];
-		std::set<int> friendlist; //(ONLY index for client_table, show ONLY ONLINE friends)
+		int uid; ///< clients uid
+		char id[ID_LENGTH]; ///< clients id
+		std::set<int> friendlist; ///< clients friend list, ONLY index for client_table, show ONLY ONLINE friends
 
+		/**
+		@brief set client socket to recv
+		@details init overlapped struct with 0, and start async recv.
+		*/
 		void set_recv()
 		{
 			recv_over.reset();
@@ -50,6 +59,11 @@ namespace BattleArena {
 					error_display("Error at WSARecv()", err_no);
 			}
 		}
+		
+		/**
+		@brief Function for error_display while socket communication.
+		@details will display error with WSAGetLastError() and process will stop that position.
+		*/
 		void error_display(const char* msg, int err_no)
 		{
 			WCHAR* lpMsgBuf;
@@ -65,64 +79,82 @@ namespace BattleArena {
 			LocalFree(lpMsgBuf);
 		}
 	};
+
+/**
+@brief Class for client who Wait matchs(after matchmaking, before match)
+@details group for match-maked client. after match making, there's a short term, because battle server and lobby server communicate for initiating new match. 
+@author Gurnwoo Kim
+*/
 	struct ROOM_WAITER
 	{
-		int waiter[MATCHUP_NUM];
+		int waiter[MATCHUP_NUM]; ///< array for clients index.
 	};
 
+/**
+@brief Lobby Server Class
+@details Process communication func - login, friends, match making...
+@author Gurnwoo Kim
+*/
 	class LOBBYSERVER
 	{
-	private:
-		std::vector<std::thread> m_threads;
-		std::atomic<int> player_num;
-		HANDLE m_iocp;
-		SOCKET m_listenSocket;
-		SOCKET m_battleSocket;
-		
-		CLIENT m_clients[MAX_USER + 1];
-		std::mutex client_table_lock;
-		std::map<int, int> client_table; //connected user table that consist of (user UID, m_clients's INDEX)
-
-		//Match Queue
-		std::mutex queueLock;
-		std::list<int> m_queueList;
-		std::map<int, std::list<int>::iterator> m_queueMap;
-		
-		std::mutex waiterLock;
-		std::list<ROOM_WAITER> m_waiters;
-
-		//Func
-		void error_display(const char* msg, int err_no);
-		void InitWSA();
-		void InitThreads();
-
-		void do_worker();
-
-		void send_packet(int client, void* buff);
-		void send_packet_default(int client, int TYPE);
-		void send_packet_room_info(int client, int room_id);
-		void send_packet_request_room(char mode);
-		void send_packet_friend_status(int client, int who, int status);
-		void process_packet(DWORD client, void* packet);
-		void process_packet_response_room(void* buffer);
-		void process_packet_login(int client, void* buffer);
-		void process_packet_request_friend(int client, void* buffer);
-		void process_packet_accept_friend(int client, void* buffer);
-
-		void match_enqueue(DWORD client);
-		void match_dequeue(DWORD client);
-		void match_make();
-
-		void disconnect_client(int client);
-		void insert_client_table(int uid, int clinet);
-		void delete_client_table(int uid);
-
-		//is client connect?
-		int isConnect(int uid); //uid ver
-		int isConnect(const char* id); //char ver
 	public:
 		LOBBYSERVER();
 		~LOBBYSERVER();
+
+		/**
+		@brief Run Server. Server start accepting clients.
+		*/
 		void Run();
+
+	private:
+		std::vector<std::thread> m_threads; ///< threads for server.
+		std::atomic<int> player_num; ///< use for clients index.
+		HANDLE m_iocp; ///< handle for iocp.
+		SOCKET m_listenSocket; ///< socket for listening client.
+		SOCKET m_battleSocket; ///< socket for connecting battle server.
+		
+		CLIENT m_clients[MAX_USER + 1]; ///< array for clients.
+		std::mutex client_table_lock; ///< lock for m_clients.
+		std::map<int, int> client_table; ///<connected user table that consist of (user UID, m_clients's INDEX).
+
+		//Match Queue
+		std::mutex queueLock; ///< lock for match-making queue.
+		std::list<int> m_queueList; ///< array for clients who waiting match-making.
+		std::map<int, std::list<int>::iterator> m_queueMap; ///< map for fast access to m_queueList.
+		
+		std::mutex waiterLock; ///< lock for m_waiters.
+		std::list<ROOM_WAITER> m_waiters; ///< array for match-waiters
+
+		//Func
+		void error_display(const char* msg, int err_no); ///< error display function for socket communication.
+		void InitWSA(); ///< Initializing WSA environment.
+		void InitThreads(); ///< Initializing threads.
+
+		void do_worker(); ///< Function for iocp thread.
+
+		void send_packet(int client, void* buff); ///< send packet to client.
+		void send_packet_default(int client, int type); ///< send default type packet to client.
+		void send_packet_room_info(int client, int room_id); ///< notify client to connect battle server with room_id
+		void send_packet_request_room(char mode); ///< request room to battle server.
+		void send_packet_friend_status(int client, int who, int status); ///< notify client that friends status is changed.
+
+		void process_client_packet(DWORD client, void* packet); ///< process clients packet.
+		void process_battle_packet(DWORD client, void* packet); ///< process battle server packet.
+		void process_packet_response_room(void* buffer); ///< process response room packet.
+		void process_packet_login(int client, void* buffer); ///< process clients login.
+		void process_packet_request_friend(int client, void* buffer); ///< process add friend request.
+		void process_packet_accept_friend(int client, void* buffer); ///< process answer for add friend request.
+
+		void match_enqueue(DWORD client); ///< enqueue client to match pool.
+		void match_dequeue(DWORD client); ///< dequeue client to match pool.
+		void match_make(); ///< match-making function.
+
+		void disconnect_client(int client); ///< process clients disconnect.
+		void insert_client_table(int uid, int clinet); ///< insert client to client_table
+		void delete_client_table(int uid); ///<  delete client from client_table
+
+		//is client connect?
+		int isConnect(int uid); ///< return clients index if uid is connected.
+		int isConnect(const char* id); ///< return clients index if id is connected.
 	};
 }

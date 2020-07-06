@@ -17,6 +17,7 @@ DBMANAGER::~DBMANAGER()
 	SQLFreeHandle(SQL_HANDLE_ENV, henv);
 }
 
+
 void DBMANAGER::init()
 {
 	SQLRETURN retcode;
@@ -30,14 +31,6 @@ void DBMANAGER::init()
 
 void DBMANAGER::HandleDiagnosticRecord(SQLHANDLE hHandle, SQLSMALLINT hType, RETCODE RetCode)
 {
-	/************************************************************************
-	/* HandleDiagnosticRecord : display error/warning information
-	/*
-	/* Parameters:
-	/* hHandle ODBC handle
-	/* hType Type of handle (SQL_HANDLE_STMT, SQL_HANDLE_ENV, SQL_HANDLE_DBC)
-	/* RetCode Return code of failing command
-	/************************************************************************/
 	SQLSMALLINT iRec = 0;
 	SQLINTEGER iError;
 	WCHAR wszMessage[1000];
@@ -54,6 +47,7 @@ void DBMANAGER::HandleDiagnosticRecord(SQLHANDLE hHandle, SQLSMALLINT hType, RET
 		}
 	}
 }
+
 
 int DBMANAGER::get_uid(const char* id)
 {
@@ -78,6 +72,7 @@ int DBMANAGER::get_uid(const char* id)
 	return uid;
 }
 
+
 std::vector<std::string> DBMANAGER::get_friendlist(const char* id)
 {
 	std::vector<std::string> friendlist;
@@ -98,6 +93,7 @@ std::vector<std::string> DBMANAGER::get_friendlist(const char* id)
 
 	return friendlist;
 }
+
 
 void DBMANAGER::insert_friend(const char* friendA, const char* friendB)
 {
