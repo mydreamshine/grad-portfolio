@@ -11,17 +11,17 @@ class Vector3d
 {
 public:
     float x, y, z;
-    Vector3d()  //constructor
+    Vector3d() :  //constructor
+        x(0),
+        y(0),
+        z(0)
     {
-        x = 0;
-        y = 0;
-        z = 0;
     }
-    Vector3d(float x1, float y1, float z1 = 0)     //initializing object with values.
+    Vector3d(float x1, float y1, float z1 = 0) :    //initializing object with values.
+        x(x1),
+        y(y1),
+        z(z1)
     {
-        x = x1;
-        y = y1;
-        z = z1;
     }
     Vector3d(const Vector3d& vec);
     Vector3d operator+(const Vector3d& vec);

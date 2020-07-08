@@ -1,19 +1,5 @@
 #include "PACKET_BUFFER.h"
 
-void PACKET_VECTOR::emplace_back(void* src, size_t len)
-{
-	size_t require_len = this->len + len;
-	if (require_len > max_len) {
-		char* new_data = new char[require_len];
-		memcpy(new_data, data, this->len);
-		delete[] data;
-		data = new_data;
-		max_len = require_len;
-	}
-	memcpy(data + this->len, src, len);
-	this->len += len;
-}
-
 PACKET_BUFFER::PACKET_BUFFER(size_t min_size) :
 	min_size(min_size),
 	need_size(min_size)

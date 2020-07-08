@@ -115,6 +115,7 @@ namespace BattleArena {
 		while (true)
 		{
 			GetQueuedCompletionStatus(m_iocp, &ReceivedBytes, &key, &over, INFINITE);
+
 			CLIENT* client = reinterpret_cast<CLIENT*>(key);
 			if (0 == ReceivedBytes) {
 				std::wcout << L"[CLIENT - " << key << L"] Disconnected" << std::endl;
@@ -154,6 +155,7 @@ namespace BattleArena {
 				//if game is done.
 				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
+					m_Rooms[key]->end();
 					delete m_Rooms[key];
 					m_Rooms[key] = nullptr;
 					set_empty_room(key);
@@ -186,14 +188,14 @@ namespace BattleArena {
 				continue;
 			}
 
-			const EVENT<EVENT_TYPE>& ev = timer_queue.top();
+			const EVENT& ev = timer_queue.top();
 
 			if (ev.wakeup_time > high_resolution_clock::now()) {
 				timer_lock.unlock();
 				this_thread::sleep_for(3ms);
 				continue;
 			}
-			EVENT<EVENT_TYPE> p_ev = ev;
+			EVENT p_ev = ev;
 			timer_queue.pop();
 			timer_lock.unlock();
 
@@ -211,7 +213,7 @@ namespace BattleArena {
 	}
 	void BATTLESERVER::add_event(int client, EVENT_TYPE et, int milisec_delay)
 	{
-		EVENT<EVENT_TYPE> ev{ client, high_resolution_clock::now() + chrono::milliseconds(milisec_delay), et};
+		EVENT ev{ client, et, high_resolution_clock::now() + chrono::milliseconds(milisec_delay)};
 		add_timer(ev);
 	}
 
@@ -257,6 +259,7 @@ namespace BattleArena {
 			int empty_room = get_empty_room();
 			if (empty_room != -1) {
 				m_Rooms[empty_room] = make_game_mode(room_packet->mode);
+				m_Rooms[empty_room]->init();
 			}
 			wprintf(L"[LOBBY] - Room Response %d", empty_room);
 			send_packet_response_room(empty_room);

@@ -77,9 +77,6 @@
     <ClInclude Include="..\..\Common\csockaddr_in.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
-    <ClInclude Include="general_config.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Config.h">
       <Filter>BattleLogic</Filter>
     </ClInclude>

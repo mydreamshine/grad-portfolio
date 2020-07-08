@@ -28,27 +28,6 @@ Recv 쓰레드에서는 지속적으로 클라이언트의 패킷을 받고 packet_vector에 저장
 
 using namespace std;
 
-class PACKET_VECTOR {
-public:
-	char* data;
-	int len;
-	int max_len;
-	PACKET_VECTOR() : data(new char[100]), len(0), max_len(100) { };
-	~PACKET_VECTOR() { delete[] data; data = NULL; len = 0; max_len = 0; };
-	void emplace_back(void* src, int len) {
-		int require_len = this->len + len;
-		if (require_len > max_len) {
-			char* new_data = new char[require_len];
-			memcpy(new_data, data, this->len);
-			delete[] data;
-			data = new_data;
-			max_len = require_len;
-		}
-		memcpy(data + this->len, src, len);
-		this->len += len;
-	};
-	void clear() { len = 0; };
-};
 
 SOCKET listen_socket;
 SOCKET client_sock;
@@ -59,7 +38,6 @@ HANDLE accept_flag;
 
 mutex packet_lock;
 PACKET_VECTOR packet_vector; //수신 스레드와 게임 로직 간 공유되는 패킷 리스트
-
 PACKET_VECTOR packets; //처리해야할 패킷 리스트 - 로직 시작 전 packet_vector에서 복사
 
 //최종적으로 전송은 event_data + info_data 두개를 합쳐 유저에게 한번에 보냄
@@ -70,8 +48,9 @@ mutex socket_lock;
 map<int, SOCKET> sockets;
 map<int, HERO> m_heros;
 map<int, BULLET> m_bullets;
-int bullet_uid;
 vector<BoundingBox> m_walls;
+int bullet_uid;
+
 
 //BB 로딩 함수
 void loadMap(const char* path)

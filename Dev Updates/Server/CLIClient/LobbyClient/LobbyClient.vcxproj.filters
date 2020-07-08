@@ -30,8 +30,11 @@
     <ClCompile Include="..\..\Common\OVER_EX.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="PACKET_BUFFER.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="..\..\Common\PACKET_BUFFER.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -50,8 +53,11 @@
     <ClInclude Include="..\..\Common\OVER_EX.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="PACKET_BUFFER.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="..\..\Common\PACKET_BUFFER.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\PACKET_VECTOR.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

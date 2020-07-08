@@ -46,7 +46,6 @@ namespace BattleArena {
 		std::mutex timer_lock;					///< lock for timer_queue.
 		std::vector<std::thread> m_threads;		///< threads for server.
 
-
 		/**
 		@brief Init WSA environment.
 		*/
