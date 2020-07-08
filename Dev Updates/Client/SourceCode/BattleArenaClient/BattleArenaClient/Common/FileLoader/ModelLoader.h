@@ -16,6 +16,8 @@
 
 namespace aiModelData
 {
+	struct aiSkeleton;
+
 	struct aiVertex
 	{
 		aiVector3D vPosition;
@@ -56,9 +58,10 @@ namespace aiModelData
 		bool  PickUp = false;
 	};
 
-	enum class AnimActionType
+	// FrameworkEvent의 MOTION_TYPE과 1:1 매칭됨
+	enum class AnimActionType : char
 	{
-		Idle, Walk, Attack, Impact,	Dieing, SkillPose, FreeMotion, Count
+		Idle, Walk, Attack, Impact,	Dieing, SkillPose, FreeMotion, Count, Non
 	};
 
 	struct AnimInfo
@@ -78,7 +81,7 @@ namespace aiModelData
 		bool CurrAnimDurationIsOnceDone = false;
 
 		std::vector<std::string> Actions[(int)AnimActionType::Count];
-		AnimActionType CurrPlayingAction = AnimActionType::Idle;
+		AnimActionType CurrPlayingAction = AnimActionType::Non;
 
 
 		void Init()
@@ -94,6 +97,7 @@ namespace aiModelData
 			AnimTimeLineNotifys.clear();
 			for (auto& ActionNames : Actions)
 				ActionNames.clear();
+			CurrPlayingAction = AnimActionType::Non;
 		}
 
 		void SetAction(const std::string& AnimName, AnimActionType ActionType)
@@ -132,6 +136,7 @@ namespace aiModelData
 		void AnimPlay(const std::string& AnimName)
 		{
 			CurrPlayingAnimName = AnimName;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 			CurrAnimTimePos = 0.0f;
 			CurrAnimIsStop = false;
 			CurrAnimIsPause = false;
@@ -141,6 +146,7 @@ namespace aiModelData
 		void AnimStop(const std::string& AnimName)
 		{
 			if (CurrPlayingAnimName != AnimName) return;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 			CurrAnimTimePos = 0.0f;
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
@@ -150,30 +156,50 @@ namespace aiModelData
 		void AnimResume(const std::string& AnimName)
 		{
 			if (CurrPlayingAnimName != AnimName) return;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 			CurrAnimIsPause = false;
 		}
 		void AnimPause(const std::string& AnimName)
 		{
 			if (CurrPlayingAnimName != AnimName) return;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 			CurrAnimIsPause = true;
 		}
 		void AnimLoop(const std::string& AnimName, bool isLooping = true)
 		{
 			if (CurrPlayingAnimName != AnimName) return;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 			CurrAnimIsLoop = isLooping;
 		}
 		bool AnimIsPlaying(const std::string& AnimName, bool& isSetted)
 		{
 			if (CurrPlayingAnimName != AnimName) isSetted = false;
 			else isSetted = true;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
+
 			return !CurrAnimIsStop && !CurrAnimIsPause;
 		}
 		bool AnimOnceDone(const std::string& AnimName, bool& isSetted)
 		{
 			if (CurrPlayingAnimName != AnimName) isSetted = false;
 			else isSetted = true;
+			CurrPlayingAction = AnimInfo::FindActionFrom(AnimName);
 
 			return CurrAnimDurationIsOnceDone;
+		}
+
+		AnimActionType FindActionFrom(const std::string& AnimName)
+		{
+			for (int i = 0; i < (int)AnimActionType::Count; ++i)
+			{
+				for (auto& ActionName : Actions[i])
+				{
+					if (ActionName == AnimName)
+						return (AnimActionType)i;
+				}
+			}
+
+			return AnimActionType::Non;
 		}
 
 		void AnimPlay(const AnimActionType& ActionType, int IndexAction = 0)
@@ -206,17 +232,37 @@ namespace aiModelData
 			std::string AnimName = Actions[(int)ActionType][IndexAction];
 			AnimInfo::AnimLoop(AnimName, isLooping);
 		}
-		void AnimIsPlaying(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
+		bool AnimIsPlaying(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
 		{
 			if (Actions[(int)ActionType].size() == 0) return;
 			std::string AnimName = Actions[(int)ActionType][IndexAction];
-			AnimInfo::AnimIsPlaying(AnimName, isSetted);
+			return AnimInfo::AnimIsPlaying(AnimName, isSetted);
 		}
-		void AnimOnceDone(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
+		bool AnimOnceDone(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
 		{
 			if (Actions[(int)ActionType].size() == 0) return;
 			std::string AnimName = Actions[(int)ActionType][IndexAction];
-			AnimInfo::AnimOnceDone(AnimName, isSetted);
+			return AnimInfo::AnimOnceDone(AnimName, isSetted);
+		}
+
+		// 애니메이션 파일 이름에 ActionType이 있을 경우에만 호출 가능한 메소드
+	    // ex) "Meshtint Free Knight@Idle.fbx"와 같이 애니메이션 파일이름에 "Idle"이 들어가 있으면
+	    // ActionType의 Idle과 부합하므로 해당 애니메이션을 Action으로 등록 가능
+		void AutoApplyActionFromSkeleton(aiSkeleton* Skeleton)
+		{
+			if (Skeleton == nullptr) return;
+			std::set<std::string> AnimNameList;
+			Skeleton->GetAnimationList_Name(AnimNameList);
+			for (auto& AnimName : AnimNameList)
+			{
+				if      (AnimName.find("Idle") != std::string::npos)      this->SetAction(AnimName, aiModelData::AnimActionType::Idle);
+				else if (AnimName.find("Walk") != std::string::npos)      this->SetAction(AnimName, aiModelData::AnimActionType::Walk);
+				else if (AnimName.find("Attack") != std::string::npos)    this->SetAction(AnimName, aiModelData::AnimActionType::Attack);
+				else if (AnimName.find("Impact") != std::string::npos)    this->SetAction(AnimName, aiModelData::AnimActionType::Impact);
+				else if (AnimName.find("Dieing") != std::string::npos)    this->SetAction(AnimName, aiModelData::AnimActionType::Dieing);
+				else if (AnimName.find("SkillPose") != std::string::npos) this->SetAction(AnimName, aiModelData::AnimActionType::SkillPose);
+				else                                                      this->SetAction(AnimName, aiModelData::AnimActionType::FreeMotion);
+			}
 		}
 
 		void SetAnimTimeLineNotify(const std::string& notify_name, float notify_timePos)

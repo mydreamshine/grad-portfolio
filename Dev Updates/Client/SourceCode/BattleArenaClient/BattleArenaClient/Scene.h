@@ -74,8 +74,8 @@ public:
 
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
-    // Control Element ID, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
-    void SpawnCharacter(int New_CE_ID, CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
+    // Control Element ID, Player NickName, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnPlayer(int New_CE_ID, std::wstring Name, CHARACTER_TYPE CharacterType, bool IsMainPlayer, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
     // Control Element ID, Attack Order(Chracter Type), Propensity, Transform(Scale, RotationEuler, Position)
     void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
     // Control Element ID, Skill Type, Propensity, Transform(Scale, RotationEuler, Position)

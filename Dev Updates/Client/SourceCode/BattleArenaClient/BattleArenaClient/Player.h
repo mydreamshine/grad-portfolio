@@ -7,16 +7,6 @@
 #include "Common/Util/d3d12/Camera.h"
 #include "Common/Timer/Timer.h"
 
-namespace ActionType
-{
-	constexpr int Idle      = 0x00000001;
-	constexpr int Walk      = 0x00000010;
-	constexpr int Attack    = 0x00000100;
-	constexpr int SkillPose = 0x00001000;
-	constexpr int Dieing    = 0x00010000;
-	constexpr int Impact    = 0x00100000;
-}
-
 namespace ActionNotifyTime
 {
 	constexpr float MeshtintFreeKnight_SwordSlashStart = 0.6f;
@@ -31,16 +21,19 @@ struct Player
 {
 	std::wstring m_Name;
 
-	Object* m_ObjectRef = nullptr;
+	Object* m_CharacterObjRef = nullptr;
+	Object* m_NickNameObjRef = nullptr; // Text Object
+	Object* m_HP_BarObjRef[3] = { nullptr, nullptr, nullptr }; // 0: 테두리, 1: 증감HP Bar, 2: HP Bar
 
 	Camera m_Camera;
-	int m_CurrAction = ActionType::Idle;
 
 public:
-	void SetTransform(const XMFLOAT3& Scale, const XMFLOAT3& RotationEuler, const XMFLOAT3& Position);
-	void SetMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);
+	void SetTransform(const DirectX::XMFLOAT3& Scale, const DirectX::XMFLOAT3& RotationEuler, const DirectX::XMFLOAT3& Position);
+	void PlayMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);
 	void SetState(PLAYER_STATE PlayerState);
 	void SetHP(int HP);
+
+	void Init();
 
 public:
 	// PlayerObject의 위치가 바뀔때마다 Camera의 위치도 변경된다.
