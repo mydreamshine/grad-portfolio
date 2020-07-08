@@ -14,12 +14,12 @@ void PACKET_VECTOR::emplace_back(void* src, size_t len)
 	this->len += len;
 }
 
-
 PACKET_BUFFER::PACKET_BUFFER(size_t min_size) :
 	min_size(min_size),
 	need_size(min_size)
 {
 }
+
 PACKET_BUFFER::~PACKET_BUFFER()
 {
 }

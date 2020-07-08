@@ -70,7 +70,7 @@ void NWMODULE<T>::packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_
 	PACKET_VECTOR& s_packet = packet_buffer.s_packet;
 
 	size_t copy_size = 0;
-	const char* buf_ptr = reinterpret_cast<char*>(buffer);
+	char* buf_ptr = reinterpret_cast<char*>(buffer);
 
 	while (0 < len) {
 		if (len + saved_size >= need_size) {
@@ -203,11 +203,12 @@ NWMODULE<T>::NWMODULE(T& MainModule, HANDLE iocp) :
 	lobby_socket(INVALID_SOCKET),
 	battle_socket(INVALID_SOCKET),
 	MainModule(MainModule),
-	lobby_buffer(sizeof(SIZE_TYPE))
+	lobby_buffer(sizeof(SIZE_TYPE)),
+	battle_buffer(sizeof(SIZE_TYPE))
 {
-	callbacks.reserve(SC_PACKET_COUNT);
+	lobby_callbacks.reserve(SC_PACKET_COUNT);
 	for (int i = 0; i < SC_PACKET_COUNT; ++i)
-		callbacks.emplace_back([a = i](T&) {printf("ENROLL LOBBY PACKET TYPE %d\n", a); });
+		lobby_callbacks.emplace_back([a = i](T&) {printf("ENROLL LOBBY PACKET TYPE %d\n", a); });
 	InitWSA();
 }
 
@@ -354,7 +355,7 @@ void NWMODULE<T>::notify_battle_recv(size_t length)
 	if (length == 0 || length == SOCKET_ERROR)
 		process_disconnect(battle_socket, battle_buffer);
 	else {
-		packet_drain(battle_buffer, batle_over.data(), length);
+		packet_drain(battle_buffer, battle_over.data(), length);
 		//recv ÇÑ¹ø ´õ
 		/*DWORD flag = 0;
 		lobby_over.reset();
