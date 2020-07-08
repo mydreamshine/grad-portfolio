@@ -10,10 +10,6 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 {
     Scene::OnInit(device, commandList,
         objCB_index, skinnedCB_index, textBatch_index);
-
-    m_SpawnBound.Center = m_WorldCenter;
-    m_SpawnBound.Extents.x = 1355.4405f;
-    m_SpawnBound.Extents.z = 1243.2412f;
 }
 
 void PlayGameScene::OnInitProperties(CTimer& gt)
@@ -67,48 +63,32 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         }
     }
 
-    if (m_MainPlayer != nullptr)
-    {
-        m_MainPlayer->m_CurrAction = ActionType::Idle;
-        m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, *m_AllRitemsRef, m_CurrSkillObjInstanceNUM);
-    }
-
-    m_CurrSkillObjInstanceNUM = 0;
-
     m_LightRotationAngle = 0.0f;
-
-
-    SceneStartTime = gt.GetTotalTime();
-    sec = sec2 = 0;
-    time_str = L"Time Limit\n   03:00";
-    TimeLimit_sec = 180;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
     static XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
     m_MainCamera.LookAt(EyePosition, LookAtPosition, UpDirection);
+
+    GameInfo_CountKill = 0;
+    GameInfo_CountDeath = 0;
+    GameInfo_CountAssistance = 0;
+
+    KillLogList.clear();
+    ChattingList.clear();
+
+    TimeLimit_Sec = 0;
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     const bool key_state[], const POINT& oldCursorPos,
     const RECT& ClientRect,
-    CTimer& gt)
+    CTimer& gt,
+    std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    PlayGameScene::AnimateWorldObjectsTransform(gt);
+    PlayGameScene::AnimateWorldObjectsTransform(gt, GeneratedEvents);
     PlayGameScene::ProcessCollision(gt);
-    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
-
-    float totalTime = gt.GetTotalTime() - SceneStartTime;
-    int totalTime_i = (int)totalTime;
-
-    if ((totalTime_i != 0) && (totalTime_i % 5 == 0))
-    {
-        if (sec2 < totalTime_i / 5)
-        {
-            sec2 = totalTime_i / 5;
-            this->RandomCreateCharacterObject();
-        }
-    }
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
 void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
@@ -120,48 +100,13 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
     ObjectManager objManager;
 
-    m_MainPlayer = std::make_unique<Player>();
-
     for (auto& Ritem_iter : AllRitems)
     {
         auto Ritem = Ritem_iter.second.get();
-        if (Ritem_iter.first == "Meshtint Free Knight")
+        if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.CreateCharacterObject(
-                objCB_index++, skinnedCB_index++,
-                m_AllObjects,
-                m_CharacterObjects, m_MaxCharacterObject,
-                m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
-
-            std::string objName = Ritem_iter.first;
-
-            // 스케일을 2로 늘려줘야 거시적으로
-            // 주변 사물과의 크기 비례가 어색하지 않게 된다.
-            float ConvertModelUnit = ModelFileUnit::meter * 2.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 17.86f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
-            objManager.SetObjectComponent(newObj, objName, Ritem,
-                ModelSkeletons["Meshtint Free Knight"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
-                &WorldScale, &WorldRotationEuler, &WorldPosition);
-            auto& MeshBound = newObj->m_RenderItem->Geo->DrawArgs[newObj->m_RenderItem->Name].Bounds;
-            newObj->m_TransformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
-            newObj->m_TransformInfo->UpdateLocalTransform();
-            newObj->m_TransformInfo->UpdateWorldTransform();
-            auto animInfo = newObj->m_SkeletonInfo->m_AnimInfo.get();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
-            animInfo->SetAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", ActionNotifyTime::MeshtintFreeKnight_SwordSlashStart);
-
-            m_MainPlayer->m_ObjectRef = newObj;
-        }
-        else if (Ritem_iter.first.find("UI") != std::string::npos)
-        {
-            const UINT maxUIObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
-            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
+            const UINT maxUILayOutObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             // UI 오브젝트 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
@@ -171,8 +116,9 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             objManager.SetObjectComponent(newObj, objName, Ritem);
 
             if (objName == "UI_Layout_SkillList") continue;
-            newObj->m_UIinfos[objName] = std::make_unique<TextInfo>();
-            auto text_info = newObj->m_UIinfos[objName].get();
+            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+            auto text_info = newLayoutTextObj->m_Textinfo.get();
+            newLayoutTextObj->m_Name = "Text" + objName;
             text_info->m_FontName = L"맑은 고딕";
             text_info->m_TextColor = DirectX::Colors::Blue;
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
@@ -184,7 +130,6 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0  D: 0  A: 0";
             else if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
             else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
-            //else if (objName == "UI_Layout_SkillList");
             else if (objName == "UI_Layout_Skill1")  text_info->m_Text = L"Skill1";
             else if (objName == "UI_Layout_Skill2")  text_info->m_Text = L"Skill2";
             else if (objName == "UI_Layout_Skill3")  text_info->m_Text = L"Skill3";
@@ -200,31 +145,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
             std::string objName = Ritem_iter.first;
 
-            // 장비 아이템은 어차피 캐릭터 오브젝트에
-            // Attaching 할 거라 WorldTransform을 지정하지 않아도 된다.
-            if (objName == "Sword" || objName == "Shield")
-            {
-                objName += " - Equipment";
-                float ConvertModelUnit = ModelFileUnit::meter;
-                XMFLOAT3 ModelLocalScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-                if (objName.find("Sword") != std::string::npos)
-                {
-                    XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
-                    XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
-                    objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
-                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
-                    objManager.SetAttaching(newObj, m_MainPlayer->m_ObjectRef, "RigRPalm");
-                }
-                else if (objName.find("Shield") != std::string::npos)
-                {
-                    XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
-                    XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
-                    objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
-                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
-                    objManager.SetAttaching(newObj, m_MainPlayer->m_ObjectRef, "RigLPalm");
-                }
-            }
-            else if (objName == "SpawnStageGround")
+            if (objName == "SpawnStageGround")
             {
                 XMFLOAT3 WorldPosition = { 17.86f, 5.0f, 0.0f };
                 objManager.SetObjectComponent(newObj, objName, Ritem, nullptr,
@@ -244,7 +165,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                     float width = FloorBound.Extents.x;
                     float depth = FloorBound.Extents.z;
 
-                    m_SceneBounds.Center = m_WorldCenter = FloorBound.Center;
+                    m_SceneBounds.Center = FloorBound.Center;
                     // m_SceneBounds.Radius에 비례해서 ShadowMap이 맵핑되다보니
                     // ShadowMap의 해상도보다 m_SceneBounds.Radius가 크면
                     // BackBuffer에 맵핑되는 그림자의 해상도가 상대적으로 떨어지게 된다.
@@ -252,6 +173,11 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 }
             }
         }
+    }
+
+    // Create Text Objects
+    {
+
     }
 
     // Create DeActive Objects
@@ -290,108 +216,9 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_WorldObjects[i]->Activated = false;
     }
 
-    m_MainPlayer->SetCreateSkillObjRef(m_AllObjects, m_WorldObjects, m_MaxWorldObject, AllRitems, m_CurrSkillObjInstanceNUM);
-
-    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
+    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
-    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
-}
-
-// character & equipment object generate test
-void PlayGameScene::RandomCreateCharacterObject()
-{
-    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
-    auto& AllRitems = *m_AllRitemsRef;
-    auto& Geometries = *m_GeometriesRef;
-    auto& ModelSkeletons = *m_ModelSkeltonsRef;
-
-    ObjectManager objManager;
-    Object* newCharacterObj = nullptr;
-    static int CharacterCreatingNum = 1;
-    // character gen test
-    {
-        newCharacterObj = objManager.FindDeactiveCharacterObject(
-            m_AllObjects,
-            m_CharacterObjects, m_MaxCharacterObject,
-            m_WorldObjects, m_MaxWorldObject);
-
-        if (newCharacterObj == nullptr)
-        {
-            MessageBox(NULL, L"No characters available in the character list.", L"Object Generate Warning", MB_OK);
-            return;
-        }
-
-        // 스케일을 2로 늘려줘야 거시적으로
-        // 주변 사물과의 크기 비례가 어색하지 않게 된다.
-        float ConvertModelUnit = ModelFileUnit::meter * 2.0f;
-        XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-        XMFLOAT3 WorldRotationEuler = { 0.0f, MathHelper::RandF(0.0f, 360.0f), 0.0f };
-        XMFLOAT3 WorldPosition =
-        {
-            MathHelper::RandF(-m_SpawnBound.Extents.x, m_SpawnBound.Extents.x),
-            0.0f,
-            MathHelper::RandF(-m_SpawnBound.Extents.z, m_SpawnBound.Extents.z),
-        };
-        XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
-        std::string objName = "Meshtint Free Knight - Instancing" + std::to_string(CharacterCreatingNum++);
-        objManager.SetObjectComponent(newCharacterObj, objName,
-            AllRitems["Meshtint Free Knight"].get(),
-            ModelSkeletons["Meshtint Free Knight"].get(),
-            nullptr, &LocalRotationEuler, nullptr,
-            &WorldScale, &WorldRotationEuler, &WorldPosition);
-        auto& MeshBound = newCharacterObj->m_RenderItem->Geo->DrawArgs[newCharacterObj->m_RenderItem->Name].Bounds;
-        newCharacterObj->m_TransformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
-        newCharacterObj->m_TransformInfo->UpdateLocalTransform();
-        newCharacterObj->m_TransformInfo->UpdateWorldTransform();
-
-        auto animInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
-        animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-        animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
-        animInfo->SetAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", ActionNotifyTime::MeshtintFreeKnight_SwordSlashStart);
-    }
-
-    // equipment gen test
-    {
-        static int EquipmentCreatingNum = 1;
-
-        float ConvertModelUnit = ModelFileUnit::meter;
-        XMFLOAT3 ModelLocalScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-        // Attaching Sword
-        {
-            auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-            if (newEquipmentObj == nullptr)
-            {
-                MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
-                return;
-            }
-
-            XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
-            XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
-            std::string objName = "Sword - Equipment - Instancing" + std::to_string(EquipmentCreatingNum);
-            objManager.SetObjectComponent(newEquipmentObj, objName,
-                AllRitems["Sword"].get(), nullptr,
-                &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
-            objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigRPalm");
-        }
-
-        // Attaching Shield
-        {
-            auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-            if (newEquipmentObj == nullptr)
-            {
-                MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
-                return;
-            }
-
-            XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
-            XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
-            std::string objName = "Shield - Equipment - Instancing" + std::to_string(EquipmentCreatingNum++);
-            objManager.SetObjectComponent(newEquipmentObj, objName,
-                AllRitems["Shield"].get(), nullptr,
-                &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
-            objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigLPalm");
-        }
-    }
+    m_nTextBatch = (UINT)m_TextObjects.size();
 }
 
 void PlayGameScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -424,36 +251,64 @@ void PlayGameScene::UpdateShadowTransform(CTimer& gt)
     Scene::UpdateShadowTransform(gt);
 }
 
-void PlayGameScene::UpdateTextInfo(CTimer& gt)
+void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    float totalTime = gt.GetTotalTime() - SceneStartTime;
-    int totalTime_i = (int)totalTime;
+    ObjectManager ObjManager;
+    Object* KillLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KillLog");
+    Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_ChattingLog");
+    Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
+    Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KDA");
 
-    if ((totalTime_i != 0) && (totalTime_i % 1 == 0))
+    // Update KillLog Text
     {
-        if (sec < totalTime_i / 1)
+        auto& KillLog = KillLogObject->m_Textinfo->m_Text;
+        KillLog.clear();
+
+        int EmptyKillLogLine = 6;
+        for (auto& KillLogLine : KillLogList)
         {
-            sec = totalTime_i / 1;
-            TimeLimit_sec = ((int)TimeLimit_sec - 1 > 0) ? TimeLimit_sec - 1 : 0;
-            time_str = L"Time Limit\n   ";
-            if ((TimeLimit_sec / 60) / 10 == 0)
-                time_str += std::to_wstring(0);
-            time_str += std::to_wstring(TimeLimit_sec / 60);
-            time_str += L":";
-            if ((TimeLimit_sec % 60) / 10 == 0)
-                time_str += std::to_wstring(0);
-            time_str += std::to_wstring(TimeLimit_sec % 60);
+            KillLog += KillLogLine;
+            if (--EmptyKillLogLine == 0) break;
+            else KillLog += L'\n';
         }
     }
 
-    for (auto& obj : m_UIObjects)
+    // Update Chatting Text
     {
-        for (auto& ui_info_iter : obj->m_UIinfos)
+        auto& ChattingLog = ChattingLogObject->m_Textinfo->m_Text;
+        ChattingLog.clear();
+
+        if (ChattingMode == true)
         {
-            auto ui_info = ui_info_iter.second.get();
-            if (obj->m_Name.find("TimeLimit") != std::string::npos)
-                ui_info->m_Text = time_str;
+            int EmptyChatLine = 10;
+            for (auto& ChatLine : ChattingList)
+            {
+                ChattingLog += ChatLine;
+                if (--EmptyChatLine == 0) break;
+                else ChattingLog += L'\n';
+            }
         }
+    }
+
+    // Update TimeLimit Text
+    {
+        auto& TimeLimitText = TimeLimitObject->m_Textinfo->m_Text;
+        int minute = TimeLimit_Sec / 60;
+        int sec = TimeLimit_Sec % 60;
+        TimeLimitText = L"Time Limit\n  ";
+
+        if (minute < 10) TimeLimitText += L"0";
+        TimeLimitText += std::to_wstring(minute) + L":";
+        if (sec < 10) TimeLimitText += L"0";
+        TimeLimitText += std::to_wstring(sec);
+    }
+
+    // Update KDA Score Text
+    {
+        auto& KDA_ScoreText = KDA_ScoreObject->m_Textinfo->m_Text;
+        KDA_ScoreText  = L"K: " + std::to_wstring(GameInfo_CountKill)  + L"  ";
+        KDA_ScoreText += L"D: " + std::to_wstring(GameInfo_CountDeath) + L"  ";
+        KDA_ScoreText += L"A: " + std::to_wstring(GameInfo_CountAssistance);
     }
 }
 
@@ -471,12 +326,11 @@ void PlayGameScene::AnimateLights(CTimer& gt)
     }
 }
 
-void PlayGameScene::AnimateSkeletons(CTimer& gt)
+void PlayGameScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     if (m_MainPlayer != nullptr)
     {
-        CD3DX12_VIEWPORT ViewPort(0.0f, 0.0f, (float)m_width, (float)m_height);
-        m_MainPlayer->ProcessSkeletonAnimDurationDone();
+        m_MainPlayer->ProcessSkeletonAnimDurationDone(GeneratedEvents);
     }
 
     for (auto& obj : m_CharacterObjects)
@@ -582,7 +436,7 @@ void PlayGameScene::AnimateCameras(CTimer& gt)
     m_MainCamera.UpdateViewMatrix();
 }
 
-void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt)
+void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     for (auto& obj : m_WorldObjects)
     {
@@ -591,7 +445,7 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt)
     }
 }
 
-void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
+void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     if (m_MainPlayer != nullptr)
     {
@@ -604,4 +458,473 @@ void PlayGameScene::ProcessCollision(CTimer& gt)
 {
     if (m_MainPlayer != nullptr)
         m_MainPlayer->ProcessCollision(m_WorldObjects);
+}
+
+void PlayGameScene::SpawnCharacter(int New_CE_ID,
+    CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity,
+    XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
+{
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
+    ObjectManager objManager;
+    Object* newCharacterObj = nullptr;
+    newCharacterObj = objManager.FindDeactiveCharacterObject(
+        m_AllObjects,
+        m_CharacterObjects, m_MaxCharacterObject,
+        m_WorldObjects, m_MaxWorldObject);
+
+    if (newCharacterObj == nullptr)
+    {
+        MessageBox(NULL, L"No characters available in the character list.", L"Object Generate Warning", MB_OK);
+        return;
+    }
+
+    if (IsMainCharacter == true) m_PlayerCharacter = newCharacterObj;
+
+
+    // Set Character Prop
+    {
+        newCharacterObj->m_CE_ID = New_CE_ID;
+        newCharacterObj->CharacterType = CharacterType;
+        newCharacterObj->Propensity = Propensity;
+        switch (CharacterType)
+        {
+        case CHARACTER_TYPE::NON:
+            objManager.DeActivateObj(newCharacterObj);
+            break;
+        case CHARACTER_TYPE::WARRIOR:
+        {
+            // 스케일을 2로 늘려줘야 거시적으로
+            // 주변 사물과의 크기 비례가 어색하지 않게 된다.
+            float ConvertModelUnit = ModelFileUnit::meter * 2.0f;
+            XMFLOAT3 WorldScale = { Scale.x * ConvertModelUnit, Scale.y * ConvertModelUnit, Scale.z * ConvertModelUnit };
+            XMFLOAT3 WorldRotationEuler = RotationEuler;
+            XMFLOAT3 WorldPosition = Position;
+            XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
+            std::string objName = "Meshtint Free Knight - Instancing" + std::to_string(New_CE_ID);
+            objManager.SetObjectComponent(newCharacterObj, objName,
+                AllRitems["Meshtint Free Knight"].get(),
+                ModelSkeletons["Meshtint Free Knight"].get(),
+                nullptr, &LocalRotationEuler, nullptr,
+                &WorldScale, &WorldRotationEuler, &WorldPosition);
+            auto& MeshBound = newCharacterObj->m_RenderItem->Geo->DrawArgs[newCharacterObj->m_RenderItem->Name].Bounds;
+            newCharacterObj->m_TransformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
+            newCharacterObj->m_TransformInfo->UpdateLocalTransform();
+            newCharacterObj->m_TransformInfo->UpdateWorldTransform();
+
+            auto animInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
+            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+            animInfo->SetAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", ActionNotifyTime::MeshtintFreeKnight_SwordSlashStart);
+
+            // Equipment Attaching
+            {
+                float ConvertModelUnit = ModelFileUnit::meter;
+                XMFLOAT3 ModelLocalScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+                // Attaching Sword
+                {
+                    auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+                    if (newEquipmentObj == nullptr)
+                    {
+                        MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+                        return;
+                    }
+
+                    XMFLOAT3 ModelLocalRotationEuler = { 1.0f, 3.0f, 83.0f };
+                    XMFLOAT3 ModelLocalPosition = { 10.0f, -7.0f, 1.0f };
+                    std::string objName = "Sword - Equipment - Instancing" + std::to_string(New_CE_ID);
+                    objManager.SetObjectComponent(newEquipmentObj, objName,
+                        AllRitems["Sword"].get(), nullptr,
+                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+                    objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigRPalm");
+                }
+
+                // Attaching Shield
+                {
+                    auto newEquipmentObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+                    if (newEquipmentObj == nullptr)
+                    {
+                        MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+                        return;
+                    }
+
+                    XMFLOAT3 ModelLocalRotationEuler = { 12.0f, -96.0f, 93.0f };
+                    XMFLOAT3 ModelLocalPosition = { 0.0f, 0.0f, 0.0f };
+                    std::string objName = "Shield - Equipment - Instancing" + std::to_string(New_CE_ID);
+                    objManager.SetObjectComponent(newEquipmentObj, objName,
+                        AllRitems["Shield"].get(), nullptr,
+                        &ModelLocalScale, &ModelLocalRotationEuler, &ModelLocalPosition);
+                    objManager.SetAttaching(newEquipmentObj, newCharacterObj, "RigLPalm");
+                }
+            }
+        }
+            break;
+        case CHARACTER_TYPE::BERSERKER:
+            break;
+        case CHARACTER_TYPE::ASSASSIN:
+            break;
+        case CHARACTER_TYPE::PRIEST:
+            break;
+        }
+    }
+}
+
+void PlayGameScene::SpawnNormalAttackObject(int New_CE_ID,
+    CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity,
+    XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
+{
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
+    ObjectManager objManager;
+    Object* newNormalAttackObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+    if (newNormalAttackObj == nullptr)
+    {
+        MessageBox(NULL, L"No skill objects available in the world object list.", L"Object Generate Warning", MB_OK);
+        return;
+    }
+
+    // Set Object Prop
+    {
+        newNormalAttackObj->m_CE_ID = New_CE_ID;
+        newNormalAttackObj->Propensity = Propensity;
+        XMFLOAT3 WorldScale = Scale;
+        XMFLOAT3 WorldRotationEuler = RotationEuler;
+        XMFLOAT3 WorldPosition = Position;
+
+        std::string objName;
+        RenderItem* Ritem = nullptr;
+        
+        switch (AttackOrder)
+        {
+        case CHARACTER_TYPE::NON:
+            objManager.DeActivateObj(newNormalAttackObj);
+            return;
+            break;
+        case CHARACTER_TYPE::WARRIOR:
+        {
+            objName = objName = "SwordNormalAttack - Instancing" + std::to_string(New_CE_ID);
+            //Ritem = ;
+        }
+            break;
+        case CHARACTER_TYPE::BERSERKER:
+        {
+            objName = objName = "AxeNormalAttack - Instancing" + std::to_string(New_CE_ID);
+            //Ritem = ;
+        }
+            break;
+        case CHARACTER_TYPE::ASSASSIN:
+        {
+            objName = objName = "DaggerNormalAttack - Instancing" + std::to_string(New_CE_ID);
+            //Ritem = ;
+        }
+            break;
+        case CHARACTER_TYPE::PRIEST:
+        {
+            objName = objName = "MagicWandNormalAttack - Instancing" + std::to_string(New_CE_ID);
+            //Ritem = ;
+        }
+            break;
+        }
+
+        objManager.SetObjectComponent(newNormalAttackObj, objName,
+            Ritem, nullptr,
+            nullptr, nullptr, nullptr,
+            &WorldScale, &WorldRotationEuler, &WorldPosition);
+        newNormalAttackObj->m_TransformInfo->UpdateWorldTransform();
+    }
+}
+
+void PlayGameScene::SpawnSkillObject(int New_CE_ID,
+    SKILL_TYPE SkillType, OBJECT_PROPENSITY Propensity,
+    XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
+{
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
+    ObjectManager objManager;
+    Object* newSkillObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+    if (newSkillObj == nullptr)
+    {
+        MessageBox(NULL, L"No skill objects available in the world object list.", L"Object Generate Warning", MB_OK);
+        return;
+    }
+
+    // Set Object Prop
+    {
+        newSkillObj->m_CE_ID = New_CE_ID;
+        newSkillObj->Propensity = Propensity;
+        XMFLOAT3 WorldScale = Scale;
+        XMFLOAT3 WorldRotationEuler = RotationEuler;
+        XMFLOAT3 WorldPosition = Position;
+
+        std::string objName;
+        RenderItem* Ritem = nullptr;
+
+        switch (SkillType)
+        {
+        case SKILL_TYPE::NON:
+            return;
+            break;
+        case SKILL_TYPE::SWORD_WAVE:
+        {
+            std::string objName = "SwordSlash - Instancing" + std::to_string(New_CE_ID);
+            Ritem = AllRitems["SkillEffect_SwordSlash_a"].get();
+        }
+        break;
+        case SKILL_TYPE::HOLY_AREA:
+        {
+            std::string objName = "HolyArea - Instancing" + std::to_string(New_CE_ID);
+
+            for (int i = 0; i < 10; ++i)
+            {
+                // create holy effect object
+            }
+        }
+            break;
+        case SKILL_TYPE::FURY_ROAR:
+        {
+            std::string objName = "FuryRoar - Instancing" + std::to_string(New_CE_ID);
+
+        }
+            break;
+        case SKILL_TYPE::STEALTH:
+        {
+            std::string objName = "StealthFog - Instancing" + std::to_string(New_CE_ID);
+            for (int i = 0; i < 4; ++i)
+            {
+                // create stealth effect object
+            }
+        }
+            break;
+        }
+
+        objManager.SetObjectComponent(newSkillObj, objName,
+            Ritem, nullptr,
+            nullptr, nullptr, nullptr,
+            &WorldScale, &WorldRotationEuler, &WorldPosition);
+        newSkillObj->m_TransformInfo->UpdateWorldTransform();
+    }
+}
+
+void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position)
+{
+    if (EffectType == EFFECT_TYPE::NON) return;
+
+    ObjectManager objManager;
+
+    switch (EffectType)
+    {
+    case EFFECT_TYPE::HOLY_EFFECT:
+        break;
+    case EFFECT_TYPE::FURY_ROAR_EFFECT:
+        break;
+    case EFFECT_TYPE::STEALTH_EFFECT:
+        break;
+    case EFFECT_TYPE::PICKING_EFFECT:
+    {
+        auto newEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+        if (newEffectObj == nullptr)
+        {
+            MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+            return;
+        }
+
+        std::string objName = "CrossTarget - Instancing" + std::to_string(++m_EffectInstancingNum);
+        objManager.SetObjectComponent(newEffectObj, objName,
+            (*m_AllRitemsRef)["PickingEffect_CrossTarget"].get(), nullptr,
+            nullptr, nullptr, nullptr,
+            nullptr, nullptr, &Position);
+
+        newEffectObj->DeActivatedTime = 1.0f;
+        newEffectObj->DeActivatedDecrease = 1.0f;
+        newEffectObj->SelfDeActivated = true;
+        newEffectObj->DisappearForDeAcTime = true;
+    }
+        break;
+    }
+}
+
+void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
+{
+    ObjectManager ObjManager;
+    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
+    if(ControledObj != nullptr)
+        ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+}
+
+void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)
+{
+    ObjectManager ObjManager;
+    Object* ControledObj = ObjManager.FindObjectCE_ID(m_CharacterObjects, CE_ID);
+
+    if (ControledObj != nullptr)
+    {
+        CHARACTER_TYPE CharacterType = ControledObj->CharacterType;
+        auto& animInfo = ControledObj->m_SkeletonInfo->m_AnimInfo;
+        std::string AnimName = animInfo->CurrPlayingAnimName;
+
+        switch (MotionType)
+        {
+        case MOTION_TYPE::NON:
+            return;
+            break;
+        case MOTION_TYPE::IDLE:
+        {
+            if (AnimName.find("Idle") != std::string::npos) return;
+
+            animInfo->AnimStop(AnimName);
+
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::NON:       return; break;
+            case CHARACTER_TYPE::WARRIOR:   AnimName = "Meshtint Free Knight@Battle Idle"; break;
+            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        case MOTION_TYPE::WALK:
+        {
+            if (AnimName.find("Walk") != std::string::npos) return;
+
+            animInfo->AnimStop(AnimName);
+
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::NON:       return; break;
+            case CHARACTER_TYPE::WARRIOR:   AnimName = "Meshtint Free Knight@Stride Walking"; break;
+            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        case MOTION_TYPE::ATTACK:
+        {
+            if (AnimName.find("NormalAttack") != std::string::npos) return;
+
+            animInfo->AnimStop(AnimName);
+
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::NON:       return; break;
+            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        case MOTION_TYPE::IMPACT:
+        {
+            if (AnimName.find("Impact") != std::string::npos) return;
+
+            animInfo->AnimStop(AnimName);
+
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::NON:       return; break;
+            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        case MOTION_TYPE::SKILL_POSE:
+        {
+            if (AnimName.find("Skill") != std::string::npos) return;
+
+            switch (SkillType)
+            {
+            case SKILL_TYPE::NON:        return; break;
+            case SKILL_TYPE::SWORD_WAVE: animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
+            case SKILL_TYPE::HOLY_AREA:  animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
+            case SKILL_TYPE::FURY_ROAR:  animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
+            case SKILL_TYPE::STEALTH:    animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        case MOTION_TYPE::DIEING:
+        {
+            if (AnimName.find("Dieing") != std::string::npos) return;
+
+            animInfo->AnimStop(AnimName);
+
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::NON:       return; break;
+            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
+            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
+            }
+        }
+            break;
+        }
+
+        animInfo->AnimPlay(AnimName);
+        if (MotionType == MOTION_TYPE::IDLE || MotionType == MOTION_TYPE::WALK) animInfo->AnimLoop(AnimName);
+    }
+}
+
+void PlayGameScene::SetPlayerState(int CE_ID, PLAYER_STATE PlayerState)
+{
+    auto Player_iter = m_Players.find(CE_ID);
+    if (Player_iter == m_Players.end()) return;
+    Player* ControledPlayer = Player_iter->second.get();
+
+    ControledPlayer->SetState(PlayerState);
+}
+
+void PlayGameScene::DeActivateObject(int CE_ID)
+{
+    ObjectManager ObjManager;
+    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
+    if (ControledObj != nullptr)
+        ObjManager.DeActivateObj(ControledObj);
+}
+
+void PlayGameScene::SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance)
+{
+    GameInfo_CountKill = Count_Kill;
+    GameInfo_CountDeath = Count_Death;
+    GameInfo_CountAssistance = Count_Assistance;
+}
+
+void PlayGameScene::SetKillLog(std::wstring Do_UserName, std::wstring Target_UserName)
+{
+    if (KillLogList.size() == MaxKillLog) KillLogList.pop_back();
+    KillLogList.push_back(Do_UserName + L" Killed " + Target_UserName);
+}
+
+void PlayGameScene::SetChatLog(std::wstring UserName, std::wstring Message)
+{
+    if (ChattingList.size() == MaxChatLog) ChattingList.pop_back();
+    ChattingList.push_back(L"[" + UserName + L"]: " + Message);
+}
+
+void PlayGameScene::SetGamePlayTimeLimit(unsigned int Sec)
+{
+    TimeLimit_Sec = Sec;
+}
+
+void PlayGameScene::SetPlayerHP(int CE_ID, int HP)
+{
+    auto Player_iter = m_Players.find(CE_ID);
+    if (Player_iter == m_Players.end()) return;
+    Player* ControledPlayer = Player_iter->second.get();
+
+    ControledPlayer->SetHP(HP);
 }

@@ -37,14 +37,25 @@ void GameOverScene::OnInitProperties(CTimer& gt)
     }
 
     m_LightRotationAngle = 0.0f;
+
+    UserInfo_UserName.clear();
+    UserInfo_UserRank = 0;
+
+    GameMatchingResult_CountKill = 0;
+    GameMatchingResult_CountDeath = 0;
+    GameMatchingResult_CountAssistance = 0;
+    GameMatchingResult_TotalDamage = 0;
+    GameMatchingResult_TotalHeal = 0;
+    GameMatchingResult_PlayedCharacterType = CHARACTER_TYPE::NON;
 }
 
 void GameOverScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     const bool key_state[], const POINT& oldCursorPos,
     const RECT& ClientRect,
-    CTimer& gt)
+    CTimer& gt,
+    std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
 void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
@@ -56,7 +67,7 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
 
     ObjectManager objManager;
-    const UINT maxUIObject = (UINT)Geometries["GameOverSceneUIGeo"]->DrawArgs.size();
+    const UINT maxUILayOutObject = (UINT)Geometries["GameOverSceneUIGeo"]->DrawArgs.size();
     for (auto& Ritem_iter : AllRitems)
     {
         auto Ritem = Ritem_iter.second.get();
@@ -86,7 +97,7 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         }
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
@@ -94,8 +105,9 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
             if (objName.find("Background") != std::string::npos) continue;
 
-            newObj->m_UIinfos[objName] = std::make_unique<TextInfo>();
-            auto text_info = newObj->m_UIinfos[objName].get();
+            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+            auto text_info = newLayoutTextObj->m_Textinfo.get();
+            newLayoutTextObj->m_Name = "Text" + objName;
             text_info->m_FontName = L"¸¼Àº °íµñ";
             text_info->m_TextColor = DirectX::Colors::Blue;
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
@@ -105,7 +117,7 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
             if (objName == "UI_Layout_GameOverInfo")        text_info->m_Text = L"Game Over Info\n\nTotal Damage,\nTotal Kill,\nTotal Death,\n etc.";
             else if (objName == "UI_Layout_GameOverResult") text_info->m_Text = L"Game Over";
-            else if (objName == "UI_Layout_ReturnMainMenu") text_info->m_Text = L"Main Menu";
+            else if (objName == "UI_Layout_ReturnLoby")     text_info->m_Text = L"Retrun Loby";
         }
     }
 
@@ -136,9 +148,9 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_WorldObjects[i]->Activated = false;
     }
 
-    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UIObjects.size();
+    m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
-    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
+    m_nTextBatch = (UINT)m_TextObjects.size();
 }
 
 void GameOverScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -171,6 +183,22 @@ void GameOverScene::UpdateShadowTransform(CTimer& gt)
     Scene::UpdateShadowTransform(gt);
 }
 
+void GameOverScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
+{
+    ObjectManager ObjManager;
+    Object* GameOverInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameOverInfo");
+
+    auto& GameOverInfo = GameOverInfoObject->m_Textinfo->m_Text;
+
+    GameOverInfo  = L"UserName: " + UserInfo_UserName + L'\n';
+    GameOverInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank);
+    GameOverInfo += L"Total Kill: " + std::to_wstring(GameMatchingResult_CountKill);
+    GameOverInfo += L"Total Death: " + std::to_wstring(GameMatchingResult_CountDeath);
+    GameOverInfo += L"Total Assistance: " + std::to_wstring(GameMatchingResult_CountAssistance);
+    GameOverInfo += L"Total Damage: " + std::to_wstring(GameMatchingResult_TotalDamage);
+    GameOverInfo += L"Total Heal: " + std::to_wstring(GameMatchingResult_TotalHeal);
+}
+
 void GameOverScene::AnimateLights(CTimer& gt)
 {
     float deg2rad = MathHelper::Pi / 180.0f;
@@ -185,7 +213,7 @@ void GameOverScene::AnimateLights(CTimer& gt)
     }
 }
 
-void GameOverScene::AnimateSkeletons(CTimer& gt)
+void GameOverScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     for (auto& obj : m_CharacterObjects)
     {
@@ -221,6 +249,22 @@ void GameOverScene::AnimateCameras(CTimer& gt)
     m_MainCamera.UpdateViewMatrix();
 }
 
-void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
+void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+}
+
+void GameOverScene::SetMatchStatisticInfo(std::wstring UserName, int UserRank,
+    unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance,
+    int TotalScore_Damage, int TotalScore_Heal,
+    CHARACTER_TYPE PlayedCharacterType)
+{
+    UserInfo_UserName = UserName;
+    UserInfo_UserRank = UserRank;
+
+    GameMatchingResult_PlayedCharacterType = PlayedCharacterType;
+    GameMatchingResult_CountKill = Count_Kill;
+    GameMatchingResult_CountDeath = Count_Death;
+    GameMatchingResult_CountAssistance = Count_Assistance;
+    GameMatchingResult_TotalDamage = TotalScore_Damage;
+    GameMatchingResult_TotalHeal = TotalScore_Heal;
 }

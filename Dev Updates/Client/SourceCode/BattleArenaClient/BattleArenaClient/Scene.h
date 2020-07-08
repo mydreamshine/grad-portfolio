@@ -2,6 +2,7 @@
 
 #include "DXSample.h"
 #include "FrameResource.h"
+#include "FrameworkEvent.h"
 #include "Object.h"
 #include "Common/Util/d3d12/GeometryGenerator.h"
 #include "Common/Util/d3d12/Camera.h"
@@ -28,7 +29,8 @@ public:
     virtual void OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
         const bool key_state[], const POINT& oldCursorPos,
         const RECT& ClientRect,
-        CTimer& gt);
+        CTimer& gt,
+        std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 public:
     virtual void SetGeometriesRef(std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>* Geometries) { m_GeometriesRef = Geometries; }
@@ -46,13 +48,13 @@ public:
     virtual void UpdateMainPassCB(UploadBuffer<PassConstants>* passCB, CTimer& gt);
     virtual void UpdateShadowPassCB(UploadBuffer<PassConstants>* passCB, ShadowMap* shadow_map, CTimer& gt);
     virtual void UpdateShadowTransform(CTimer& gt);
-    virtual void UpdateTextInfo(CTimer& gt) = 0;
+    virtual void UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents) = 0;
     virtual void AnimateLights(CTimer& gt) = 0;
-    virtual void AnimateSkeletons(CTimer& gt) = 0;
+    virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents) = 0;
     virtual void AnimateCameras(CTimer& gt) = 0;
     
 public:
-    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt) = 0;
+    virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents) = 0;
 
 public:
     const PassConstants& GetMainPassCB() { return m_MainPassCB; }
@@ -68,7 +70,49 @@ public:
     const std::vector<std::unique_ptr<Object>>& GetAllObjects() { return m_AllObjects; }
     const std::vector<Object*> GetCharacterObjects() { return m_CharacterObjects; }
     const std::vector<Object*> GetWorldObjects() { return m_WorldObjects; }
-    const std::vector<Object*> GetUIObjects() { return m_UIObjects; }
+    const std::vector<Object*> GetUILayOutObjects() { return m_UILayOutObjects; }
+
+public:
+    ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
+    // Control Element ID, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnCharacter(int New_CE_ID, CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
+    // Control Element ID, Attack Order(Chracter Type), Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
+    // Control Element ID, Skill Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnSkillObject(int New_CE_ID, SKILL_TYPE SkillType, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
+    // Effect Type, Transform(Position)
+    void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position) {}
+    // Control Element ID, Transform(Scale, RotationEuler, Position)
+    void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
+    // Control Element ID, MotionType, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
+    void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType = SKILL_TYPE::NON) {}
+    // Control Element ID, Player State
+    void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState) {}
+    // Deactivated Poison Gas Area
+    void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea) {}
+    // Control Element ID
+    void DeActivateObject(int CE_ID) {}
+
+    // UserName, UserRank
+    void SetUserInfo(std::wstring UserName, int UserRank) {}
+    // Count Score(Kill, Death, Assistance)
+    void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance) {}
+    // Do_UserName, Target_UserName
+    void SetKillLog(std::wstring Do_UserName, std::wstring Target_UserName) {}
+    // UserName, Message
+    void SetChatLog(std::wstring UserName, std::wstring Message) {}
+    // Remaining Sec
+    void SetGamePlayTimeLimit(unsigned int Sec) {}
+    // Remaining HP
+    void SetPlayerHP(int CE_ID, int HP) {}
+    // UserName, UserRank, Count Score(Kill, Death, Assistance, Total Damage, Total Heal), Played Character Type
+    void SetMatchStatisticInfo(std::wstring UserName, int UserRank,
+        unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance,
+        int TotalScore_Damage, int TotalScore_Heal,
+        CHARACTER_TYPE PlayedCharacterType) {}
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 protected:
@@ -94,12 +138,14 @@ protected:
     std::vector<std::unique_ptr<Object>> m_AllObjects;
     std::vector<Object*> m_CharacterObjects; // SkinnedConstants + ObjConstants + MatConstants가 있는 오브젝트
     std::vector<Object*> m_WorldObjects; // ObjConstants + MatConstants가 있는 오브젝트
-    std::vector<Object*> m_UIObjects; // ObjConstants + MatConstants만 있는 오브젝트
+    std::vector<Object*> m_UILayOutObjects; // ObjConstants + MatConstants만 있는 오브젝트
+    std::vector<Object*> m_TextObjects; // TextInfo만 있는 오브젝트
+    std::vector<Object*> m_EffectObjects; // ObjConstants + MatConstants (+ Billbord, Non-Shadow Rendering)
 
 public:
     UINT m_nSKinnedCB = 0; // = m_CharacterObjects.size();
     UINT m_nObjCB = 0; // = m_WorldObjects.size() + m_UIObjects.size();
-    UINT m_nTextBatch = 0; // = sum(ui_obj->m_UIinfos.size() in m_UIObjects)
+    UINT m_nTextBatch = 0; // = m_TextObjects.size();
 
 protected:
     Camera m_MainCamera;

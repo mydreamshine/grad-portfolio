@@ -20,12 +20,13 @@ void Scene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
 void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     const bool key_state[], const POINT& oldCursorPos,
     const RECT& ClientRect,
-    CTimer& gt)
+    CTimer& gt,
+    std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     m_ClientRect = ClientRect;
 
     AnimateLights(gt);
-    AnimateSkeletons(gt);
+    AnimateSkeletons(gt, GeneratedEvents);
     AnimateCameras(gt);
 
     UpdateObjectCBs(frame_resource->ObjectCB.get(), gt);
@@ -34,9 +35,9 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     UpdateShadowTransform(gt);
     UpdateMainPassCB(frame_resource->PassCB.get(), gt);
     UpdateShadowPassCB(frame_resource->PassCB.get(), shadow_map, gt);
-    UpdateTextInfo(gt);
+    UpdateTextInfo(gt, GeneratedEvents);
 
-    ProcessInput(key_state, oldCursorPos, gt);
+    ProcessInput(key_state, oldCursorPos, gt, GeneratedEvents);
 }
 
 void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -67,7 +68,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
         }
     }
 
-    for (auto& obj : m_UIObjects)
+    for (auto& obj : m_UILayOutObjects)
     {
         auto objInfo = obj->m_TransformInfo.get();
         if (objInfo->NumObjectCBDirty > 0)

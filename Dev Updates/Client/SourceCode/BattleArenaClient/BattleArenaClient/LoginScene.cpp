@@ -20,9 +20,10 @@ void LoginScene::OnInitProperties(CTimer& gt)
 void LoginScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     const bool key_state[], const POINT& oldCursorPos,
     const RECT& ClientRect,
-    CTimer& gt)
+    CTimer& gt,
+    std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt);
+    Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
 void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
@@ -33,22 +34,52 @@ void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textB
     auto& Geometries = *m_GeometriesRef;
 
     ObjectManager objManager;
-    const UINT maxUIObject = (UINT)Geometries["LoginSceneUIGeo"]->DrawArgs.size();
+    const UINT maxUILayOutObject = (UINT)Geometries["LoginSceneUIGeo"]->DrawArgs.size();
     for (auto& Ritem_iter : AllRitems)
     {
         auto Ritem = Ritem_iter.second.get();
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.CreateUIObject(objCB_index++, m_AllObjects, m_UIObjects, maxUIObject);
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
             objManager.SetObjectComponent(newObj, objName, Ritem);
+
+            if (objName.find("Id") != std::string::npos || objName.find("Password") != std::string::npos)
+            {
+                auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+                auto newEditTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+
+                if (objName.find("Id") != std::string::npos)
+                {
+                    newLayoutTextObj->m_Name = "LayOutText_ID";
+                    newEditTextObj->m_Name = "EditText_ID";
+                }
+                else if (objName.find("Password") != std::string::npos)
+                {
+                    newLayoutTextObj->m_Name = "LayOutText_Password";
+                    newEditTextObj->m_Name = "EditText_Password";
+                }
+
+                newLayoutTextObj->m_Textinfo->m_FontName = L"¸¼Àº °íµñ";
+                newEditTextObj->m_Textinfo->m_FontName = L"¸¼Àº °íµñ";
+                newLayoutTextObj->m_Textinfo->m_TextColor = DirectX::Colors::Blue;
+                newEditTextObj->m_Textinfo->m_TextColor = DirectX::Colors::Blue;
+
+                auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
+                float UI_LayoutWidth = Ritem->Geo->DrawArgs[objName].Bounds.Extents.x * 2.0f;
+                newEditTextObj->m_Textinfo->m_TextPos.x = UI_LayoutPos.x;
+                newEditTextObj->m_Textinfo->m_TextPos.y = UI_LayoutPos.y;
+                newLayoutTextObj->m_Textinfo->m_TextPos.x = UI_LayoutPos.x - UI_LayoutWidth * 0.2f;
+                newLayoutTextObj->m_Textinfo->m_TextPos.y = UI_LayoutPos.y;
+            }
         }
     }
-    m_nObjCB = (UINT)m_UIObjects.size();
+
+    m_nObjCB = (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = 0;
-    for (auto& ui_obj : m_UIObjects) m_nTextBatch += (UINT)ui_obj->m_UIinfos.size();
+    m_nTextBatch = (UINT)m_TextObjects.size();
 }
 
 void LoginScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -90,6 +121,6 @@ void LoginScene::UpdateShadowTransform(CTimer& gt)
     Scene::UpdateShadowTransform(gt);
 }
 
-void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt)
+void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
 }

@@ -295,7 +295,7 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         Meshes["UI_Layout_GameOverBackground"] = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_GameOverInfo"]       = geoGen.CreateQuad(-550.0f * wnd_x_factor,  270.0f * wnd_y_factor,  320.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_GameOverResult"]     = geoGen.CreateQuad( -85.0f * wnd_x_factor,  340.0f * wnd_y_factor,  170.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_ReturnMainMenu"]     = geoGen.CreateQuad(-100.0f * wnd_x_factor, -210.0f * wnd_y_factor,  200.0f * wnd_x_factor,  80.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_ReturnLoby"]         = geoGen.CreateQuad(-100.0f * wnd_x_factor, -210.0f * wnd_y_factor,  200.0f * wnd_x_factor,  80.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["GameOverSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "GameOverSceneUIGeo", Meshes));

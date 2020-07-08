@@ -2,6 +2,7 @@
 
 #include"Scene.h"
 #include "ResourceManager.h"
+#include "FrameworkEvent.h"
 
 class Framework : public DXSample
 {
@@ -12,7 +13,7 @@ public:
 
     virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name, ResourceManager* ExternalResource, std::string* additionalAssetPath = nullptr);
     void OnInitAllSceneProperties();
-    virtual void OnUpdate(RECT* pClientRect = nullptr);
+    virtual void OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RECT* pClientRect = nullptr);
     virtual void OnRender();
     virtual void OnDestroy();
 
@@ -20,6 +21,10 @@ public:
     virtual void OnKeyUp(UINT8 key, POINT* OldCursorPos = nullptr);
 
     BYTE* GetFrameData();
+
+public:
+    void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events);
+    void ProcessEvent(EVENT& Event);
 
 private:
     void LoadPipeline();
