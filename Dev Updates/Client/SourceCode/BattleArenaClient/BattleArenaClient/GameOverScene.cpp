@@ -31,8 +31,9 @@ void GameOverScene::OnInitProperties(CTimer& gt)
             auto skeletonInfo = obj->m_SkeletonInfo.get();
             auto animInfo = skeletonInfo->m_AnimInfo.get();
             animInfo->Init();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
     }
 
@@ -91,9 +92,13 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 ModelSkeletons["Meshtint Free Knight"].get(),
                 nullptr, &LocalRotationEuler, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
+
+            auto skeletonInfo = newObj->m_SkeletonInfo.get();
             auto animInfo = newObj->m_SkeletonInfo->m_AnimInfo.get();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+            animInfo->Init();
+            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
