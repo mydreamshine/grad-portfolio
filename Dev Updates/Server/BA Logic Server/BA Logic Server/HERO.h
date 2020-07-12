@@ -1,6 +1,4 @@
 #pragma once
-#include "Vector3d.h"
-#include "BULLET.h"
 #include <DirectXCollision.h>
 using namespace DirectX;
 
@@ -8,25 +6,20 @@ class HERO
 {
 public:
 	HERO();
-	void set_key(int updown, char key);
+
 	void update(float fTime);
+	void do_attack();
+	void do_skill();
+
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT3 rot;
+	DirectX::BoundingBox AABB;
+	float vel;
 
 	int hp;
+	char anim_type;
+	float anim_timepos;
 
-	Vector3d pos;
-	Vector3d rot;
-	Vector3d disp;
-	float vel;
-	
-	bool wasd[4];
-	bool isMove;
-
-	BoundingBox AABB;
-
-	BULLET get_bullet(char shooter, Vector3d& dir);
-	void half_back();
-	void roll_back();
 private:
-	void move(float fTime);
 	void set_aabb();
 };

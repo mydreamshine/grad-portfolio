@@ -30,7 +30,7 @@ private:
 	std::mutex socket_lock;
 	std::map<int, SOCKET> sockets;
 	std::map<int, HERO> m_heros;
-	std::map<int, BULLET> m_bullets;
+	std::map<int, SKILL> m_bullets;
 	std::vector<DirectX::BoundingBox> m_walls;
 
 	void process_packet_vector();

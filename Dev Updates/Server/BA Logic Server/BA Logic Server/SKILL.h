@@ -3,7 +3,7 @@
 #include <DirectXCollision.h>
 using namespace DirectX;
 
-class BULLET
+class SKILL
 {
 public:
 	BULLET(char shooter);

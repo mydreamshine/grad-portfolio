@@ -141,16 +141,17 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp" />
     <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
-    <ClCompile Include="BULLET.cpp" />
+    <ClCompile Include="SKILL.cpp" />
     <ClCompile Include="HERO.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="Vector3d.cpp" />
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h" />
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h" />
     <ClInclude Include="..\..\Rooms\DMRoom.h" />
-    <ClInclude Include="BULLET.h" />
+    <ClInclude Include="SKILL.h" />
     <ClInclude Include="HERO.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="Timer.h" />

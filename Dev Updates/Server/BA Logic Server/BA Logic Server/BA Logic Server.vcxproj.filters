@@ -19,6 +19,9 @@
     <Filter Include="Common">
       <UniqueIdentifier>{1e29a8df-49b3-45ef-9b4d-f27bad092284}</UniqueIdentifier>
     </Filter>
+    <Filter Include="protocol">
+      <UniqueIdentifier>{e8af4122-5107-4fa8-b27b-c4c5117ba9ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="소스.cpp">
@@ -33,14 +36,14 @@
     <ClCompile Include="Vector3d.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="BULLET.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Rooms\DMRoom.cpp">
       <Filter>Rooms</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="SKILL.cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -56,14 +59,17 @@
     <ClInclude Include="Vector3d.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="BULLET.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Rooms\DMRoom.h">
       <Filter>Rooms</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="SKILL.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h">
+      <Filter>protocol</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
