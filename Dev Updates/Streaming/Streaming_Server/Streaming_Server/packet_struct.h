@@ -12,53 +12,100 @@
 #define TSS_MOUSE_LBUTTON_DOWN 8
 #define TSS_MOUSE_LBUTTON_UP   9
 
-#define SSCS_TRY_LOGIN         10
-#define SSCS_REQUEST_USER_INFO 11
-#define SSCS_TRY_GAME_MATCHING 12
+
 ///////////////////////////////////////////////////////////////////////////////////////////
+
+using PACKET_SIZE = unsigned char;
+using PACKET_TYPE = unsigned char;
+constexpr int string_len = 32;
+
+enum SSCS_PACKET {
+	SSCS_TRY_LOGIN,
+	SSCS_REQUEST_USER_INFO,
+	SSCS_TRY_GAME_MATCHING,
+	SSCS_SEND_CHAT_MESSAGE,
+	SSCS_TRY_MOVE_CHARACTER,
+	SSCS_TRY_ROTATION_CHARACTER,
+	SSCS_TRY_NORMAL_ATTACK,
+	SSCS_TRY_USE_SKILL,
+	SSCS_DONE_CHARACTER_MOTION,
+	SSCS_ACTIVATE_ANIM_NOTIFY,
+	SSCS_TRY_RETURN_LOBBY,
+
+	SSCS_PACKET_COUNT
+};
+
+enum CSSS_PACKET {
+	CSSS_LOGIN_OK,
+	CSSS_CHANGE_SCENE,
+	CSSS_SPAWN_PLAYER,
+	CSSS_SPAWN_NORMAL_ATTACK_OBJ,
+	CSSS_SPAWN_SKILL_OBJ,
+	CSSS_SPAWN_EFFECT,
+	CSSS_SET_OBJ_TRANSFORM,			//Done
+	CSSS_SET_CHARACTER_MOTION,		//Done
+	CSSS_SET_CHARACTER_STATE,		//Done
+	CSSS_DEACTIVATE_OBJ,
+	CSSS_SET_CHARACTER_HP,
+	CSSS_UPDATE_POISON_FOG_DEACT_AREA,
+	CSSS_SET_GAME_PLAYTIME_LIMIT,
+
+	CSSS_SET_KDA_SCORE,
+	CSSS_SEND_KILL_MESSAGE,
+	CSSS_SEND_CHAT_MESSAGE,
+	CSSS_SEND_MATCH_STATISTIC,
+	CSSS_SEND_USER_INFO,
+
+	CSSS_PACKET_COUNT
+};
 
 ////////////////////////////////////// 통신 패킷 타입 /////////////////////////////////////
 #pragma pack(push, 1)
 // Terminal -> Streaming Server
 struct tss_packet_keydown
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 };
 struct tss_packet_keyup
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 };
 struct tss_packet_mouse_button_down
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	long x;
 	long y;
 };
 struct tss_packet_mouse_button_up
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 };
 
 
+struct default_packet
+{
+	PACKET_SIZE size;
+	PACKET_TYPE type;
+};
 
 // Streaming Server -> Contents Server
 struct sscs_packet_try_login
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
-	wchar_t id[255];
-	wchar_t password[255];
+	wchar_t id[string_len];
+	wchar_t password[string_len];
 
-	sscs_packet_login_info()
+	sscs_packet_try_login()
 	{
-		for (unsigned char i = 0; i < 255; ++i)
+		for (unsigned char i = 0; i < string_len; ++i)
 		{
 			id[i] = 0x00;
 			password[i] = 0x00;
@@ -67,33 +114,33 @@ struct sscs_packet_try_login
 };
 struct sscs_packet_request_user_info
 {
-	unsigned char size;
-	unsigned char type;
-	short         client_id;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
+	short       client_id;
 };
 // 해당 플레이어가 어떤 캐릭터를 선택했는가에 따라
 // PlayGameScene에 생성될 캐릭터들의 구성이 달라진다.
 struct sscs_packet_try_game_matching
 {
-	unsigned char size;
-	unsigned char type;
-	short         client_id;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
+	short       client_id;
 
 	// contents ref.
 	char selected_character_type;
 };
 struct sscs_packet_send_chat_message
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 
 	// contents ref.
-	wchar_t message[255];
+	wchar_t message[string_len];
 
 	sscs_packet_send_chat_message()
 	{
-		for (unsigned char i = 0; i < 255; ++i)
+		for (unsigned char i = 0; i < string_len; ++i)
 			message[i] = 0x00;
 	}
 };
@@ -102,8 +149,8 @@ struct sscs_packet_send_chat_message
 // 해당 캐릭터의 고유 Speed값만큼 위치이동시킨다.
 struct sscs_packet_try_move_character
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 
 	// contents ref.
@@ -113,8 +160,8 @@ struct sscs_packet_try_move_character
 // Yaw_angle만큼 회전시킨다.
 struct sscs_packet_try_rotation_character
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 
 	// contents ref.
@@ -146,8 +193,8 @@ struct sscs_packet_try_rotation_character
 //       ViewList가 활성화된 클라이언트들에게 전달한다.
 struct sscs_packet_try_normal_attack
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 };
 // 해당 클라이언트가 지닌 캐릭터 오브젝트에 따라
@@ -230,8 +277,8 @@ struct sscs_packet_try_normal_attack
 //        적 플레이어의 캐릭터면 투명)
 struct sscs_packet_try_use_skill
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 };
 // 해당 캐릭터를 컨트롤 하는 클라이언트에게서만 전달되는 패킷
@@ -241,8 +288,8 @@ struct sscs_packet_try_use_skill
 // 모션이 끝났음을 서버에게 통보할 필요는 없다.
 struct sscs_packet_done_character_motion
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 
 	// contents ref.
@@ -253,8 +300,8 @@ struct sscs_packet_done_character_motion
 // skill 오브젝트가 생성된다.
 struct sscs_packet_activate_anim_notify
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 
 	// contents ref.
@@ -262,26 +309,26 @@ struct sscs_packet_activate_anim_notify
 };
 // 해당 패킷을 클라이언트로부터 받으면
 // 해당 클라이언트가 matching room에서 빠져나가게 된다.
-struct sscs_try_return_loby
+struct sscs_try_return_lobby
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short         client_id;
 };
 
-
+//////////////////////////////////////////////////////////////////////////////////////
 
 // Contents Server -> Streaming Server
 struct csss_packet_login_ok
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 	short client_id;
 };
 struct csss_packet_change_scene
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	char scene_type;
@@ -291,12 +338,12 @@ struct csss_packet_change_scene
 // 카메라 뷰가 달라진다.
 struct csss_packet_spawn_player
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int     object_id;
-	wchar_t user_name[255]; // nick name
+	wchar_t user_name[string_len]; // nick name
 	char    character_type;
 	float   scale_x, scale_y, scale_z;
 	float   rotation_euler_x, rotation_euler_y, rotation_euler_z;
@@ -306,7 +353,7 @@ struct csss_packet_spawn_player
 
 	csss_packet_spawn_player()
 	{
-		for (unsigned char i = 0; i < 255; ++i)
+		for (unsigned char i = 0; i < string_len; ++i)
 			user_name[i] = 0x00;
 	}
 };
@@ -316,8 +363,8 @@ struct csss_packet_spawn_player
 // 지면과 수평한 상태로 짧은 거리를 날라간다.
 struct csss_packet_spawn_normal_attack_obj
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
@@ -331,8 +378,8 @@ struct csss_packet_spawn_normal_attack_obj
 // Skill 오브젝트의 렌더Item이 달라진다.
 struct csss_packet_spawn_skill_obj
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
@@ -351,8 +398,8 @@ struct csss_packet_spawn_skill_obj
 // (현재 Effect Action이 어느 순간을 연출하고 있느냐가 필요하기 때문.)
 struct csss_packet_spawn_effect
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	char  effect_type;
@@ -361,8 +408,8 @@ struct csss_packet_spawn_effect
 };
 struct csss_packet_set_obj_transform
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
@@ -389,8 +436,8 @@ struct csss_packet_set_obj_transform
 //    (Idle이나 Walk 모션이 아닐 경우에만 해당.)
 struct csss_packet_set_character_motion
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
@@ -403,8 +450,8 @@ struct csss_packet_set_character_motion
 // die 상태일 경우 키입력처리를 하지 않는다.
 struct csss_pacekt_set_character_state
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
@@ -412,14 +459,14 @@ struct csss_pacekt_set_character_state
 };
 // 독안개 비활성 영역 크기에 따라
 // 독안개 영역에 poison fog effect를 줄 예정
-struct csss_packet_update_poison_fog_deact_area;
+struct csss_packet_update_poison_fog_deact_area
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int left, top, right, bottom;
-}
+};
 // 해당 오브젝트를 클라이언트 화면에서 비활성시킨다.
 // 그리고 서버에선 해당 오브젝트 id를 폐기(혹은 비활성)한다.
 // 단, 아군 클라이언트들의 ViewList에 존재하는
@@ -432,45 +479,46 @@ struct csss_packet_update_poison_fog_deact_area;
 // 적군 클라이언트들에게 해당 오브젝트를 비활성화하도록 명령한다.
 struct csss_packet_deactivate_obj
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	int   object_id;
 };
+struct csss_packet_set_character_hp
+{
+	PACKET_SIZE size;
+	PACKET_TYPE type;
+
+	// contents ref.
+	int hp;
+};
+
+//UI
 struct csss_packet_set_kda_score
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	unsigned char score_kill;
 	unsigned char score_death;
 	unsigned char score_assistance;
 };
-struct csss_packet_set_kda_score
-{
-	unsigned char size;
-	unsigned char type;
 
-	// contents ref.
-	unsigned char score_kill;
-	unsigned char score_death;
-	unsigned char score_assistance;
-};
 // message 예시
 // [nick name](이)가 [nick name](을)를 죽였습니다.
 struct csss_packet_send_kill_message
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
-	wchar_t message[255];
+	wchar_t message[string_len];
 
 	csss_packet_send_kill_message()
 	{
-		for (char i = 0; i < 255; ++i)
+		for (char i = 0; i < string_len; ++i)
 			message[i] = 0x00;
 	}
 };
@@ -478,44 +526,36 @@ struct csss_packet_send_kill_message
 // [nick name]: 채팅 내용
 struct csss_packet_send_chat_message
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
-	wchar_t message[255];
+	wchar_t message[string_len];
 
 	csss_packet_send_chat_message()
 	{
-		for (char i = 0; i < 255; ++i)
+		for (char i = 0; i < string_len; ++i)
 			message[i] = 0x00;
 	}
 };
 struct csss_packet_set_game_playtime_limit
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
 	unsigned int remain_sec;
-};
-struct csss_packet_set_character_hp
-{
-	unsigned char size;
-	unsigned char type;
-
-	// contents ref.
-	int hp;
 };
 // GameOverScene에 출력할 매칭 결과
 // played_character_type에 따라
 // GameOverScene에 렌더링되는 캐릭터가 달라진다.
 struct csss_packet_send_match_statistic
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
-	wchar_t       user_name[255]; // nick name
+	wchar_t       user_name[string_len]; // nick name
 	int           user_rank;
 	unsigned char count_kill;
 	unsigned char count_death;
@@ -526,16 +566,16 @@ struct csss_packet_send_match_statistic
 };
 struct csss_packet_send_user_info
 {
-	unsigned char size;
-	unsigned char type;
+	PACKET_SIZE size;
+	PACKET_TYPE type;
 
 	// contents ref.
-	wchar_t user_name[255]; // nick name
+	wchar_t user_name[string_len]; // nick name
 	int     user_rank;
 
-	sscs_packet_user_info()
+	csss_packet_send_user_info()
 	{
-		for (unsigned char i = 0; i < 255; ++i)
+		for (unsigned char i = 0; i < string_len; ++i)
 			user_name[i] = 0x00;
 	}
 };

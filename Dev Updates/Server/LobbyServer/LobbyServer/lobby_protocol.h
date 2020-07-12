@@ -2,9 +2,8 @@
 #define LOBBYSERVER_PORT 15500
 #define BATTLESERVER_PORT 15600
 #define ID_LENGTH 11
-typedef char SIZE_TYPE;
+using SIZE_TYPE = char;
 
-#pragma pack(push, 1)
 /*
 C : Client
 S : Lobby Server
@@ -78,10 +77,11 @@ enum GAME_MODES {
 	GAMEMODE_NGP
 };
 
+#pragma pack(push, 1)
 struct common_default_packet
 {
 	SIZE_TYPE size;
-	CHAR type;
+	char type;
 };
 
 struct cs_packet_request_login
@@ -219,5 +219,4 @@ struct cb_attack
 	char uid;       //해당 UID 플레이어의 공격
 	float dir[3];   //Normalize된 공격방향
 };
-
 #pragma pack(pop)

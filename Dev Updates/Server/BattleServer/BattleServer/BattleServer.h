@@ -84,6 +84,11 @@ namespace BattleArena {
 		void do_worker();
 		
 		/**
+		@brief Process player disconnect.
+		*/
+		void disconnect_player(CLIENT* client);
+
+		/**
 		@brief Send packet to client.
 		@param client target client.
 		@param buff data.

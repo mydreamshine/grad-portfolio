@@ -1,5 +1,6 @@
 #pragma once
 #include "OVER_EX.h"
+#include "PACKET_BUFFER.h"
 
 class ROOM;
 /**
@@ -14,9 +15,9 @@ public:
 	ROOM* room{ nullptr }; ///< room where the clients connect.
 
 	int id{ 0 }; ///< id
-	char savedPacket[200]{}; ///< packet buffer.
+	char savedPacket[MAX_BUFFER_SIZE]{}; ///< packet buffer.
 	size_t saved_size{ 0 }; ///< packet buffer data.
-	size_t need_size{ 4 }; ///< packet buffer data.
+	size_t need_size{ 1 }; ///< packet buffer data.
 
 	CLIENT() {};
 	~CLIENT() {};

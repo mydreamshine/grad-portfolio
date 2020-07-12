@@ -117,20 +117,15 @@ namespace BattleArena {
 			GetQueuedCompletionStatus(m_iocp, &ReceivedBytes, &key, &over, INFINITE);
 
 			CLIENT* client = reinterpret_cast<CLIENT*>(key);
+			OVER_EX* over_ex = reinterpret_cast<OVER_EX*>(over);
 			if (0 == ReceivedBytes) {
-				std::wcout << L"[CLIENT - " << key << L"] Disconnected" << std::endl;
-				if (client->room != nullptr)
-					client->room->disconnect(client);
-				if (client->socket != INVALID_SOCKET) {
-					closesocket(client->socket);
-					client->socket = INVALID_SOCKET;
-				}
-				if(client != &m_Lobby)
-					delete client;
+				if (EV_SEND == over_ex->event_type)
+					delete over_ex;
+				else
+					disconnect_player(client);
 				continue;
 			}
 
-			OVER_EX* over_ex = reinterpret_cast<OVER_EX*>(over);
 			switch (over_ex->event_type())
 			{
 			case EV_RECV:
@@ -162,9 +157,9 @@ namespace BattleArena {
 				}
 				//else push next update event
 				else add_event(static_cast<int>(key), EV_UPDATE, UPDATE_INTERVAL);
-			}
 				delete over_ex;
 				break;
+			}
 
 			case EV_SEND:
 				delete over_ex;
@@ -176,6 +171,19 @@ namespace BattleArena {
 				break;
 			}
 		}
+	}
+
+	void BATTLESERVER::disconnect_player(CLIENT* client)
+	{
+		std::wcout << L"[CLIENT - " << int(client) << L"] Disconnected" << std::endl;
+		if (client->room != nullptr)
+			client->room->disconnect(client);
+		if (client->socket != INVALID_SOCKET) {
+			closesocket(client->socket);
+			client->socket = INVALID_SOCKET;
+		}
+		if (client != &m_Lobby)
+			delete client;
 	}
 
 	void BATTLESERVER::do_timer()
@@ -281,6 +289,7 @@ namespace BattleArena {
 			cb_packet_request_login* packet = reinterpret_cast<cb_packet_request_login*>(buffer);
 			client->recv_over.set_event(EV_RECV);
 			client->room = m_Rooms[packet->room_id];
+
 			//if all users are Connected, Start Game
 			if (true == m_Rooms[packet->room_id]->regist(client)) {
 				wprintf(L"[ROOM %d] - GAME START\n", packet->room_id);

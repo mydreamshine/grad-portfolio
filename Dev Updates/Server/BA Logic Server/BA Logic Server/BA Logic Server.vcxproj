@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\CLIENT.cpp" />
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp" />
     <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
     <ClCompile Include="SKILL.cpp" />
@@ -148,8 +149,11 @@
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameworkEvent.h" />
     <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h" />
+    <ClInclude Include="..\..\Common\CLIENT.h" />
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h" />
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
     <ClInclude Include="..\..\Rooms\DMRoom.h" />
     <ClInclude Include="SKILL.h" />
     <ClInclude Include="HERO.h" />

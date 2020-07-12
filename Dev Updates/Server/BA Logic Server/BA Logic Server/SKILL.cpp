@@ -1,28 +1,56 @@
-#include "BULLET.h"
+#include "SKILL.h"
+#include "HERO.h"
 
-BULLET::BULLET(char shooter) :
-	shooter(shooter)
+SKILL::SKILL() :
+	pos(0, 0, 0),
+	rot(0, 0, 0),
+	dir(0, 0, -1.0f),
+	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
+	vel(5.0f),
+
+	skill_type(0),
+	anim_time_pos(0)
 {
-	AABB.Extents.x = 0.25f;
-	AABB.Extents.y = 0.25f;
-	AABB.Extents.z = 0.25f;
-	damage = 0;
-	vel = 0;
-	isDestroy = false;
 }
 
-void BULLET::update(float fTime)
+SKILL::~SKILL()
 {
-	move(fTime);
+}
+
+void SKILL::update(float elapsedTime)
+{
+	anim_time_pos += elapsedTime;
 	set_aabb();
 }
 
-void BULLET::move(float fTime)
+void SKILL::effect(HERO* hero)
 {
-	pos += dir * vel * fTime;
 }
 
-void BULLET::set_aabb()
+void SKILL::set_aabb()
 {
 	AABB.Center = pos.ToXMFloat3();
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+NORMAL_ATTACK::NORMAL_ATTACK() : 
+	SKILL(),
+	damage(10)
+{
+}
+
+NORMAL_ATTACK::~NORMAL_ATTACK()
+{
+}
+
+void NORMAL_ATTACK::update(float elapsedTime)
+{
+	pos += dir * vel * elapsedTime;
+	SKILL::update(elapsedTime);
+}
+
+void NORMAL_ATTACK::effect(HERO* hero)
+{
+	hero->hp -= damage;
+}
+

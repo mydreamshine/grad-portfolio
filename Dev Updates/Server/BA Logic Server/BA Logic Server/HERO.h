@@ -1,25 +1,45 @@
 #pragma once
+#include "Vector3d.h"
 #include <DirectXCollision.h>
 using namespace DirectX;
+
+class SKILL;
 
 class HERO
 {
 public:
 	HERO();
+	virtual ~HERO();
 
-	void update(float fTime);
-	void do_attack();
-	void do_skill();
+	void rotate(float yaw);
+	virtual void update(float elapsedTime);
+	virtual SKILL* do_attack() {};
+	virtual SKILL* do_skill() {};
+	
 
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 rot;
+	Vector3d pos;
+	Vector3d rot;
+	Vector3d dir;
 	DirectX::BoundingBox AABB;
 	float vel;
 
+	char propensity;
+
 	int hp;
-	char anim_type;
-	float anim_timepos;
+	char motion_type;
+	float anim_time_pos;
 
 private:
 	void set_aabb();
+};
+
+class WARRIOR : public HERO
+{
+public:
+	WARRIOR();
+	virtual ~WARRIOR();
+
+	virtual void update(float elapsedTime);
+	virtual SKILL* do_attack();
+	virtual SKILL* do_skill();
 };

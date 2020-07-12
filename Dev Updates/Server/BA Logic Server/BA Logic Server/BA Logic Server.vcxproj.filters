@@ -45,13 +45,13 @@
     <ClCompile Include="SKILL.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\CLIENT.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.h">
       <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol.h">
-      <Filter>소스 파일</Filter>
     </ClInclude>
     <ClInclude Include="HERO.h">
       <Filter>헤더 파일</Filter>
@@ -70,6 +70,18 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h">
       <Filter>protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h">
+      <Filter>protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameworkEvent.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CLIENT.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
