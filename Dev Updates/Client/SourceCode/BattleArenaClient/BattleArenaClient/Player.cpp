@@ -2,67 +2,49 @@
 #include "Player.h"
 
 using namespace DirectX;
+using namespace aiModelData;
 
 
 void Player::SetTransform(const XMFLOAT3& Scale, const XMFLOAT3& RotationEuler, const XMFLOAT3& Position)
 {
-	auto& TransformInfo = m_ObjectRef->m_TransformInfo;
+	auto& TransformInfo = m_CharacterObjRef->m_TransformInfo;
 	TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
 	TransformInfo->UpdateWorldTransform();
 }
 
-void Player::SetMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType)
+void Player::PlayMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType)
 {
-	auto AnimInfo = m_ObjectRef->m_SkeletonInfo->m_AnimInfo.get();
-	CHARACTER_TYPE CharacterType = m_ObjectRef->CharacterType;
-	std::string AnimName = AnimInfo->CurrPlayingAnimName;
+	auto AnimInfo = m_CharacterObjRef->m_SkeletonInfo->m_AnimInfo.get();
+	AnimActionType CurrPlayingAction = AnimInfo->CurrPlayingAction;
+	AnimActionType newActionType = (AnimActionType)MotionType;
 
-	if (MotionType == MOTION_TYPE::NON) return;
+	if (newActionType == AnimActionType::Non) return;
 
-	AnimInfo->AnimStop(AnimName);
-
-	switch (MotionType)
-	{
-	case MOTION_TYPE::IDLE:
-		m_CurrAction = ActionType::Idle;
-		break;
-	case MOTION_TYPE::WALK:
-		break;
-	case MOTION_TYPE::ATTACK:
-		break;
-	case MOTION_TYPE::IMPACT:
-		break;
-	case MOTION_TYPE::SKILL_POSE:
-	{
-		switch (SkillMotionType)
-		{
-		case SKILL_TYPE::NON: return; break;
-		case SKILL_TYPE::SWORD_WAVE:
-			break;
-		case SKILL_TYPE::HOLY_AREA:
-			break;
-		case SKILL_TYPE::FURY_ROAR:
-			break;
-		case SKILL_TYPE::STEALTH:
-			break;
-		default:
-			break;
-		}
-	}
-		break;
-	case MOTION_TYPE::DIEING:
-		break;
-	}
+	AnimInfo->AnimStop(CurrPlayingAction);
+	AnimInfo->AnimPlay(newActionType);
+	if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
+		AnimInfo->AnimLoop(newActionType);
 }
 
 void Player::SetState(PLAYER_STATE PlayerState)
 {
-	m_ObjectRef->PlayerState = PlayerState;
+	m_CharacterObjRef->PlayerState = PlayerState;
 }
 
 void Player::SetHP(int HP)
 {
-	m_ObjectRef->HP = HP;
+	m_CharacterObjRef->HP = HP;
+}
+
+void Player::Init()
+{
+	ObjectManager ObjManager;
+	for (auto& obj : m_CharacterObjRef->m_Childs)
+		ObjManager.DeActivateObj(obj);
+	ObjManager.DeActivateObj(m_CharacterObjRef);
+	ObjManager.DeActivateObj(m_NickNameObjRef);
+	for (auto& obj : m_HP_BarObjRef)
+		ObjManager.DeActivateObj(obj);
 }
 
 void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
@@ -71,11 +53,12 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 	std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
 	EventManager eventManager;
-	int Act_Object = m_ObjectRef->m_CE_ID;
+	int Act_Object = m_CharacterObjRef->m_CE_ID;
+	aiModelData::AnimActionType ActionType = m_CharacterObjRef->m_SkeletonInfo->m_AnimInfo->CurrPlayingAction;
 
 	// Set Moving Direction
-	if (((m_CurrAction & ActionType::Idle) == ActionType::Idle)
-		|| ((m_CurrAction & ActionType::Walk) == ActionType::Walk))
+	if (ActionType == aiModelData::AnimActionType::Idle
+		|| ActionType == aiModelData::AnimActionType::Walk)
 	{
 		float yaw_angle = 0.0f;
 		float deg2rad = MathHelper::Pi / 180.0f;
@@ -112,8 +95,8 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 	// Reservate Motion Events
 	if (key_state[VK_LBUTTON] == true || key_state[VK_RBUTTON] == true)
 	{
-		if ((m_CurrAction & ActionType::Attack) == ActionType::Attack) return;
-		if ((m_CurrAction & ActionType::SkillPose) == ActionType::SkillPose) return;
+		if (ActionType == aiModelData::AnimActionType::Attack) return;
+		if (ActionType == aiModelData::AnimActionType::SkillPose) return;
 
 		Player::ProcessPicking(oldCursorPos, ViewPort, gt, GroundObject, GeneratedEvents);
 
@@ -123,7 +106,7 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		}
 		else if (key_state[VK_RBUTTON] == true)
 		{
-			CHARACTER_TYPE CharacterType = m_ObjectRef->CharacterType;
+			CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
 			SKILL_TYPE SkillType = SKILL_TYPE::NON;
 			switch (CharacterType)
 			{
@@ -155,12 +138,12 @@ void Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& V
 	if (Picking == true)
 	{
 		EventManager eventManager;
-		int Act_Object = m_ObjectRef->m_CE_ID;
+		int Act_Object = m_CharacterObjRef->m_CE_ID;
 
-		XMVECTOR PlayerPOS = XMLoadFloat3(&m_ObjectRef->m_TransformInfo->GetWorldPosition());
+		XMVECTOR PlayerPOS = XMLoadFloat3(&m_CharacterObjRef->m_TransformInfo->GetWorldPosition());
 		XMFLOAT3 playerPos; XMStoreFloat3(&playerPos, PlayerPOS);
 
-		intersectPos.y = playerPos.y + m_ObjectRef->m_TransformInfo->m_Bound.Extents.y;
+		intersectPos.y = playerPos.y + m_CharacterObjRef->m_TransformInfo->m_Bound.Extents.y;
 		XMVECTOR PickedPos = XMLoadFloat3(&intersectPos);
 		XMFLOAT3 pickedPos; XMStoreFloat3(&pickedPos, PickedPos);
 
@@ -190,35 +173,36 @@ void Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& V
 void Player::ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
 	EventManager eventManager;
-	int Act_Object = m_ObjectRef->m_CE_ID;
+	int Act_Object = m_CharacterObjRef->m_CE_ID;
 
-	std::string objName = m_ObjectRef->m_Name;
-	auto& animInfo = m_ObjectRef->m_SkeletonInfo->m_AnimInfo;
-	std::string currAnimName = animInfo->CurrPlayingAnimName;
+	std::string objName = m_CharacterObjRef->m_Name;
+	auto& animInfo = m_CharacterObjRef->m_SkeletonInfo->m_AnimInfo;
+	AnimActionType CurrPlayingAction = animInfo->CurrPlayingAction;
+	MOTION_TYPE CurrMotion = (MOTION_TYPE)CurrPlayingAction;
 
-	if ((m_CurrAction & ActionType::SkillPose) == ActionType::SkillPose)
+	if (CurrPlayingAction != AnimActionType::Idle && CurrPlayingAction != AnimActionType::Walk)
 	{
-		if (objName.find("Meshtint Free Knight") != std::string::npos)
-		{
-			if (currAnimName == "Meshtint Free Knight@Sword And Shield Slash")
-			{
-				bool AnimNotifyIsSetted = false;
-				if (animInfo->CheckAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", AnimNotifyIsSetted) == true)
-					eventManager.ReservateEvent_TryUseSkill(GeneratedEvents, Act_Object, SKILL_TYPE::SWORD_WAVE);
-
-				bool AnimIsSetted = true;
-				if (animInfo->AnimOnceDone(currAnimName, AnimIsSetted) == true)
-					eventManager.ReservateEvent_DoneCharacterMotion(GeneratedEvents, Act_Object, MOTION_TYPE::SKILL_POSE);
-			}
-		}
+		bool AnimIsSetted = true;
+		if (animInfo->AnimOnceDone(CurrPlayingAction, AnimIsSetted) == true)
+			eventManager.ReservateEvent_DoneCharacterMotion(GeneratedEvents, Act_Object, CurrMotion);
 	}
+
+	bool AnimNotifyIsSetted = false;
+	if (animInfo->CheckAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::WARRIOR_SKILL_SWORD_WAVE_OBJ_GEN);
+	/*else if (animInfo->CheckAnimTimeLineNotify("Holy Area Gen", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::PRIEST_SKILL_HOLY_AREA_OBJ_GEN);
+	else if (animInfo->CheckAnimTimeLineNotify("Fury Roar Act", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::BERSERKER_SKILL_FURY_ROAR_ACT);
+	else if (animInfo->CheckAnimTimeLineNotify("Stealth Act", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::ASSASSIN_SKILL_STEALTH_ACT);*/
 }
 
 void Player::UpdateCamera(CTimer& gt, float aspect)
 {
-	if (m_ObjectRef == nullptr) return;
+	if (m_CharacterObjRef == nullptr) return;
 
-	auto& transformInfo = m_ObjectRef->m_TransformInfo;
+	auto& transformInfo = m_CharacterObjRef->m_TransformInfo;
 
 	float deg2rad = MathHelper::Pi / 180.0f;
 	float camAngle = -90.0f * deg2rad;

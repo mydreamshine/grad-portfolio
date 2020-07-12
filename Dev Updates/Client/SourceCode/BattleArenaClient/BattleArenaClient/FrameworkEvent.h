@@ -13,9 +13,10 @@ enum class EVENT_TYPE : char
 enum class EVENT_DATA_TYPE : char
 {
 	OBJ_TRANSFORM,
-	CHARACTER_SPAWN_INFO,
+	PLAYER_SPAWN_INFO,
 	CHARACTER_MOTION_INFO,
 	DONE_CHARACTER_MOTION_INFO,
+	ACT_ANIM_NOTIFY_INFO,
 	PLAYER_STATE_INFO,
 	DEACT_PGAREA, // InAactive Poison Gas Area
 	LOGIN_INFO,
@@ -74,25 +75,42 @@ enum class EFFECT_TYPE : char
 	PICKING_EFFECT // 현재 클리이언트 화면에만 활성화
 };
 
+// aiModelData의 AnimActionType과 1:1 매칭됨
 enum class MOTION_TYPE : char
 {
-	NON,
 	IDLE,
 	WALK,
 	ATTACK,
 	IMPACT, // be attacked
+	DIEING, 
 	SKILL_POSE,
-	DIEING
+	FREE_MOTION,
+	COUNT,
+	NON
 };
 
 // 캐릭터 상태
-// 은신, 무적, 일시무적(피해에 의한)
+// 은신, 무적, 일시무적(피해에 의한), 죽음
 enum class PLAYER_STATE : char
 {
 	NON,
 	ACT_STEALTH,
 	ACT_INVINCIBILITY,
 	ACT_SEMI_INVINCIBILITY,
+	ACT_DIE
+};
+
+enum class ANIM_NOTIFY_TYPE : char
+{
+	NON,
+	WARRIOR_NORMAL_ATTACK_OBJ_GEN,
+	WARRIOR_SKILL_SWORD_WAVE_OBJ_GEN,
+	BERSERKER_NORMAL_ATTACK_OBJ_GEN,
+	BERSERKER_SKILL_FURY_ROAR_ACT,
+	ASSASSIN_NORMAL_ATTACK_OBJ_GEN,
+	ASSASSIN_SKILL_STEALTH_ACT,
+	PRIEST_NORMAL_ATTACK_OBJ_GEN,
+	PRIEST_SKILL_HOLY_AREA_OBJ_GEN
 };
 
 #pragma pack(push, 1)
@@ -110,8 +128,9 @@ struct EVENT_DATA_OBJ_TRANSFORM : EVENT_DATA
 	DirectX::XMFLOAT3 Position;
 };
 
-struct EVENT_DATA_CHARACTER_SPAWN_INFO : EVENT_DATA_OBJ_TRANSFORM
+struct EVENT_DATA_PLAYER_SPAWN_INFO : EVENT_DATA_OBJ_TRANSFORM
 {
+	std::wstring      Name;
 	CHARACTER_TYPE    CharacterType;
 	OBJECT_PROPENSITY Propensity;
 	bool              IsMainCharacter;
@@ -151,6 +170,11 @@ struct EVENT_DATA_DONE_CHARACTER_MOTION_INFO : EVENT_DATA
 	MOTION_TYPE MotionType;
 };
 
+struct EVENT_DATA_ACT_ANIM_NOTIFY : EVENT_DATA
+{
+	ANIM_NOTIFY_TYPE AnimNotifyType;
+};
+
 struct EVENT_DATA_PLAYER_STATE_INFO : EVENT_DATA
 {
 	PLAYER_STATE PlayerState;
@@ -164,7 +188,7 @@ struct EVENT_DATA_POISON_FOG_DEACT_AREA : EVENT_DATA
 struct EVENT_DATA_USER_INFO : EVENT_DATA
 {
 	std::wstring UserName;
-	int         UserRank;
+	int          UserRank;
 };
 
 struct EVENT_DATA_KDA_SCORE : EVENT_DATA
@@ -198,13 +222,13 @@ struct EVENT_DATA_PLAYER_HP : EVENT_DATA
 
 struct EVENT_DATA_MATCH_STATISTIC_INFO : EVENT_DATA
 {
-	std::wstring UserName;
-	int  UserRank;
-	char Count_Kill;
-	char Count_Death;
-	char Count_Assistance;
-	int  TotalScore_Damage;
-	int  TotalScore_Heal;
+	std::wstring  UserName;
+	int           UserRank;
+	unsigned char Count_Kill;
+	unsigned char Count_Death;
+	unsigned char Count_Assistance;
+	int           TotalScore_Damage;
+	int           TotalScore_Heal;
 	CHARACTER_TYPE PlayedCharacterType;
 };
 
@@ -307,7 +331,7 @@ struct TIME_EVENT : EVENT
 #define FEC_CHANGE_SCENE                        0x00
 
 // Scene Object Ref
-#define FEC_SPAWN_CHARACTER                     0x01
+#define FEC_SPAWN_PLAYER                        0x01
 #define FEC_SPAWN_NORMAL_ATTACK_OBJ             0x02
 #define FEC_SPAWN_SKILL_OBJ                     0x03
 #define FEC_SPAWN_EFFECT_OBJ                    0x04
@@ -355,15 +379,17 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReservateEvent_SpawnCharacter(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
+	void ReservateEvent_SpawnPlayer(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
+		std::wstring Name,
 		CHARACTER_TYPE CharacterType,
 		DirectX::XMFLOAT3 Scale, DirectX::XMFLOAT3 RotationEuler, DirectX::XMFLOAT3 Position,
 		OBJECT_PROPENSITY Propensity,
 		bool IsMainCharacter = false)
 	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_SPAWN_CHARACTER);
-		auto newEventData = std::make_unique<EVENT_DATA_CHARACTER_SPAWN_INFO>();
-		newEventData->EventType = EVENT_DATA_TYPE::CHARACTER_SPAWN_INFO;
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_SPAWN_PLAYER);
+		auto newEventData = std::make_unique<EVENT_DATA_PLAYER_SPAWN_INFO>();
+		newEventData->EventType = EVENT_DATA_TYPE::PLAYER_SPAWN_INFO;
+		newEventData->Name = Name;
 		newEventData->CharacterType = CharacterType;
 		newEventData->Scale = Scale;
 		newEventData->RotationEuler = RotationEuler;
@@ -653,6 +679,17 @@ public:
 		auto newEventData = std::make_unique<EVENT_DATA_DONE_CHARACTER_MOTION_INFO>();
 		newEventData->EventType = EVENT_DATA_TYPE::DONE_CHARACTER_MOTION_INFO;
 		newEventData->MotionType = MotionType;
+		newEvent->Data = std::move(newEventData);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_ActivatedAnimNotify(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
+		ANIM_NOTIFY_TYPE AnimNotifyType)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_ACTIVATE_ANIM_NOTIFY);
+		auto newEventData = std::make_unique<EVENT_DATA_ACT_ANIM_NOTIFY>();
+		newEventData->EventType = EVENT_DATA_TYPE::ACT_ANIM_NOTIFY_INFO;
+		newEventData->AnimNotifyType = AnimNotifyType;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}

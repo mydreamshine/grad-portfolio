@@ -34,12 +34,11 @@ public:
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
-    void ProcessCollision(CTimer& gt);
 
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
-    // Control Element ID, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
-    void SpawnCharacter(int New_CE_ID, CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Control Element ID, Player NickName, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
+    void SpawnPlayer(int New_CE_ID, std::wstring Name, CHARACTER_TYPE CharacterType, bool IsMainPlayer, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
     // Control Element ID, Attack Order(Chracter Type), Propensity, Transform(Scale, RotationEuler, Position)
     void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
     // Control Element ID, Skill Type, Propensity, Transform(Scale, RotationEuler, Position)
@@ -72,9 +71,11 @@ public:
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
-    const UINT m_MaxTextObject = 9;
-    UINT       m_EffectInstancingNum = 0;
+    const UINT m_MaxTextObject = 9 + MAX_CHARACTER_OBJECT;
+    UINT       m_MaxUILayOutObject = MAX_CHARACTER_OBJECT * 3; // Number of HP Bar(테두리 + 증감HP Bar + HP Bar)
+    std::uint64_t m_EffectInstancingNum = 0;
 
+    Object* m_GroundObj = nullptr;
     Player* m_MainPlayer = nullptr;
     std::unordered_map<int, std::unique_ptr<Player>> m_Players;
 

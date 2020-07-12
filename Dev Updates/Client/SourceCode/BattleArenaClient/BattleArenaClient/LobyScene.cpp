@@ -16,6 +16,8 @@ void LobyScene::OnInitProperties(CTimer& gt)
 {
     for (auto& obj : m_CharacterObjects)
     {
+        if (obj->Activated != true) continue;
+
         if (obj->m_Name == "Meshtint Free Knight")
         {
             auto transformInfo = obj->m_TransformInfo.get();
@@ -26,13 +28,14 @@ void LobyScene::OnInitProperties(CTimer& gt)
             XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
             transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
             transformInfo->SetLocalRotationEuler(LocalRotationEuler);
-
-            auto skeletonInfo = obj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
         }
+
+        auto skeletonInfo = obj->m_SkeletonInfo.get();
+        auto animInfo = skeletonInfo->m_AnimInfo.get();
+        animInfo->Init();
+        animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+        animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+        animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
     }
 
     m_LightRotationAngle = 0.0f;
@@ -91,9 +94,13 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
                 ModelSkeletons["Meshtint Free Knight"].get(),
                 nullptr, &LocalRotationEuler, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
-            auto animInfo = newObj->m_SkeletonInfo->m_AnimInfo.get();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+
+            auto skeletonInfo = newObj->m_SkeletonInfo.get();
+            auto animInfo = skeletonInfo->m_AnimInfo.get();
+            animInfo->Init();
+            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {

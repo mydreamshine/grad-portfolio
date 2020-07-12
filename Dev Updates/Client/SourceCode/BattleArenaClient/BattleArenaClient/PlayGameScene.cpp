@@ -14,45 +14,19 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 
 void PlayGameScene::OnInitProperties(CTimer& gt)
 {
-    for (auto& obj : m_CharacterObjects)
+    ObjectManager objManager;
+
+    for (auto& obj : m_WorldObjects)
     {
-        if (obj->m_Name == "Meshtint Free Knight")
+        if (obj->m_Name.find("Instancing") != std::string::npos)
         {
-            auto transformInfo = obj->m_TransformInfo.get();
-            // 스케일을 2로 늘려줘야 거시적으로
-            // 주변 사물과의 크기 비례가 어색하지 않게 된다.
-            float ConvertModelUnit = ModelFileUnit::meter * 2.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 17.86f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
-            transformInfo->Init();
-            auto& MeshBound = obj->m_RenderItem->Geo->DrawArgs[obj->m_RenderItem->Name].Bounds;
-            transformInfo->SetBound(MeshBound, TransformInfo::BoundPivot::Bottom);
-            transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
-            transformInfo->SetLocalRotationEuler(LocalRotationEuler);
-
-
-            auto skeletonInfo = obj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
-            animInfo->SetAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", ActionNotifyTime::MeshtintFreeKnight_SwordSlashStart);
-        }
-        else
-        {
-            ObjectManager objManager;
-            if (obj->m_Name.find("Instancing") != std::string::npos)
-            {
-                for (auto& attachedObj : obj->m_Childs)
-                    objManager.DeActivateObj(attachedObj);
-            }
+            for (auto& attachedObj : obj->m_Childs)
+                objManager.DeActivateObj(attachedObj);
             objManager.DeActivateObj(obj);
         }
     }
 
-    for (auto& obj : m_WorldObjects)
+    for (auto& obj : m_UILayOutObjects)
     {
         if (obj->m_Name.find("Instancing") != std::string::npos)
         {
@@ -62,6 +36,32 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
             objManager.DeActivateObj(obj);
         }
     }
+
+    for (auto& obj : m_TextObjects)
+    {
+        if (obj->m_Name.find("Instancing") != std::string::npos)
+        {
+            ObjectManager objManager;
+            for (auto& attachedObj : obj->m_Childs)
+                objManager.DeActivateObj(attachedObj);
+            objManager.DeActivateObj(obj);
+        }
+    }
+
+    /*for (auto& obj : m_EffectObjects)
+    {
+        for (auto& attachedObj : obj->m_Childs)
+            objManager.DeActivateObj(attachedObj);
+        objManager.DeActivateObj(obj);
+    }*/
+
+    for (auto& Player_iter : m_Players)
+    {
+        auto Player = Player_iter.second.get();
+        Player->Init();
+    }
+    m_Players.clear();
+    m_MainPlayer = nullptr;
 
     m_LightRotationAngle = 0.0f;
 
@@ -78,6 +78,8 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     ChattingList.clear();
 
     TimeLimit_Sec = 0;
+
+    ChattingMode = false;
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -87,7 +89,6 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     PlayGameScene::AnimateWorldObjectsTransform(gt, GeneratedEvents);
-    PlayGameScene::ProcessCollision(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
@@ -97,6 +98,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     auto& AllRitems = *m_AllRitemsRef;
     auto& Geometries = *m_GeometriesRef;
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
+    m_MaxUILayOutObject = MAX_CHARACTER_OBJECT * 2 + (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
 
     ObjectManager objManager;
 
@@ -105,8 +107,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         auto Ritem = Ritem_iter.second.get();
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
-            const UINT maxUILayOutObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
-            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, m_MaxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             // UI 오브젝트 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
@@ -161,6 +162,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
                 if(objName == "Floor1")
                 {
+                    m_GroundObj = newObj;
                     auto& FloorBound = newObj->m_TransformInfo->m_Bound;
                     float width = FloorBound.Extents.x;
                     float depth = FloorBound.Extents.z;
@@ -173,11 +175,6 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 }
             }
         }
-    }
-
-    // Create Text Objects
-    {
-
     }
 
     // Create DeActive Objects
@@ -210,10 +207,27 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
         }
 
+        const UINT nDeActivateUILayOutObj = m_MaxUILayOutObject - (UINT)m_UILayOutObjects.size();
+        for (UINT i = 0; i < nDeActivateUILayOutObj; ++i)
+        {
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, m_MaxUILayOutObject);
+            m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
+        }
+
+        const UINT nDeActivateTextObj = m_MaxTextObject - (UINT)m_TextObjects.size();
+        for (UINT i = 0; i < nDeAcativateWorldObj; ++i)
+        {
+            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+        }
+
         for (UINT i = m_MaxCharacterObject - nDeAcativateCharacterObj; i < m_MaxCharacterObject; ++i)
             m_CharacterObjects[i]->Activated = false;
         for (UINT i = m_MaxWorldObject - nDeAcativateWorldObj; i < m_MaxWorldObject; ++i)
             m_WorldObjects[i]->Activated = false;
+        for (UINT i = m_MaxUILayOutObject - nDeActivateUILayOutObj; i < m_MaxUILayOutObject; ++i)
+            m_UILayOutObjects[i]->Activated = false;
+        for (UINT i = m_MaxTextObject - nDeActivateTextObj; i < m_MaxTextObject; ++i)
+            m_TextObjects[i]->Activated = false;
     }
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
@@ -329,9 +343,7 @@ void PlayGameScene::AnimateLights(CTimer& gt)
 void PlayGameScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     if (m_MainPlayer != nullptr)
-    {
-        m_MainPlayer->ProcessSkeletonAnimDurationDone(GeneratedEvents);
-    }
+        m_MainPlayer->ProcessSkeletonAnimNotify(GeneratedEvents);
 
     for (auto& obj : m_CharacterObjects)
     {
@@ -450,21 +462,21 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
     if (m_MainPlayer != nullptr)
     {
         CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
-        m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt);
+        m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt,m_GroundObj, GeneratedEvents);
     }
 }
 
-void PlayGameScene::ProcessCollision(CTimer& gt)
-{
-    if (m_MainPlayer != nullptr)
-        m_MainPlayer->ProcessCollision(m_WorldObjects);
-}
-
-void PlayGameScene::SpawnCharacter(int New_CE_ID,
-    CHARACTER_TYPE CharacterType, bool IsMainCharacter, OBJECT_PROPENSITY Propensity,
+void PlayGameScene::SpawnPlayer(
+    int New_CE_ID,
+    std::wstring Name,
+    CHARACTER_TYPE CharacterType,
+    bool IsMainPlayer,
+    OBJECT_PROPENSITY Propensity,
     XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
 {
     if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    if (CharacterType == CHARACTER_TYPE::NON) return;
+
     auto& AllRitems = *m_AllRitemsRef;
     auto& Geometries = *m_GeometriesRef;
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
@@ -482,9 +494,6 @@ void PlayGameScene::SpawnCharacter(int New_CE_ID,
         return;
     }
 
-    if (IsMainCharacter == true) m_PlayerCharacter = newCharacterObj;
-
-
     // Set Character Prop
     {
         newCharacterObj->m_CE_ID = New_CE_ID;
@@ -492,9 +501,6 @@ void PlayGameScene::SpawnCharacter(int New_CE_ID,
         newCharacterObj->Propensity = Propensity;
         switch (CharacterType)
         {
-        case CHARACTER_TYPE::NON:
-            objManager.DeActivateObj(newCharacterObj);
-            break;
         case CHARACTER_TYPE::WARRIOR:
         {
             // 스케일을 2로 늘려줘야 거시적으로
@@ -515,9 +521,12 @@ void PlayGameScene::SpawnCharacter(int New_CE_ID,
             newCharacterObj->m_TransformInfo->UpdateLocalTransform();
             newCharacterObj->m_TransformInfo->UpdateWorldTransform();
 
-            auto animInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
-            animInfo->AnimPlay("Meshtint Free Knight@Battle Idle");
-            animInfo->AnimLoop("Meshtint Free Knight@Battle Idle");
+            auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
+            auto animInfo = skeletonInfo->m_AnimInfo.get();
+            animInfo->Init();
+            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
             animInfo->SetAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", ActionNotifyTime::MeshtintFreeKnight_SwordSlashStart);
 
             // Equipment Attaching
@@ -569,6 +578,26 @@ void PlayGameScene::SpawnCharacter(int New_CE_ID,
         case CHARACTER_TYPE::PRIEST:
             break;
         }
+    }
+
+    // Create Player
+    {
+        auto newPlayer = std::make_unique<Player>();
+        newPlayer->m_Name = Name;
+        newPlayer->m_CharacterObjRef = newCharacterObj;
+        newPlayer->m_NickNameObjRef = objManager.FindDeactiveTextObject(m_AllObjects, m_TextObjects, m_MaxTextObject);
+        auto& Textinfo = newPlayer->m_NickNameObjRef->m_Textinfo;
+        Textinfo->m_FontName = L"맑은 고딕";
+        Textinfo->m_TextColor = DirectX::Colors::Blue;
+        Textinfo->m_Text = Name;
+        newPlayer->m_HP_BarObjRef[0] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayOutObject);
+        newPlayer->m_HP_BarObjRef[1] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayOutObject);
+        newPlayer->m_HP_BarObjRef[2] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayOutObject);
+        /*objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Border - Instancing", AllRitems["HP Bar Border"].get());
+        objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[1], "HP Bar Increase - Instancing", AllRitems["HP Bar Increase"].get());
+        objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[2], "HP Bar Dest - Instancing", AllRitems["HP Bar Dest"].get());*/
+        if (IsMainPlayer == true) m_MainPlayer = newPlayer.get();
+        m_Players[newCharacterObj->m_CE_ID] = std::move(newPlayer);
     }
 }
 
@@ -764,118 +793,26 @@ void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 Rotat
 
 void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)
 {
-    ObjectManager ObjManager;
-    Object* ControledObj = ObjManager.FindObjectCE_ID(m_CharacterObjects, CE_ID);
-
-    if (ControledObj != nullptr)
+    if (m_Players.find(CE_ID) != m_Players.end())
     {
-        CHARACTER_TYPE CharacterType = ControledObj->CharacterType;
-        auto& animInfo = ControledObj->m_SkeletonInfo->m_AnimInfo;
-        std::string AnimName = animInfo->CurrPlayingAnimName;
+        m_Players[CE_ID]->PlayMotion(MotionType, SkillType);
+    }
+    else
+    {
+        ObjectManager ObjManager;
+        Object* ControledObj = ObjManager.FindObjectCE_ID(m_CharacterObjects, CE_ID);
+        if (ControledObj == nullptr) return;
 
-        switch (MotionType)
-        {
-        case MOTION_TYPE::NON:
-            return;
-            break;
-        case MOTION_TYPE::IDLE:
-        {
-            if (AnimName.find("Idle") != std::string::npos) return;
+        auto AnimInfo = ControledObj->m_SkeletonInfo->m_AnimInfo.get();
+        aiModelData::AnimActionType CurrPlayingAction = AnimInfo->CurrPlayingAction;
+        aiModelData::AnimActionType newActionType = (aiModelData::AnimActionType)MotionType;
 
-            animInfo->AnimStop(AnimName);
+        if (newActionType == aiModelData::AnimActionType::Non) return;
 
-            switch (CharacterType)
-            {
-            case CHARACTER_TYPE::NON:       return; break;
-            case CHARACTER_TYPE::WARRIOR:   AnimName = "Meshtint Free Knight@Battle Idle"; break;
-            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        case MOTION_TYPE::WALK:
-        {
-            if (AnimName.find("Walk") != std::string::npos) return;
-
-            animInfo->AnimStop(AnimName);
-
-            switch (CharacterType)
-            {
-            case CHARACTER_TYPE::NON:       return; break;
-            case CHARACTER_TYPE::WARRIOR:   AnimName = "Meshtint Free Knight@Stride Walking"; break;
-            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        case MOTION_TYPE::ATTACK:
-        {
-            if (AnimName.find("NormalAttack") != std::string::npos) return;
-
-            animInfo->AnimStop(AnimName);
-
-            switch (CharacterType)
-            {
-            case CHARACTER_TYPE::NON:       return; break;
-            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        case MOTION_TYPE::IMPACT:
-        {
-            if (AnimName.find("Impact") != std::string::npos) return;
-
-            animInfo->AnimStop(AnimName);
-
-            switch (CharacterType)
-            {
-            case CHARACTER_TYPE::NON:       return; break;
-            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        case MOTION_TYPE::SKILL_POSE:
-        {
-            if (AnimName.find("Skill") != std::string::npos) return;
-
-            switch (SkillType)
-            {
-            case SKILL_TYPE::NON:        return; break;
-            case SKILL_TYPE::SWORD_WAVE: animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
-            case SKILL_TYPE::HOLY_AREA:  animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
-            case SKILL_TYPE::FURY_ROAR:  animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
-            case SKILL_TYPE::STEALTH:    animInfo->AnimStop(AnimName); /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        case MOTION_TYPE::DIEING:
-        {
-            if (AnimName.find("Dieing") != std::string::npos) return;
-
-            animInfo->AnimStop(AnimName);
-
-            switch (CharacterType)
-            {
-            case CHARACTER_TYPE::NON:       return; break;
-            case CHARACTER_TYPE::WARRIOR:   /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::BERSERKER: /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::ASSASSIN:  /*AnimName = ;*/ break;
-            case CHARACTER_TYPE::PRIEST:    /*AnimName = ;*/ break;
-            }
-        }
-            break;
-        }
-
-        animInfo->AnimPlay(AnimName);
-        if (MotionType == MOTION_TYPE::IDLE || MotionType == MOTION_TYPE::WALK) animInfo->AnimLoop(AnimName);
+        AnimInfo->AnimStop(CurrPlayingAction);
+        AnimInfo->AnimPlay(newActionType);
+        if (newActionType == aiModelData::AnimActionType::Idle || newActionType == aiModelData::AnimActionType::Walk)
+            AnimInfo->AnimLoop(newActionType);
     }
 }
 
@@ -890,10 +827,18 @@ void PlayGameScene::SetPlayerState(int CE_ID, PLAYER_STATE PlayerState)
 
 void PlayGameScene::DeActivateObject(int CE_ID)
 {
-    ObjectManager ObjManager;
-    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
-    if (ControledObj != nullptr)
-        ObjManager.DeActivateObj(ControledObj);
+    if (m_Players.find(CE_ID) != m_Players.end())
+    {
+        m_Players[CE_ID]->Init();
+        m_Players.erase(CE_ID);
+    }
+    else
+    {
+        ObjectManager ObjManager;
+        Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
+        if (ControledObj != nullptr)
+            ObjManager.DeActivateObj(ControledObj);
+    }
 }
 
 void PlayGameScene::SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance)
