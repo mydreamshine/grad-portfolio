@@ -18,6 +18,7 @@
 namespace BattleArena {
 	constexpr auto MAX_ROOM = 100; ///< Max room count of server.
 	constexpr auto UPDATE_INTERVAL = 30; ///< Interval of updateing time. Millisecond.
+	constexpr auto RECV_BUF_SIZE = 256;
 
 	void error_display(const char* msg, int err_no);
 

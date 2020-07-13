@@ -12,10 +12,11 @@ class OVER_EX
 private:
 	WSAOVERLAPPED over;				///< WSAOVERLAPPED structure.
 	WSABUF wsabuf;					///< WSABUF structure.
-	char packet[MAX_BUFFER_SIZE];	///< Inner recv buffer.
+	char* packet;	///< Inner recv buffer.
 	int ev_type;					///< Event type for iocp. can be defined for its own goal.
 
 public:
+	~OVER_EX();
 	/**
 	@brief Basic Constructor.
 	*/
@@ -26,6 +27,13 @@ public:
 	@param ev set event.
 	*/
 	OVER_EX(int ev);
+
+	/**
+	@brief Set event type and allocate inner buffer. usually for recv data.
+	@param ev set event.
+	@param buf_len inner buffer size.
+	*/
+	OVER_EX(int ev, size_t buf_size);
 
 	/**
 	@brief Set event type and copy buff to inner buffer. usually for send data.
@@ -61,8 +69,9 @@ public:
 
 	/**
 	@brief init for socket communication.
+	@param buf_size inner buffer size.
 	*/
-	void init();
+	void init(size_t buf_size);
 
 	/**
 	@brief set event.

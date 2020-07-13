@@ -64,7 +64,7 @@ namespace BattleArena {
 		wprintf(L"Waiting LobbyServer...");
 		CSOCKADDR_IN LobbyAddr{};
 		m_Lobby.socket = accept(m_listenSocket, LobbyAddr.getSockAddr(), LobbyAddr.len());
-		m_Lobby.recv_over.init();
+		m_Lobby.recv_over.init(RECV_BUF_SIZE);
 		m_Lobby.recv_over.set_event(EV_LOBBY);
 		m_Lobby.set_recv();
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_Lobby.socket), m_iocp, reinterpret_cast<ULONG_PTR>(&m_Lobby), 0);
@@ -99,7 +99,7 @@ namespace BattleArena {
 			clientSocket = accept(m_listenSocket, clientAddr.getSockAddr(), clientAddr.len());
 			CLIENT* client = new CLIENT{};
 			client->socket = clientSocket;
-			client->recv_over.init();
+			client->recv_over.init(RECV_BUF_SIZE);
 			client->recv_over.set_event(EV_AUTHO);
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(client->socket), m_iocp, reinterpret_cast<ULONG_PTR>(client), 0);
 			client->set_recv();
@@ -119,7 +119,7 @@ namespace BattleArena {
 			CLIENT* client = reinterpret_cast<CLIENT*>(key);
 			OVER_EX* over_ex = reinterpret_cast<OVER_EX*>(over);
 			if (0 == ReceivedBytes) {
-				if (EV_SEND == over_ex->event_type)
+				if (EV_SEND == over_ex->event_type())
 					delete over_ex;
 				else
 					disconnect_player(client);
