@@ -1,7 +1,6 @@
 #pragma comment(lib, "ws2_32")
 #include "BATTLESERVER.h"
 #include <iostream>
-#include "battle_protocol.h"
 #include "..//..//LobbyServer/LobbyServer/lobby_protocol.h"
 
 
@@ -175,7 +174,7 @@ namespace BattleArena {
 
 	void BATTLESERVER::disconnect_player(CLIENT* client)
 	{
-		std::wcout << L"[CLIENT - " << int(client) << L"] Disconnected" << std::endl;
+		std::wcout << L"[CLIENT - " << reinterpret_cast<int>(client) << L"] Disconnected" << std::endl;
 		if (client->room != nullptr)
 			client->room->disconnect(client);
 		if (client->socket != INVALID_SOCKET) {
@@ -227,7 +226,7 @@ namespace BattleArena {
 
 	void BATTLESERVER::send_packet(CLIENT* client, void* buff)
 	{
-		OVER_EX* send_over = new OVER_EX{EV_SEND, buff};
+		OVER_EX* send_over = new OVER_EX {EV_SEND, buff};
 		WSASend(client->socket, send_over->buffer(), 1, 0, 0, send_over->overlapped(), 0);
 	}
 	void BATTLESERVER::send_packet_default(CLIENT* client, int TYPE)
@@ -246,17 +245,6 @@ namespace BattleArena {
 		send_packet(&m_Lobby, &packet);
 	}
 
-	void BATTLESERVER::ProcessPacket(CLIENT* client, void* buffer)
-	{
-		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
-		switch (packet->type)
-		{
-		default:
-			printf("[CLIENT %lld] - Unknown Packet\n", client->socket);
-			while (true);
-			break;
-		}
-	}
 	void BATTLESERVER::ProcessLobbyPacket(void* buffer)
 	{
 		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
@@ -333,7 +321,7 @@ namespace BattleArena {
 		ROOM* newgame = nullptr;
 		switch (mode) {
 		case GAMEMODE_NGP:
-			newgame = new NGPROOM;
+			newgame = new DMRoom{};
 		}
 		return newgame;
 	}

@@ -43,6 +43,14 @@ public:
 	OVER_EX(int ev, void* buff);
 
 	/**
+	@brief Set event type and copy buff to inner buffer. usually for send data.
+	@param ev set event.
+	@param buff want to send data pointer.
+	@param buf_size buff data size.
+	*/
+	OVER_EX(int ev, void* buff, size_t buf_size);
+
+	/**
 	@brief return wsabuf pointer.
 	*/
 	WSABUF* buffer() { return &wsabuf; }

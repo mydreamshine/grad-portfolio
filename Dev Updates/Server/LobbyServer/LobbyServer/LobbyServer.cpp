@@ -110,7 +110,7 @@ namespace BattleArena {
 			int new_id = player_num++;
 			m_clients[new_id].socket = clientSocket;
 			m_clients[new_id].state = ST_IDLE;
-			m_clients[new_id].recv_over.init();
+			m_clients[new_id].recv_over.init(RECV_BUFFER_SIZE);
 			m_clients[new_id].recv_over.set_event(EV_CLIENT);
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_clients[new_id].socket), m_iocp, new_id, 0);
 			std::wcout << L"[CLIENT - " << new_id << L"] Accept" << std::endl;

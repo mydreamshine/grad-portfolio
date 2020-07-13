@@ -16,13 +16,14 @@ OVER_EX::OVER_EX() :
 {}
 OVER_EX::OVER_EX(int ev) :
 	ev_type(ev),
-	packet(nullptr)
+	packet(nullptr),
+	over(),
+	wsabuf()
 {
 }
 OVER_EX::OVER_EX(int ev, size_t buf_size) :
 	OVER_EX(ev)
 {
-	packet = new char[buf_size];
 	init(buf_size);
 }
 
@@ -30,12 +31,23 @@ OVER_EX::OVER_EX(int ev, void* buff) :
 	OVER_EX(ev)
 {
 	common_default_packet* cdp = reinterpret_cast<common_default_packet*>(buff);
-	packet = new char[cdp->size];
 	init(cdp->size);
-	memcpy(packet, cdp, cdp->size);
+	memcpy(packet, buff, cdp->size);
+}
+
+OVER_EX::OVER_EX(int ev, void* buff, size_t buf_size) :
+	OVER_EX(ev)
+{
+	init(buf_size);
+	memcpy(packet, buff, buf_size);
 }
 void OVER_EX::init(size_t buf_size)
 {
+	if (packet != nullptr) {
+		delete[] packet;
+		packet = nullptr;
+	}
+	packet = new char[buf_size];
 	memset(&over, 0, sizeof(WSAOVERLAPPED));
 	wsabuf.buf = packet;
 	wsabuf.len = buf_size;

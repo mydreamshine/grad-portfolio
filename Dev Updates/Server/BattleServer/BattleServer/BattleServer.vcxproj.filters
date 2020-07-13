@@ -22,8 +22,8 @@
     <Filter Include="Common\Source">
       <UniqueIdentifier>{53433334-9e99-408f-9f4a-21879944626a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="BattleLogic">
-      <UniqueIdentifier>{b2081e2c-1a34-4438-af2a-79fc953b2851}</UniqueIdentifier>
+    <Filter Include="Rooms">
+      <UniqueIdentifier>{9b66289e-0237-4479-9700-d1d56b7c49b2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,23 +36,20 @@
     <ClCompile Include="..\..\Common\CLIENT.cpp">
       <Filter>Common\Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\EVENT.cpp">
-      <Filter>Common\Source</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\OVER_EX.cpp">
-      <Filter>Common\Source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\ROOM.cpp">
       <Filter>Common\Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\csockaddr_in.cpp">
       <Filter>Common\Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Object.cpp">
-      <Filter>BattleLogic</Filter>
+    <ClCompile Include="..\..\Rooms\DMRoom.cpp">
+      <Filter>Rooms</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\PacketMgr.cpp">
-      <Filter>BattleLogic</Filter>
+    <ClCompile Include="..\..\Rooms\ROOM.cpp">
+      <Filter>Rooms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
+      <Filter>Common\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -71,23 +68,17 @@
     <ClInclude Include="..\..\Common\OVER_EX.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\ROOM.h">
-      <Filter>Common\Header</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\csockaddr_in.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Config.h">
-      <Filter>BattleLogic</Filter>
+    <ClInclude Include="..\..\Rooms\DMRoom.h">
+      <Filter>Rooms</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Object.h">
-      <Filter>BattleLogic</Filter>
+    <ClInclude Include="..\..\Rooms\ROOM.h">
+      <Filter>Rooms</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\PacketMgr.h">
-      <Filter>BattleLogic</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Vector2d.h">
-      <Filter>BattleLogic</Filter>
+    <ClInclude Include="..\..\Common\PACKET_VECTOR.h">
+      <Filter>Common\Header</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

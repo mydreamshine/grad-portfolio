@@ -1,7 +1,5 @@
-#include "ROOM.h"
+#include "NGPRoom.h"
 #include "CLIENT.h"
-
-ROOM::~ROOM() {};
 
 NGPROOM::NGPROOM()
 {
@@ -19,7 +17,7 @@ bool NGPROOM::update(float elapsedTime)
 }
 void NGPROOM::init()
 {
-	clients = new CLIENT* [MATCHUP_NUM];
+	clients = new CLIENT * [MATCHUP_NUM];
 
 	player_num = 0;
 	PlayerList.clear();
@@ -72,7 +70,7 @@ void NGPROOM::end()
 {
 	DeleteObjects();
 	//차후 서버단으로 이전
-	for (int i=0;i<MATCHUP_NUM;++i)
+	for (int i = 0; i < MATCHUP_NUM; ++i)
 	{
 		SOCKET tmp = clients[i]->socket;
 		clients[i]->socket = INVALID_SOCKET;
@@ -97,7 +95,7 @@ void NGPROOM::PacketReceiver(CLIENT* client, int ReceivedBytes)
 	while (retval > 0)
 	{
 		if (retval + client->saved_size >= client->need_size) {
-			int copy_size = (client->need_size - client->saved_size);
+			size_t copy_size = (client->need_size - client->saved_size);
 			memcpy(client->savedPacket + client->saved_size, buf_pos, copy_size);
 			buf_pos += copy_size;
 			retval -= copy_size;

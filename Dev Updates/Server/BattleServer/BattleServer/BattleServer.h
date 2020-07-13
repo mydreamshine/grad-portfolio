@@ -13,7 +13,8 @@
 #include "EVENT.h"
 #include "OVER_EX.h"
 #include "CLIENT.h"
-#include "ROOM.h"
+
+#include "DMRoom.h"
 
 namespace BattleArena {
 	constexpr auto MAX_ROOM = 100; ///< Max room count of server.
@@ -24,7 +25,6 @@ namespace BattleArena {
 
 	enum EVENT_TYPE;
 	enum CL_STATE;
-
 
 	/**
 	@brief Battle server.
@@ -108,13 +108,6 @@ namespace BattleArena {
 		@param room_id available room id.
 		*/
 		void send_packet_response_room(int room_id);
-
-		/**
-		@brief Process packet received from clients.
-		@param client sender.
-		@param buffer packet data.
-		*/
-		void ProcessPacket(CLIENT* client, void* buffer);
 
 		/**
 		@brief Process packet received from lobby.

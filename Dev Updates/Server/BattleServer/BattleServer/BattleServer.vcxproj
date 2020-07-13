@@ -118,7 +118,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Rooms;C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,25 +129,22 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\CLIENT.cpp" />
     <ClCompile Include="..\..\Common\csockaddr_in.cpp" />
-    <ClCompile Include="..\..\Common\EVENT.cpp" />
-    <ClCompile Include="..\..\Common\Object.cpp" />
     <ClCompile Include="..\..\Common\OVER_EX.cpp" />
-    <ClCompile Include="..\..\Common\PacketMgr.cpp" />
-    <ClCompile Include="..\..\Common\ROOM.cpp" />
+    <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp" />
+    <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
+    <ClCompile Include="..\..\Rooms\ROOM.cpp" />
     <ClCompile Include="BattleServer.cpp" />
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\CLIENT.h" />
-    <ClInclude Include="..\..\Common\Config.h" />
     <ClInclude Include="..\..\Common\csockaddr_in.h" />
     <ClInclude Include="..\..\Common\EVENT.h" />
-    <ClInclude Include="..\..\Common\Object.h" />
     <ClInclude Include="..\..\Common\OVER_EX.h" />
-    <ClInclude Include="..\..\Common\PacketMgr.h" />
-    <ClInclude Include="..\..\Common\ROOM.h" />
-    <ClInclude Include="..\..\Common\Vector2d.h" />
+    <ClInclude Include="..\..\Common\PACKET_VECTOR.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
+    <ClInclude Include="..\..\Rooms\DMRoom.h" />
+    <ClInclude Include="..\..\Rooms\ROOM.h" />
     <ClInclude Include="BattleServer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

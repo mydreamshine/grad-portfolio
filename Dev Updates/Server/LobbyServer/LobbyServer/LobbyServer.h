@@ -20,7 +20,7 @@
 
 
 namespace BattleArena {
-	constexpr auto MAX_BUFFER_SIZE = 200; /// max buffer size for socket communication
+	constexpr auto RECV_BUFFER_SIZE = 200; /// max buffer size for socket communication
 	constexpr auto MAX_USER = 100; /// max user count that lobby server can hold
 	constexpr auto BATTLE_KEY = MAX_USER; /// last index for battle server
 	constexpr auto MATCHUP_NUM = 3; /// will deprecated. at least count for match-making.
@@ -40,8 +40,8 @@ namespace BattleArena {
 		SOCKET socket{ INVALID_SOCKET }; ///< socket for communication.
 		CL_STATE state{ ST_IDLE }; ///< client status.
 
-		int uid; ///< clients uid
-		char id[ID_LENGTH]; ///< clients id
+		int uid{-1}; ///< clients uid
+		char id[ID_LENGTH]{0}; ///< clients id
 		std::set<int> friendlist; ///< clients friend list, ONLY index for client_table, show ONLY ONLINE friends
 
 		/**

@@ -5,11 +5,8 @@ DMRoom::DMRoom() :
 	max_player(4),
 	player_num(0)
 {
-	packet_lock.lock();
 	packet_vector.clear();
 	packets.clear();
-	packet_lock.unlock();
-
 	event_data.clear();
 	info_data.clear();
 }
@@ -85,8 +82,8 @@ void DMRoom::process_packet_vector()
 	packet_lock.unlock();
 
 	char* packet_pos = packets.data;
-	int packet_size = 0;
-	int packet_length = packets.len;
+	PACKET_SIZE packet_size = 0;
+	size_t packet_length = packets.len;
 	while (packet_length > 0)
 	{
 		default_packet* dp = reinterpret_cast<default_packet*>(packet_pos);
@@ -122,6 +119,8 @@ bool DMRoom::game_logic(float elapsedTime)
 			if (true == hero.second->AABB.Intersects(wall));
 				//Correct position.
 	}
+
+	return true;
 }
 
 void DMRoom::send_game_state()
@@ -161,10 +160,11 @@ void DMRoom::send_game_state()
 	}
 
 	event_data.emplace_back(info_data.data, info_data.len);
+
 	//WSASend
 	socket_lock.lock();
 	for (const SOCKET& socket : sockets) {
-		//WSASend(socket, )
+		send_packet(socket, event_data.data, event_data.len);
 	}
 	socket_lock.unlock();
 
