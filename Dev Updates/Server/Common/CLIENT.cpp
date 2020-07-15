@@ -1,5 +1,4 @@
 #include "CLIENT.h"
-#include "ROOM.h"
 #include <iostream>
 
 	void CLIENT::set_recv()

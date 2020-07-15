@@ -1,14 +1,19 @@
 #include "DMRoom.h"
 #include "CLIENT.h"
+#include "CharacterConfig.h"
 
 DMRoom::DMRoom() :
-	max_player(4),
-	player_num(0)
+	max_player(2),
+	player_num(0),
+	delta_time(0),
+	skill_uid(4)
 {
 	packet_vector.clear();
 	packets.clear();
 	event_data.clear();
 	info_data.clear();
+	for (int i = 0; i < max_player; ++i)
+		m_heros[i] = nullptr;
 }
 
 DMRoom::~DMRoom()
@@ -25,7 +30,13 @@ bool DMRoom::regist(CLIENT* client)
 	socket_lock.lock();
 	int cur_player = ++player_num;
 	sockets.emplace(client->socket);
+	csss_packet_login_ok packet;
+	packet.client_id = cur_player;
+	packet.type = CSSS_LOGIN_OK;
+	packet.size = sizeof(csss_packet_login_ok);
+	send_packet(client->socket, &packet, packet.size);
 	socket_lock.unlock();
+
 	return cur_player == max_player;
 }
 
@@ -40,6 +51,11 @@ void DMRoom::disconnect(CLIENT* client)
 void DMRoom::start()
 {
 	//Insert changed scene packet.
+	csss_packet_change_scene packet;
+	packet.type = CSSS_CHANGE_SCENE;
+	packet.size = sizeof(csss_packet_change_scene);
+	//packet.scene_type = (char)
+	event_data.emplace_back(&packet, packet.size);
 }
 
 void DMRoom::end()
@@ -67,8 +83,9 @@ void DMRoom::process_packet(CLIENT* client, int ReceivedBytes)
 
 bool DMRoom::update(float elapsedTime)
 {
+	delta_time = elapsedTime;
     process_packet_vector();
-    bool retval = game_logic(elapsedTime);
+    bool retval = game_logic();
     send_game_state();
     return retval;
 }
@@ -94,31 +111,53 @@ void DMRoom::process_packet_vector()
 	}
 }
 
-bool DMRoom::game_logic(float elapsedTime)
+bool DMRoom::game_logic()
 {
 	for (auto& hero : m_heros)
-		hero.second->update(elapsedTime);
+		hero.second->update(delta_time);
 	for (auto& skill : m_skills)
-		skill.second->update(elapsedTime);
+		skill.second->update(delta_time);
 
 	//Collision check and process.
-	for (auto& hero : m_heros) {
+    for (auto& skill : m_skills) {
 		//Hero and Skill.
-		for (auto& skill : m_skills) {
-			if (true == hero.second->AABB.Intersects(skill.second->AABB))
-				skill.second->effect(hero.second);
+        for (auto& hero : m_heros) {
+            if (true == hero.second->is_die()) continue;
+            if (true == hero.second->AABB.Intersects(skill.second->AABB)) {
+                skill.second->effect(hero.second);
+            }
+        }
 
-			//Skill and Wall
-			for (auto& wall : m_walls)
-				if (true == skill.second->AABB.Intersects(wall));
-					//Deactivate Skill.
-		}
+        //Skill and Wall
+        for (auto& wall : m_walls)
+            if (true == skill.second->AABB.Intersects(wall))
+                skill.second->collision_wall();
+	}
 
+	for (auto& hero : m_heros) {
+		if (true == hero.second->is_die()) continue;
 		//Hero and Wall
 		for (auto& wall : m_walls)
-			if (true == hero.second->AABB.Intersects(wall));
-				//Correct position.
+			if (true == hero.second->AABB.Intersects(wall))
+				hero.second->correct_position(wall);
 	}
+
+	//Garbage Collection.
+	for (auto skill = m_skills.begin(); skill != m_skills.end(); ) {
+		if (true == skill->second->is_die()) {
+			csss_packet_deactivate_obj packet;
+			packet.type = CSSS_DEACTIVATE_OBJ;
+			packet.size = sizeof(csss_packet_deactivate_obj);
+			packet.object_id = skill->first;
+			event_data.emplace_back(&packet, packet.size);
+			delete skill->second;
+			m_skills.erase(skill++);
+		}
+		else
+			++skill;
+	}
+
+	//Game End Check.
 
 	return true;
 }
@@ -158,7 +197,6 @@ void DMRoom::send_game_state()
 		packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
 		info_data.emplace_back(&packet, packet.size);
 	}
-
 	event_data.emplace_back(info_data.data, info_data.len);
 
 	//WSASend
@@ -176,24 +214,81 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 {
 	switch (type) {
 	case SSCS_TRY_MOVE_CHARACTER:
+		process_try_move_character(packet);
 		break;
 
 	case SSCS_TRY_ROTATION_CHARACTER:
+		process_try_rotation_character(packet);
 		break;
 
 	case SSCS_TRY_NORMAL_ATTACK:
+		process_try_normal_attack(packet);
 		break;
 
 	case SSCS_TRY_USE_SKILL:
+		process_try_use_skill(packet);
 		break;
 
 	case SSCS_DONE_CHARACTER_MOTION:
+		process_done_character_motion(packet);
 		break;
 
 	case SSCS_ACTIVATE_ANIM_NOTIFY:
+		process_activate_anim_notify(packet);
 		break;
 
 	default:
+		break;
+	}
+}
+
+void DMRoom::process_try_move_character(void* packet)
+{
+	sscs_packet_try_move_character* data = reinterpret_cast<sscs_packet_try_move_character*>(packet);
+	m_heros[data->client_id]->rotate(data->MoveDirection_Yaw_angle);
+	m_heros[data->client_id]->move(delta_time);
+}
+
+void DMRoom::process_try_rotation_character(void* packet)
+{
+	sscs_packet_try_rotation_character* data = reinterpret_cast<sscs_packet_try_rotation_character*>(packet);
+	m_heros[data->client_id]->rotate(data->Yaw_angle);
+}
+
+void DMRoom::process_try_normal_attack(void* packet)
+{
+	sscs_packet_try_normal_attack* data = reinterpret_cast<sscs_packet_try_normal_attack*>(packet);
+	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::ATTACK);
+}
+
+void DMRoom::process_try_use_skill(void* packet)
+{
+	sscs_packet_try_use_skill* data = reinterpret_cast<sscs_packet_try_use_skill*>(packet);
+	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::SKILL_POSE);
+}
+
+void DMRoom::process_done_character_motion(void* packet)
+{
+	sscs_packet_done_character_motion* data = reinterpret_cast<sscs_packet_done_character_motion*>(packet);
+	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::IDLE);
+}
+
+void DMRoom::process_activate_anim_notify(void* packet)
+{
+	sscs_packet_activate_anim_notify* data = reinterpret_cast<sscs_packet_activate_anim_notify*>(packet);
+	switch (ANIM_NOTIFY_TYPE(data->anim_notify_type)) {
+	case ANIM_NOTIFY_TYPE::WARRIOR_NORMAL_ATTACK_OBJ_GEN:
+	case ANIM_NOTIFY_TYPE::BERSERKER_NORMAL_ATTACK_OBJ_GEN:
+	case ANIM_NOTIFY_TYPE::ASSASSIN_NORMAL_ATTACK_OBJ_GEN:
+	case ANIM_NOTIFY_TYPE::PRIEST_NORMAL_ATTACK_OBJ_GEN:
+		m_heros[data->client_id]->do_attack();
+		break;
+
+	case ANIM_NOTIFY_TYPE::WARRIOR_SKILL_SWORD_WAVE_OBJ_GEN:
+	case ANIM_NOTIFY_TYPE::BERSERKER_SKILL_FURY_ROAR_ACT:
+	case ANIM_NOTIFY_TYPE::ASSASSIN_SKILL_STEALTH_ACT:
+	case ANIM_NOTIFY_TYPE::PRIEST_SKILL_HOLY_AREA_OBJ_GEN:
+		m_heros[data->client_id]->do_skill();
 		break;
 	}
 }

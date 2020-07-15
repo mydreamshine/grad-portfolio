@@ -53,7 +53,7 @@ bool NWMODULE<T>::connect_server(SOCKET& socket, const char* address, const shor
 	CSOCKADDR_IN serverAddr{ address, port };
 	int retval = ::connect(socket, serverAddr.getSockAddr(), *serverAddr.len());
 	if (SOCKET_ERROR == retval) {
-		error_display("Error at Lobby Connect()", WSAGetLastError());
+		error_display("Error at Connect()", WSAGetLastError());
 		return false;
 	}
 	return true;
@@ -169,11 +169,13 @@ void NWMODULE<T>::process_battle_packet(int packet_type, const void* buffer)
 template <class T>
 void NWMODULE<T>::RecvLobbyThread()
 {
-	size_t received_size = 0;
+	int received_size = 0;
 	while (true)
 	{
 		received_size = recv(lobby_socket, lobby_over.data(), MAX_BUFFER_SIZE, 0);
-		if (received_size == 0 || received_size == SOCKET_ERROR) {
+		if (received_size == SOCKET_ERROR)
+			error_display("RECV ERROR ", WSAGetLastError());
+		if (received_size == 0) {
 			cout << "[Connection Closed]" << endl;
 			return;
 		}
@@ -181,11 +183,10 @@ void NWMODULE<T>::RecvLobbyThread()
 	}
 }
 
-
 template <class T>
 void NWMODULE<T>::RecvBattleThread()
 {
-	size_t received_size = 0;
+	int received_size = 0;
 	while (true)
 	{
 		received_size = recv(battle_socket, battle_over.data(), MAX_BUFFER_SIZE, 0);
@@ -204,7 +205,9 @@ NWMODULE<T>::NWMODULE(T& MainModule, HANDLE iocp) :
 	battle_socket(INVALID_SOCKET),
 	MainModule(MainModule),
 	lobby_buffer(sizeof(SIZE_TYPE)),
-	battle_buffer(sizeof(SIZE_TYPE))
+	battle_buffer(sizeof(SIZE_TYPE)),
+	lobby_over(0, 256),
+	battle_over(0, 256)
 {
 	lobby_callbacks.reserve(SC_PACKET_COUNT);
 	for (int i = 0; i < SC_PACKET_COUNT; ++i)
@@ -284,7 +287,6 @@ void NWMODULE<T>::request_login(const char* id)
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
-
 template <class T>
 void NWMODULE<T>::add_friend(const char* id)
 {
@@ -294,7 +296,6 @@ void NWMODULE<T>::add_friend(const char* id)
 	strcpy_s(packet.id, ID_LENGTH-1, id);
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
-
 
 template <class T>
 void NWMODULE<T>::accept_friend(const char* id)
@@ -306,20 +307,17 @@ void NWMODULE<T>::accept_friend(const char* id)
 	send(lobby_socket, reinterpret_cast<const char*>(&packet), packet.cdp.size, 0);
 }
 
-
 template <class T>
 void NWMODULE<T>::match_enqueue()
 {
 	send_default_packet(CS_PACKET_MATCH_ENQUEUE);
 }
 
-
 template <class T>
 void NWMODULE<T>::match_dequeue()
 {
 	send_default_packet(CS_PACKET_MATCH_DEQUEUE);
 }
-
 
 template <class T>
 void NWMODULE<T>::enroll_lobby_callback(int packet_type, function<void(T&)> callback)
@@ -358,11 +356,10 @@ void NWMODULE<T>::notify_battle_recv(size_t length)
 		packet_drain(battle_buffer, battle_over.data(), length);
 		//recv ÇÑ¹ø ´õ
 		/*DWORD flag = 0;
-		lobby_over.reset();
-		WSARecv(lobby_socket, lobby_over.buffer, 1, nullptr, &flag, lobby_over.overlapped(), nullptr);*/
+		battle_over.reset();
+		WSARecv(battle_socket, battle_over.buffer, 1, nullptr, &flag, battle_over.overlapped(), nullptr);*/
 	}
 }
-
 
 template<class T>
 void NWMODULE<T>::update()

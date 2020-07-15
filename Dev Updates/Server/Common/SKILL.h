@@ -10,14 +10,17 @@ class SKILL
 public:
 	SKILL();
 	virtual ~SKILL();
+	bool is_die();
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
+	virtual void collision_wall();
 
 	Vector3d pos;
 	Vector3d rot;
 	Vector3d dir;
 	DirectX::BoundingBox AABB;
 	float vel;
+	float duration;
 
 	char propensity;
 	char skill_type;
@@ -33,7 +36,18 @@ public:
 	virtual ~NORMAL_ATTACK();
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
+	virtual void collision_wall();
+	int damage{ 10 };
+};
+
+class HOLY_AREA : public SKILL
+{
+public:
+	HOLY_AREA();
+	virtual ~HOLY_AREA();
+	virtual void update(float elapsedTime);
+	virtual void effect(HERO* hero);
 
 private:
-	int damage{ 10 };
+	float effect_time;
 };

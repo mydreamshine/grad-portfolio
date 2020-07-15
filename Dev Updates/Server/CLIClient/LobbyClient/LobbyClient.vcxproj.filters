@@ -21,9 +21,6 @@
     <ClCompile Include="소스.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="NWMODULE.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\csockaddr_in.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -35,6 +32,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="NWMODULE.cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

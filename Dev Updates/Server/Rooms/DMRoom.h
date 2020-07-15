@@ -6,8 +6,8 @@
 #include <set>
 
 #include <DirectXCollision.h>
-#include "..\BA Logic Server\BA Logic Server\HERO.h"
-#include "..\BA Logic Server\BA Logic Server\SKILL.h"
+#include "..\Common\HERO.h"
+#include "..\Common\SKILL.h"
 #include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 
 class DMRoom : public ROOM
@@ -34,14 +34,27 @@ private:
 	PACKET_VECTOR event_data; //전송될 이벤트 패킷(플레이어 힛, 리스폰 등)
 	PACKET_VECTOR info_data;  //전송될 위치정보 패킷
 
+	float delta_time;
 	std::mutex socket_lock;
 	std::set<SOCKET> sockets;
-	std::map<int, HERO*> m_heros;
+	std::map<short, HERO*> m_heros;
+	int skill_uid;
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;
 
 	void process_packet_vector();
-	bool game_logic(float elapsedTime);
+	bool game_logic();
 	void send_game_state();
+
 	void process_type_packet(void* packet, PACKET_TYPE type);
+	void process_try_move_character(void* packet);
+	void process_try_rotation_character(void* packet);
+	void process_try_normal_attack(void* packet);
+	void process_try_use_skill(void* packet);
+	void process_done_character_motion(void* packet);
+	void process_activate_anim_notify(void* packet);
+
+	friend HERO;
+	friend WARRIOR;
+	friend PRIEST;
 };

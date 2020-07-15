@@ -51,6 +51,15 @@
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
       <Filter>Common\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\HERO.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\SKILL.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Vector3d.cpp">
+      <Filter>Common\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleServer.h">
@@ -78,6 +87,15 @@
       <Filter>Rooms</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\HERO.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\SKILL.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Vector3d.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
   </ItemGroup>
