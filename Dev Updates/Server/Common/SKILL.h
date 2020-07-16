@@ -53,3 +53,10 @@ public:
 private:
 	float effect_time;
 };
+
+class FURY_ROAR : public SKILL
+{
+public:
+	FURY_ROAR();
+	virtual ~FURY_ROAR();
+};

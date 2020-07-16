@@ -289,3 +289,77 @@ void PRIEST::do_skill()
 	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
 	world->event_data.emplace_back(&packet, packet.size);
 }
+
+////////////////////////////////////////////////////////////
+
+BERSERKER::BERSERKER(DMRoom* world, short object_id, char propensity) :
+	HERO(world, object_id, propensity),
+	roar_mode(false),
+	roar_time(0.0f),
+	roar_skill(nullptr)
+{
+	character_type = ((char)CHARACTER_TYPE::BERSERKER);
+}
+
+BERSERKER::~BERSERKER()
+{
+}
+
+void BERSERKER::do_skill()
+{
+	roar_mode = true;
+	roar_time = FURY_ROAR_DURATION;
+
+	if (roar_skill != nullptr) {
+		roar_skill->destroy();
+		roar_skill = nullptr;
+	}
+
+	short object_id = world->skill_uid++;
+	roar_skill = new FURY_ROAR{};
+	csss_packet_spawn_skill_obj packet;
+
+	roar_skill->pos = pos;
+	roar_skill->propensity = propensity;
+	world->m_skills[object_id] = roar_skill;
+
+	packet.size = sizeof(csss_packet_spawn_skill_obj);
+	packet.type = CSSS_SPAWN_SKILL_OBJ;
+
+	packet.propensity = propensity;
+	packet.skill_type = (char)SKILL_TYPE::FURY_ROAR;
+	packet.object_id = object_id;
+	packet.position_x = roar_skill->pos.x; packet.position_y = roar_skill->pos.y; packet.position_z = roar_skill->pos.z;
+	packet.rotation_euler_x = roar_skill->rot.x; packet.rotation_euler_y = roar_skill->rot.y; packet.rotation_euler_z = roar_skill->rot.z;
+	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
+	world->event_data.emplace_back(&packet, packet.size);
+}
+
+void BERSERKER::move(float elapsedTime)
+{
+	if (true == roar_mode)
+		HERO::move(FURY_ROAR_ACCELERATE * elapsedTime);
+	else
+		HERO::move(elapsedTime);
+}
+
+void BERSERKER::death()
+{
+	if (roar_skill != nullptr) {
+		roar_skill->destroy();
+		roar_skill = nullptr;
+	}
+	HERO::death();
+}
+
+void BERSERKER::update(float elapsedTime)
+{
+	if (true == roar_mode) {
+		roar_time -= elapsedTime;
+		if (roar_time <= 0.0f)
+			roar_mode = false;
+		HERO::update(FURY_ROAR_ACCELERATE * elapsedTime);
+	}
+	else
+		HERO::update(elapsedTime);
+}

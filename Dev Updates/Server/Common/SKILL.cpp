@@ -120,3 +120,14 @@ void HOLY_AREA::effect(HERO* hero)
 		hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
 	}
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+FURY_ROAR::FURY_ROAR() : SKILL()
+{
+	duration = FURY_ROAR_DURATION;
+}
+
+FURY_ROAR::~FURY_ROAR()
+{
+}

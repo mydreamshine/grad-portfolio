@@ -4,6 +4,7 @@
 using namespace DirectX;
 
 class DMRoom;
+class SKILL;
 
 class HERO
 {
@@ -19,8 +20,8 @@ public:
 	bool is_die();
 	void set_hp(int hp);
 	void impact();
-	void death();
 	void respawn();
+	virtual void death();
 	virtual void update(float elapsedTime);
 	virtual void do_attack();
 	virtual void do_skill() {};
@@ -63,4 +64,20 @@ public:
 	PRIEST(DMRoom* world, short object_id, char propensity);
 	virtual ~PRIEST();
 	virtual void do_skill();
+};
+
+class BERSERKER : public HERO
+{
+	BERSERKER(DMRoom* world, short object_id, char propensity);
+	virtual ~BERSERKER();
+	virtual void do_skill();
+
+	virtual void move(float elapsedTime);
+	virtual void death();
+	virtual void update(float elapsedTime);
+
+private:
+	bool roar_mode;
+	float roar_time;
+	SKILL* roar_skill;
 };

@@ -196,7 +196,7 @@ void DMRoom::send_game_state()
 	}
 	event_data.emplace_back(info_data.data, info_data.len);
 
-	//WSASend
+	//Send data to clients.
 	socket_lock.lock();
 	for (const SOCKET& socket : sockets) {
 		send_packet(socket, event_data.data, event_data.len);

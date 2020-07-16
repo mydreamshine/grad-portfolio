@@ -56,5 +56,6 @@ private:
 
 	friend HERO;
 	friend WARRIOR;
+	friend BERSERKER;
 	friend PRIEST;
 };

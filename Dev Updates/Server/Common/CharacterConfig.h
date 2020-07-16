@@ -15,6 +15,8 @@ constexpr int HOLY_AREA_HEAL_AMOUNT = 10;
 constexpr float HOLY_AREA_DURATION = 10.0f;
 constexpr float HOLY_AREA_EFFECT_RATE = 1.0f;
 
+constexpr float FURY_ROAR_DURATION = 8.0f;
+constexpr float FURY_ROAR_ACCELERATE = 2.0f;
 
 
 enum class CHARACTER_TYPE : char
