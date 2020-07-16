@@ -131,3 +131,15 @@ FURY_ROAR::FURY_ROAR() : SKILL()
 FURY_ROAR::~FURY_ROAR()
 {
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+STELTH::STELTH() : SKILL()
+{
+	duration = STELTH_DURATION;
+}
+
+STELTH::~STELTH()
+{
+}

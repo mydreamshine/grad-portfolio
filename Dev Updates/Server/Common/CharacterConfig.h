@@ -18,6 +18,7 @@ constexpr float HOLY_AREA_EFFECT_RATE = 1.0f;
 constexpr float FURY_ROAR_DURATION = 8.0f;
 constexpr float FURY_ROAR_ACCELERATE = 2.0f;
 
+constexpr float STELTH_DURATION = 7.0f;
 
 enum class CHARACTER_TYPE : char
 {

@@ -60,3 +60,10 @@ public:
 	FURY_ROAR();
 	virtual ~FURY_ROAR();
 };
+
+class STELTH : public SKILL
+{
+public:
+	STELTH();
+	virtual ~STELTH();
+};

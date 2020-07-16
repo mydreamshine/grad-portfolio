@@ -58,4 +58,5 @@ private:
 	friend WARRIOR;
 	friend BERSERKER;
 	friend PRIEST;
+	friend ASSASSIN;
 };

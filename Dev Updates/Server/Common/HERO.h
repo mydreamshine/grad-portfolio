@@ -81,3 +81,18 @@ private:
 	float roar_time;
 	SKILL* roar_skill;
 };
+
+class ASSASSIN : public HERO
+{
+public:
+	ASSASSIN(DMRoom* world, short object_id, char propensity);
+	virtual ~ASSASSIN();
+	virtual void do_skill();
+	virtual void death();
+	virtual void update(float elapsedTime);
+
+private:
+	bool stelth_mode;
+	float stelth_time;
+	SKILL* stelth_skill;
+};

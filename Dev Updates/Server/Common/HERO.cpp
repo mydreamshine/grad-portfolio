@@ -143,7 +143,7 @@ void HERO::update(float elapsedTime)
 
 void HERO::do_attack()
 {
-	short object_id = world->skill_uid++;
+	int object_id = world->skill_uid++;
 	SKILL* normal_attack = new NORMAL_ATTACK{};
 	normal_attack->pos = pos;
 	normal_attack->rot = rot;
@@ -227,7 +227,7 @@ WARRIOR::~WARRIOR()
 void WARRIOR::do_skill()
 {
 	static float Deg[3]{ -30.0f, 0.0f, 30.0f };
-	short object_id;
+	int object_id;
 	NORMAL_ATTACK* normal_attack;
 	csss_packet_spawn_skill_obj packet;
 
@@ -270,7 +270,7 @@ PRIEST::~PRIEST()
 
 void PRIEST::do_skill()
 {
-	short object_id = world->skill_uid++;
+	int object_id = world->skill_uid++;
 	HOLY_AREA* holy_area = new HOLY_AREA{};
 	csss_packet_spawn_skill_obj packet;
 
@@ -315,7 +315,7 @@ void BERSERKER::do_skill()
 		roar_skill = nullptr;
 	}
 
-	short object_id = world->skill_uid++;
+	int object_id = world->skill_uid++;
 	roar_skill = new FURY_ROAR{};
 	csss_packet_spawn_skill_obj packet;
 
@@ -356,10 +356,80 @@ void BERSERKER::update(float elapsedTime)
 {
 	if (true == roar_mode) {
 		roar_time -= elapsedTime;
-		if (roar_time <= 0.0f)
+		if (roar_time <= 0.0f) {
+			roar_skill->destroy();
+			roar_skill = nullptr;
 			roar_mode = false;
+		}
 		HERO::update(FURY_ROAR_ACCELERATE * elapsedTime);
 	}
 	else
 		HERO::update(elapsedTime);
+}
+
+////////////////////////////////////////////////////////////
+
+ASSASSIN::ASSASSIN(DMRoom* world, short object_id, char propensity) :
+	HERO(world, object_id, propensity),
+	stelth_mode(false),
+	stelth_time(0.0f),
+	stelth_skill(nullptr)
+{
+	character_type = (char)CHARACTER_TYPE::ASSASSIN;
+}
+
+ASSASSIN::~ASSASSIN()
+{
+}
+
+void ASSASSIN::do_skill()
+{
+	stelth_mode = true;
+	stelth_time = STELTH_DURATION;
+
+	if (stelth_skill != nullptr) {
+		stelth_skill->destroy();
+		stelth_skill = nullptr;
+	}
+
+	int object_id = world->skill_uid++;
+	stelth_skill = new STELTH{};
+	
+	stelth_skill->pos = pos;
+	stelth_skill->propensity = propensity;
+	world->m_skills[object_id] = stelth_skill;
+
+	csss_packet_spawn_skill_obj packet;
+	packet.size = sizeof(csss_packet_spawn_skill_obj);
+	packet.type = CSSS_SPAWN_SKILL_OBJ;
+
+	packet.propensity = propensity;
+	packet.skill_type = (char)SKILL_TYPE::STEALTH;
+	packet.object_id = object_id;
+	packet.position_x = stelth_skill->pos.x; packet.position_y = stelth_skill->pos.y; packet.position_z = stelth_skill->pos.z;
+	packet.rotation_euler_x = stelth_skill->rot.x; packet.rotation_euler_y = stelth_skill->rot.y; packet.rotation_euler_z = stelth_skill->rot.z;
+	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
+	world->event_data.emplace_back(&packet, packet.size);
+}
+
+void ASSASSIN::death()
+{
+	if (stelth_skill != nullptr) {
+		stelth_skill->destroy();
+		stelth_skill = nullptr;
+	}
+	HERO::death();
+}
+
+void ASSASSIN::update(float elapsedTime)
+{
+	if (true == stelth_mode) {
+		stelth_time -= elapsedTime;
+		if (stelth_time <= 0.0f) {
+			stelth_skill->destroy();
+			stelth_skill = nullptr;
+			stelth_mode = false;
+		}
+	}
+	HERO::update(elapsedTime);
 }
