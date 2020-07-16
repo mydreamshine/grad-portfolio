@@ -18,7 +18,8 @@ HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	anim_time_pos(0),
 	remain_state_time(0),
 	propensity(propensity),
-	object_id(object_id)
+	object_id(object_id),
+	changed_transform(false)
 {
 }
 
@@ -30,12 +31,14 @@ void HERO::rotate(float yaw)
 {
 	rot.y += yaw;
 	dir = dir.rotY(yaw);
+	changed_transform = true;
 }
 
 void HERO::move(float elapsedTime)
 {
 	pos += dir * vel * elapsedTime;
 	set_aabb();
+	changed_transform = true;
 }
 
 void HERO::correct_position(DirectX::BoundingBox& other)
@@ -43,6 +46,7 @@ void HERO::correct_position(DirectX::BoundingBox& other)
 	Vector3d offset = get_offset(other);
 	pos += offset;
 	set_aabb();
+	changed_transform = true;
 }
 
 void HERO::change_motion(char motion)
@@ -54,11 +58,13 @@ void HERO::change_motion(char motion)
 	anim_time_pos = 0.0f;
 
 	csss_packet_set_character_motion packet;
-	packet.type = CSSS_SET_CHARACTER_MOTION;
 	packet.size = sizeof(csss_packet_set_character_motion);
+	packet.type = CSSS_SET_CHARACTER_MOTION;
+	
 	packet.motion_type = motion_type;
 	packet.object_id = object_id;
 	packet.anim_time_pos = anim_time_pos;
+	packet.skill_type = 0;
 	world->event_data.emplace_back(&packet, packet.size);
 }
 

@@ -12,7 +12,8 @@ SKILL::SKILL() :
 	duration(1.0f),
 	skill_type(0),
 	anim_time_pos(0),
-	propensity(0)
+	propensity(0),
+	changed_transform(false)
 {
 }
 
@@ -23,6 +24,11 @@ SKILL::~SKILL()
 bool SKILL::is_die()
 {
 	return anim_time_pos >= duration;
+}
+
+void SKILL::destroy()
+{
+	anim_time_pos = duration;
 }
 
 void SKILL::update(float elapsedTime)
@@ -61,6 +67,7 @@ NORMAL_ATTACK::~NORMAL_ATTACK()
 
 void NORMAL_ATTACK::update(float elapsedTime)
 {
+	changed_transform = true;
 	pos += dir * vel * elapsedTime;
 	SKILL::update(elapsedTime);
 }
@@ -75,11 +82,13 @@ void NORMAL_ATTACK::effect(HERO* hero)
 		hero->death();
 	else
 		hero->impact();
+
+	destroy();
 }
 
 void NORMAL_ATTACK::collision_wall()
 {
-	anim_time_pos = duration;
+	destroy();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

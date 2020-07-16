@@ -30,6 +30,7 @@ public:
 	Vector3d pos;
 	Vector3d rot;
 	Vector3d dir;
+	bool changed_transform;
 	DirectX::BoundingBox AABB;
 	float vel;
 

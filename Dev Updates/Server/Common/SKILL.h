@@ -11,6 +11,7 @@ public:
 	SKILL();
 	virtual ~SKILL();
 	bool is_die();
+	void destroy();
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
 	virtual void collision_wall();
@@ -18,6 +19,7 @@ public:
 	Vector3d pos;
 	Vector3d rot;
 	Vector3d dir;
+	bool changed_transform;
 	DirectX::BoundingBox AABB;
 	float vel;
 	float duration;

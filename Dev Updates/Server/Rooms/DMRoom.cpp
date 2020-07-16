@@ -165,6 +165,7 @@ bool DMRoom::game_logic()
 void DMRoom::send_game_state()
 {
 	for (const auto& hero : m_heros) {
+		if (false == hero.second->changed_transform) continue;
 		//Send hero transform.
 		csss_packet_set_obj_transform transform_packet;
 		transform_packet.size = sizeof(csss_packet_set_obj_transform);
@@ -175,18 +176,12 @@ void DMRoom::send_game_state()
 		transform_packet.scale_x = transform_packet.scale_y = transform_packet.scale_z = 1.0f;
 		info_data.emplace_back(&transform_packet, transform_packet.size);
 
-		//Send hero animation.
-		csss_packet_set_character_motion motion_packet;
-		motion_packet.size = sizeof(csss_packet_set_character_motion);
-		motion_packet.type = CSSS_SET_CHARACTER_MOTION;
-		motion_packet.object_id = hero.first;
-		motion_packet.motion_type = hero.second->motion_type;
-		motion_packet.anim_time_pos = hero.second->anim_time_pos;
-		motion_packet.skill_type = 0;
-		info_data.emplace_back(&motion_packet, motion_packet.size);
+		hero.second->changed_transform = false;
 	}
 
 	for (const auto& skill : m_skills) {
+		if (false == skill.second->changed_transform) continue;
+
 		//Send skill transform.
 		csss_packet_set_obj_transform packet;
 		packet.size = sizeof(csss_packet_set_obj_transform);
@@ -196,6 +191,8 @@ void DMRoom::send_game_state()
 		packet.rotation_euler_x = skill.second->rot.x; packet.rotation_euler_y = skill.second->rot.y; packet.rotation_euler_z = skill.second->rot.z;
 		packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
 		info_data.emplace_back(&packet, packet.size);
+
+		skill.second->changed_transform = false;
 	}
 	event_data.emplace_back(info_data.data, info_data.len);
 
