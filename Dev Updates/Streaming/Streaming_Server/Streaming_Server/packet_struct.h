@@ -12,13 +12,46 @@
 #define TSS_MOUSE_LBUTTON_DOWN 8
 #define TSS_MOUSE_LBUTTON_UP   9
 
-#define SSCS_TRY_LOGIN         10
-#define SSCS_REQUEST_USER_INFO 11
-#define SSCS_TRY_GAME_MATCHING 12
+#define SSCS_TRY_LOGIN               10
+#define SSCS_REQUEST_USER_INFO       11
+#define SSCS_TRY_GAME_MATCHING       12
+#define SSCS_SEND_CHAT               13
+#define SSCS_TRY_MOVE_CHARACTER      14
+#define SSCS_TRY_MOVE_STOP_CHARACTER 15
+#define SSCS_TRY_NORMAL_ATTACK       16
+#define SSCS_TRY_USE_SKILL           17
+#define SSCS_DONE_CHARACTER_MOTION   18
+#define SSCS_ACTIVATE_ANIM_NOTIFY    19
+#define SSCS_TRY_RETURN_LOBY         20
+
+#define CSSS_LOGIN_OK                     21
+#define CSSS_CHANGE_SCENE                 22
+#define CSSS_SPAWN_PLAYER                 23
+#define CSSS_SPAWN_NORMAL_ATTACK_OBJ      24
+#define CSSS_SPAWN_SKILL_OBJ              25
+#define CSSS_SPAWN_EFFECT_OBJ             26
+#define CSSS_SET_TRANSFORM_WORLD_OBJ      27
+#define CSSS_SET_CHARACTER_MOTION         28
+#define CSSS_SET_PLAYER_STATE             29
+#define CSSS_UPDATE_POISON_FOG_DEACT_AREA 30
+#define CSSS_DEACTIVATE_OBJ               31
+#define CSSS_SET_USER_INFO                32
+#define CSSS_SET_KDA_SCORE                33
+#define CSSS_SET_KILL_LOG                 34
+#define CSSS_SET_CHAT_LOG                 35
+#define CSSS_SET_GAME_PLAY_TIME_LIMIT     36
+#define CSSS_SET_PLAYER_HP                37
+#define CSSS_SET_MATCH_STATISTIC_INFO     38
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////// 통신 패킷 타입 /////////////////////////////////////
 #pragma pack(push, 1)
+struct packet_inheritance // 
+{
+	unsigned char size;
+	unsigned char type;
+};
+
 // Terminal -> Streaming Server
 struct tss_packet_keydown
 {
@@ -47,45 +80,83 @@ struct tss_packet_mouse_button_up
 
 
 // Streaming Server -> Contents Server
-struct sscs_packet_try_login
+struct sscs_packet_try_login : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	wchar_t id[255];
 	wchar_t password[255];
 
-	sscs_packet_login_info()
+	sscs_packet_try_login()
 	{
+		size = (unsigned char)sizeof(sscs_packet_try_login);
+		type = SSCS_TRY_LOGIN;
+
 		for (unsigned char i = 0; i < 255; ++i)
 		{
 			id[i] = 0x00;
 			password[i] = 0x00;
 		}
 	}
+	sscs_packet_try_login(const wchar_t* id_text, int id_text_size,
+		const wchar_t* password_text, int password_text_size)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_login);
+		type = SSCS_TRY_LOGIN;
+
+		unsigned char ID_Text_size = (id_text_size > 255) ? 255 : (unsigned char)id_text_size;
+		unsigned char Password_Text_size = (password_text_size > 255) ? 255 : (unsigned char)id_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (ID_Text_size > i) id[i] = id_text[i];
+			else id[i] = 0x00;
+
+			if (Password_Text_size > i) password[i] = password_text[i];
+			else password[i] = 0x00;
+		}
+	}
 };
-struct sscs_packet_request_user_info
+struct sscs_packet_request_user_info : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
+
+	sscs_packet_request_user_info()
+	{
+		size = (unsigned char)sizeof(sscs_packet_request_user_info);
+		type = SSCS_REQUEST_USER_INFO;
+	}
+	sscs_packet_request_user_info(short clientID)
+	{
+		size = (unsigned char)sizeof(sscs_packet_request_user_info);
+		type = SSCS_REQUEST_USER_INFO;
+
+		client_id = clientID;
+	}
 };
 // 해당 플레이어가 어떤 캐릭터를 선택했는가에 따라
 // PlayGameScene에 생성될 캐릭터들의 구성이 달라진다.
-struct sscs_packet_try_game_matching
+struct sscs_packet_try_game_matching : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
 	// contents ref.
 	char selected_character_type;
+
+	sscs_packet_try_game_matching()
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_game_matching);
+		type = SSCS_TRY_GAME_MATCHING;
+	}
+	sscs_packet_try_game_matching(short clientID, char character_type)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_game_matching);
+		type = SSCS_TRY_GAME_MATCHING;
+
+		client_id = clientID;
+		selected_character_type = character_type;
+	}
 };
-struct sscs_packet_send_chat_message
+struct sscs_packet_send_chat_message : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
 	// contents ref.
@@ -93,32 +164,66 @@ struct sscs_packet_send_chat_message
 
 	sscs_packet_send_chat_message()
 	{
+		size = (unsigned char)sizeof(sscs_packet_send_chat_message);
+		type = SSCS_SEND_CHAT;
+
 		for (unsigned char i = 0; i < 255; ++i)
 			message[i] = 0x00;
+	}
+	sscs_packet_send_chat_message(short clientID, const wchar_t* message_text, int message_text_size)
+	{
+		size = (unsigned char)sizeof(sscs_packet_send_chat_message);
+		type = SSCS_SEND_CHAT;
+
+		client_id = clientID;
+		unsigned char Message_Text_size = (message_text_size > 255) ? 255 : (unsigned char)message_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (Message_Text_size > i) message[i] = message_text[i];
+			else message[i] = 0x00;
+		}
 	}
 };
 // 해당 클라이언트가 지닌 캐릭터 오브젝트를
 // Yaw_angle만큼 회전시키고
 // 해당 캐릭터의 고유 Speed값만큼 위치이동시킨다.
-struct sscs_packet_try_move_character
+struct sscs_packet_try_move_character : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
 	// contents ref.
 	float MoveDirection_Yaw_angle;
+
+	sscs_packet_try_move_character()
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_move_character);
+		type = SSCS_TRY_MOVE_CHARACTER;
+	}
+	sscs_packet_try_move_character(short clientID, float Yaw_angle)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_move_character);
+		type = SSCS_TRY_MOVE_CHARACTER;
+
+		client_id = clientID;
+		MoveDirection_Yaw_angle = Yaw_angle;
+	}
 };
-// 해당 클라이언트가 지닌 캐릭터 오브젝트를
-// Yaw_angle만큼 회전시킨다.
-struct sscs_packet_try_rotation_character
+struct sscs_packet_try_movestop_character : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
-	// contents ref.
-	float Yaw_angle;
+	sscs_packet_try_movestop_character()
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_movestop_character);
+		type = SSCS_TRY_MOVE_STOP_CHARACTER;
+	}
+	sscs_packet_try_movestop_character(short clientID)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_movestop_character);
+		type = SSCS_TRY_MOVE_STOP_CHARACTER;
+
+		client_id = clientID;
+	}
 };
 // 1. 해당 클라이언트가 지닌 캐릭터 오브젝트에 따라
 //    Normal Attack 오브젝트를 생성한다.
@@ -144,11 +249,26 @@ struct sscs_packet_try_rotation_character
 //       해당 캐릭터의 감소한 HP를 전달한다.
 //    E) 3초 후엔 캐릭터 상태가 NON으로 바뀌고 이또한
 //       ViewList가 활성화된 클라이언트들에게 전달한다.
-struct sscs_packet_try_normal_attack
+struct sscs_packet_try_normal_attack : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
+
+	// contents ref.
+	float character_yaw_angle;
+
+	sscs_packet_try_normal_attack()
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_normal_attack);
+		type = SSCS_TRY_NORMAL_ATTACK;
+	}
+	sscs_packet_try_normal_attack(short clientID, float yaw_angle)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_normal_attack);
+		type = SSCS_TRY_NORMAL_ATTACK;
+
+		client_id = clientID;
+		character_yaw_angle = yaw_angle;
+	}
 };
 // 해당 클라이언트가 지닌 캐릭터 오브젝트에 따라
 // Skill 오브젝트를 생성한다.
@@ -228,72 +348,140 @@ struct sscs_packet_try_normal_attack
 //       해당 캐릭터의 상태를 전달한다.
 //       (아군 플레이어의 캐릭터면 반투명,
 //        적 플레이어의 캐릭터면 투명)
-struct sscs_packet_try_use_skill
+struct sscs_packet_try_use_skill : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
+
+	// contents ref.
+	float character_yaw_angle;
+
+	sscs_packet_try_use_skill()
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_use_skill);
+		type = SSCS_TRY_USE_SKILL;
+	}
+	sscs_packet_try_use_skill(short clientID, char SkillType, float yaw_angle)
+	{
+		size = (unsigned char)sizeof(sscs_packet_try_use_skill);
+		type = SSCS_TRY_USE_SKILL;
+
+		client_id = clientID;
+		character_yaw_angle = yaw_angle;
+	}
 };
 // 해당 캐릭터를 컨트롤 하는 클라이언트에게서만 전달되는 패킷
 // 해당 모션이 끝났음을 알아야 ViewList가 활성화된 클라이언트들에게
 // 해당 캐릭터의 새로운 모션을 지정해줄 수 있다.
 // Idle이나 Walk 모션같은 경우에는 처음 모션이 지정될 때 Looping으로 지정되기 때문에
 // 모션이 끝났음을 서버에게 통보할 필요는 없다.
-struct sscs_packet_done_character_motion
+struct sscs_packet_done_character_motion : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
 	// contents ref.
 	char motion_type;
+
+	sscs_packet_done_character_motion()
+	{
+		size = (unsigned char)sizeof(sscs_packet_done_character_motion);
+		type = SSCS_DONE_CHARACTER_MOTION;
+	}
+	sscs_packet_done_character_motion(short clientID, char MotionType)
+	{
+		size = (unsigned char)sizeof(sscs_packet_done_character_motion);
+		type = SSCS_DONE_CHARACTER_MOTION;
+
+		client_id = clientID;
+		motion_type = MotionType;
+	}
 };
 // 해당 캐릭터를 컨트롤 하는 클라이언트에게서만 전달되는 패킷
 // anim_notify에 따라 normal attack 오브젝트가 생성되거나
 // skill 오브젝트가 생성된다.
-struct sscs_packet_activate_anim_notify
+struct sscs_packet_activate_anim_notify : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
 
 	// contents ref.
 	char anim_notify_type;
+
+	sscs_packet_activate_anim_notify()
+	{
+		size = (unsigned char)sizeof(sscs_packet_activate_anim_notify);
+		type = SSCS_ACTIVATE_ANIM_NOTIFY;
+	}
+	sscs_packet_activate_anim_notify(short clientID, char AnimNotifyType)
+	{
+		size = (unsigned char)sizeof(sscs_packet_activate_anim_notify);
+		type = SSCS_ACTIVATE_ANIM_NOTIFY;
+
+		client_id = clientID;
+		anim_notify_type = AnimNotifyType;
+	}
 };
 // 해당 패킷을 클라이언트로부터 받으면
 // 해당 클라이언트가 matching room에서 빠져나가게 된다.
-struct sscs_try_return_loby
+struct sscs_try_return_loby : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short         client_id;
+
+	sscs_try_return_loby()
+	{
+		size = (unsigned char)sizeof(sscs_try_return_loby);
+		type = SSCS_TRY_RETURN_LOBY;
+	}
+	sscs_try_return_loby(short clientID)
+	{
+		size = (unsigned char)sizeof(sscs_try_return_loby);
+		type = SSCS_TRY_RETURN_LOBY;
+
+		client_id = clientID;
+	}
 };
 
 
 
 // Contents Server -> Streaming Server
-struct csss_packet_login_ok
+struct csss_packet_login_ok : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
 	short client_id;
-};
-struct csss_packet_change_scene
-{
-	unsigned char size;
-	unsigned char type;
 
+	csss_packet_login_ok()
+	{
+		size = (unsigned char)sizeof(csss_packet_login_ok);
+		type = CSSS_LOGIN_OK;
+	}
+	csss_packet_login_ok(short clientID)
+	{
+		size = (unsigned char)sizeof(csss_packet_login_ok);
+		type = CSSS_LOGIN_OK;
+
+		client_id = clientID;
+	}
+};
+struct csss_packet_change_scene : packet_inheritance
+{
 	// contents ref.
 	char scene_type;
+
+	csss_packet_change_scene()
+	{
+		size = (unsigned char)sizeof(csss_packet_change_scene);
+		type = CSSS_CHANGE_SCENE;
+	}
+	csss_packet_change_scene(char SceneType)
+	{
+		size = (unsigned char)sizeof(csss_packet_change_scene);
+		type = CSSS_CHANGE_SCENE;
+
+		scene_type = SceneType;
+	}
 };
 // is_main_character:
 // 메인 캐릭터 여부에 따라
 // 카메라 뷰가 달라진다.
-struct csss_packet_spawn_player
+struct csss_packet_spawn_player : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int     object_id;
 	wchar_t user_name[255]; // nick name
@@ -306,19 +494,47 @@ struct csss_packet_spawn_player
 
 	csss_packet_spawn_player()
 	{
+		size = (unsigned char)sizeof(csss_packet_spawn_player);
+		type = CSSS_SPAWN_PLAYER;
+
 		for (unsigned char i = 0; i < 255; ++i)
 			user_name[i] = 0x00;
 	}
+	csss_packet_spawn_player(
+		int obj_ID,
+		const wchar_t* userName_text, int userName_text_size,
+		char CharacterType,
+		float ScaleX, float ScaleY, float ScaleZ,
+		float RotationEulerX, float RotationEulerY, float RotationEulerZ,
+		float PositionX, float PositionY, float PositionZ,
+		char Propensity,
+		bool IsMainCharacter)
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_player);
+		type = CSSS_SPAWN_PLAYER;
+
+		object_id = obj_ID;
+		unsigned char UserName_Text_size = (userName_text_size > 255) ? 255 : (unsigned char)userName_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (UserName_Text_size > i) user_name[i] = userName_text[i];
+			else user_name[i] = 0x00;
+		}
+		character_type = CharacterType;
+		scale_x = ScaleX; scale_y = ScaleY; scale_z = ScaleZ;
+		rotation_euler_x = RotationEulerX; rotation_euler_y = RotationEulerY; rotation_euler_z = RotationEulerZ;
+		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
+		propensity = Propensity;
+		is_main_character = IsMainCharacter;
+	}
+
 };
 // 캐릭터 종류에 따라
 // Normal Attack 오브젝트의 렌더Item이 달라진다.
 // Normal Attack 오브젝트는 Quad형태로
 // 지면과 수평한 상태로 짧은 거리를 날라간다.
-struct csss_packet_spawn_normal_attack_obj
+struct csss_packet_spawn_normal_attack_obj : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int   object_id;
 	char  attack_order; // character type
@@ -326,14 +542,35 @@ struct csss_packet_spawn_normal_attack_obj
 	float rotation_euler_x, rotation_euler_y, rotation_euler_z;
 	float position_x, position_y, position_z;
 	char  propensity;
+
+	csss_packet_spawn_normal_attack_obj()
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_normal_attack_obj);
+		type = CSSS_SPAWN_NORMAL_ATTACK_OBJ;
+	}
+	csss_packet_spawn_normal_attack_obj(
+		int obj_ID,
+		char AttackOrder,
+		float ScaleX, float ScaleY, float ScaleZ,
+		float RotationEulerX, float RotationEulerY, float RotationEulerZ,
+		float PositionX, float PositionY, float PositionZ,
+		char Propensity)
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_normal_attack_obj);
+		type = CSSS_SPAWN_NORMAL_ATTACK_OBJ;
+
+		object_id = obj_ID;
+		attack_order = AttackOrder;
+		scale_x = ScaleX; scale_y = ScaleY; scale_z = ScaleZ;
+		rotation_euler_x = RotationEulerX; rotation_euler_y = RotationEulerY; rotation_euler_z = RotationEulerZ;
+		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
+		propensity = Propensity;
+	}
 };
 // 스킬 종류에 따라
 // Skill 오브젝트의 렌더Item이 달라진다.
-struct csss_packet_spawn_skill_obj
+struct csss_packet_spawn_skill_obj : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int   object_id;
 	char  skill_type;
@@ -341,85 +578,159 @@ struct csss_packet_spawn_skill_obj
 	float rotation_euler_x, rotation_euler_y, rotation_euler_z;
 	float position_x, position_y, position_z;
 	char  propensity;
+
+	csss_packet_spawn_skill_obj()
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_skill_obj);
+		type = CSSS_SPAWN_SKILL_OBJ;
+	}
+	csss_packet_spawn_skill_obj(
+		int obj_ID,
+		char SkillType,
+		float ScaleX, float ScaleY, float ScaleZ,
+		float RotationEulerX, float RotationEulerY, float RotationEulerZ,
+		float PositionX, float PositionY, float PositionZ,
+		char Propensity)
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_skill_obj);
+		type = CSSS_SPAWN_SKILL_OBJ;
+
+		object_id = obj_ID;
+		skill_type = SkillType;
+		scale_x = ScaleX; scale_y = ScaleY; scale_z = ScaleZ;
+		rotation_euler_x = RotationEulerX; rotation_euler_y = RotationEulerY; rotation_euler_z = RotationEulerZ;
+		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
+		propensity = Propensity;
+	}
 };
 // 이펙트 종류에 따라
 // 생성되는 Effect 오브젝트들이 달라진다.
 // Normal Attack 오브젝트나 Skill 오브젝트와 달리
 // Effect가 생성될 위치만 전달한다.
-// 해당 Effect Action TimePos를 관리하다가
-// ViewList가 활성화된 클라이언트들에게 전달한다.
-// (현재 Effect Action이 어느 순간을 연출하고 있느냐가 필요하기 때문.)
-struct csss_packet_spawn_effect
+struct csss_packet_spawn_effect : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	char  effect_type;
-	float effect_action_time_pos;
 	float position_x, position_y, position_z;
-};
-struct csss_packet_set_obj_transform
-{
-	unsigned char size;
-	unsigned char type;
 
+	csss_packet_spawn_effect()
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_effect);
+		type = CSSS_SPAWN_EFFECT_OBJ;
+	}
+	csss_packet_spawn_effect(
+		char EffectType,
+		float PositionX, float PositionY, float PositionZ)
+	{
+		size = (unsigned char)sizeof(csss_packet_spawn_effect);
+		type = CSSS_SPAWN_EFFECT_OBJ;
+
+		effect_type = EffectType;
+		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
+	}
+};
+struct csss_packet_set_obj_transform : packet_inheritance
+{
 	// contents ref.
 	int   object_id;
 	float scale_x, scale_y, scale_z;
 	float rotation_euler_x, rotation_euler_y, rotation_euler_z;
 	float position_x, position_y, position_z;
-};
-// anim_time_pos:
-// 해당 모션을 실행하고 있는 도중에
-// ViewList에 들어올 수도 있기 때문에
-// 어느 순간의 모션을 실행하고 있는가가 필요하다.
-// 이를 anim_time_pos가 대체한다.
-// 서버에선 anim_time_pos를 이 패킷을 보낼 때마다 계산한다.
-// 계산 방식은 아래 2가지로 나뉜다.
-// 
-// 해당 오브젝트가 처음 모션을 실행하고 나서
-// 이 패킷을 구성할 때마다의 경과시간을 계산하고
-// A) 그 경과시간을 해당 모션의 EndTime으로 나눴을 때의 나머지가
-//    곧 anim_time_pos가 된다.
-//    (Idle이나 Walk 모션일 경우에만 해당.)
-// B) 그 경과시간이 곧 anim_time_pos가 된다.
-//    단, 경과시간이 해당 모션의 EndTime를 초과할 경우
-//    anim_time_pos는 해당 모션의 EndTiem이 된다.
-//    (Idle이나 Walk 모션이 아닐 경우에만 해당.)
-struct csss_packet_set_character_motion
-{
-	unsigned char size;
-	unsigned char type;
 
+	csss_packet_set_obj_transform()
+	{
+		size = (unsigned char)sizeof(csss_packet_set_obj_transform);
+		type = CSSS_SET_TRANSFORM_WORLD_OBJ;
+	}
+	csss_packet_set_obj_transform(
+		int obj_ID,
+		float ScaleX, float ScaleY, float ScaleZ,
+		float RotationEulerX, float RotationEulerY, float RotationEulerZ,
+		float PositionX, float PositionY, float PositionZ)
+	{
+		size = (unsigned char)sizeof(csss_packet_set_obj_transform);
+		type = CSSS_SET_TRANSFORM_WORLD_OBJ;
+
+		object_id = obj_ID;
+		scale_x = ScaleX; scale_y = ScaleY; scale_z = ScaleZ;
+		rotation_euler_x = RotationEulerX; rotation_euler_y = RotationEulerY; rotation_euler_z = RotationEulerZ;
+		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
+	}
+};
+struct csss_packet_set_character_motion : packet_inheritance
+{
 	// contents ref.
 	int   object_id;
 	char  motion_type;
-	float anim_time_pos;
 	char  skill_type; // skill motion일 경우 필요.
+
+	csss_packet_set_character_motion()
+	{
+		size = (unsigned char)sizeof(csss_packet_set_character_motion);
+		type = CSSS_SET_CHARACTER_MOTION;
+	}
+	csss_packet_set_character_motion(
+		int obj_ID,
+		char MotionType,
+		char SkillType)
+	{
+		size = (unsigned char)sizeof(csss_packet_set_character_motion);
+		type = CSSS_SET_CHARACTER_MOTION;
+
+		object_id = obj_ID;
+		motion_type = MotionType;
+		skill_type = SkillType;
+	}
 };
 // 캐릭터 상태에 따라 렌더링 효과가 부여되거나 키입력 처리가 달라진다.
 // 반투명해지거나, 깜빡이거나, 붉은 색을 띄거나, etc
 // die 상태일 경우 키입력처리를 하지 않는다.
-struct csss_pacekt_set_character_state
+struct csss_pacekt_set_character_state : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int   object_id;
 	char character_state;
+
+	csss_pacekt_set_character_state()
+	{
+		size = (unsigned char)sizeof(csss_pacekt_set_character_state);
+		type = CSSS_SET_PLAYER_STATE;
+	}
+	csss_pacekt_set_character_state(
+		int obj_ID,
+		char CharacterState)
+	{
+		size = (unsigned char)sizeof(csss_pacekt_set_character_state);
+		type = CSSS_SET_PLAYER_STATE;
+
+		object_id = obj_ID;
+		character_state = CharacterState;
+	}
 };
 // 독안개 비활성 영역 크기에 따라
 // 독안개 영역에 poison fog effect를 줄 예정
-struct csss_packet_update_poison_fog_deact_area;
+struct csss_packet_update_poison_fog_deact_area : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int left, top, right, bottom;
-}
+
+	csss_packet_update_poison_fog_deact_area()
+	{
+		size = (unsigned char)sizeof(csss_packet_update_poison_fog_deact_area);
+		type = CSSS_UPDATE_POISON_FOG_DEACT_AREA;
+	}
+	csss_packet_update_poison_fog_deact_area(
+		int Left, int Top, int Right, int Bottom)
+	{
+		size = (unsigned char)sizeof(csss_packet_update_poison_fog_deact_area);
+		type = CSSS_UPDATE_POISON_FOG_DEACT_AREA;
+
+		left = Left;
+		right = Right;
+		top = Top;
+		bottom = Bottom;
+	}
+};
 // 해당 오브젝트를 클라이언트 화면에서 비활성시킨다.
 // 그리고 서버에선 해당 오브젝트 id를 폐기(혹은 비활성)한다.
 // 단, 아군 클라이언트들의 ViewList에 존재하는
@@ -430,90 +741,189 @@ struct csss_packet_update_poison_fog_deact_area;
 // 오브젝트들 중에 Stealth 상태를 갖는 오브젝트가 있으면
 // 해당 오브젝트를 ViewList에서 제외함과 동시에
 // 적군 클라이언트들에게 해당 오브젝트를 비활성화하도록 명령한다.
-struct csss_packet_deactivate_obj
+struct csss_packet_deactivate_obj : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	int   object_id;
-};
-struct csss_packet_set_kda_score
-{
-	unsigned char size;
-	unsigned char type;
 
+	csss_packet_deactivate_obj()
+	{
+		size = (unsigned char)sizeof(csss_packet_deactivate_obj);
+		type = CSSS_DEACTIVATE_OBJ;
+	}
+	csss_packet_deactivate_obj(
+		int obj_ID)
+	{
+		size = (unsigned char)sizeof(csss_packet_deactivate_obj);
+		type = CSSS_DEACTIVATE_OBJ;
+
+		object_id = obj_ID;
+	}
+};
+struct csss_packet_send_user_info : packet_inheritance
+{
+	// contents ref.
+	wchar_t user_name[255]; // nick name
+	int     user_rank;
+
+	csss_packet_send_user_info()
+	{
+		size = (unsigned char)sizeof(csss_packet_send_user_info);
+		type = CSSS_SET_USER_INFO;
+
+		for (unsigned char i = 0; i < 255; ++i)
+			user_name[i] = 0x00;
+	}
+	csss_packet_send_user_info(
+		const wchar_t* userName_text, int userName_text_size,
+		int userRank)
+	{
+		size = (unsigned char)sizeof(csss_packet_send_user_info);
+		type = CSSS_SET_USER_INFO;
+
+		unsigned char UserName_Text_size = (userName_text_size > 255) ? 255 : (unsigned char)userName_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (UserName_Text_size > i) user_name[i] = userName_text[i];
+			else user_name[i] = 0x00;
+		}
+		user_rank = userRank;
+	}
+};
+struct csss_packet_set_kda_score : packet_inheritance
+{
 	// contents ref.
 	unsigned char score_kill;
 	unsigned char score_death;
 	unsigned char score_assistance;
-};
-struct csss_packet_set_kda_score
-{
-	unsigned char size;
-	unsigned char type;
 
-	// contents ref.
-	unsigned char score_kill;
-	unsigned char score_death;
-	unsigned char score_assistance;
+	csss_packet_set_kda_score()
+	{
+		size = (unsigned char)sizeof(csss_packet_set_kda_score);
+		type = CSSS_SET_KDA_SCORE;
+	}
+	csss_packet_set_kda_score(
+		unsigned char ScoreKill,
+		unsigned char ScoreDeath,
+		unsigned char ScoreAssistance)
+	{
+		size = (unsigned char)sizeof(csss_packet_set_kda_score);
+		type = CSSS_SET_KDA_SCORE;
+
+		score_kill = ScoreKill;
+		score_death = ScoreDeath;
+		score_assistance = ScoreAssistance;
+	}
 };
 // message 예시
 // [nick name](이)가 [nick name](을)를 죽였습니다.
-struct csss_packet_send_kill_message
+struct csss_packet_send_kill_message : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	wchar_t message[255];
 
 	csss_packet_send_kill_message()
 	{
-		for (char i = 0; i < 255; ++i)
+		size = (unsigned char)sizeof(csss_packet_send_kill_message);
+		type = CSSS_SET_KILL_LOG;
+
+		for (unsigned char i = 0; i < 255; ++i)
 			message[i] = 0x00;
+	}
+	csss_packet_send_kill_message(
+		const wchar_t* message_text, int message_text_size)
+	{
+		size = (unsigned char)sizeof(csss_packet_send_kill_message);
+		type = CSSS_SET_KILL_LOG;
+
+		unsigned char Message_Text_size = (message_text_size > 255) ? 255 : (unsigned char)message_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (Message_Text_size > i) message[i] = message_text[i];
+			else message[i] = 0x00;
+		}
 	}
 };
 // message 예시
 // [nick name]: 채팅 내용
-struct csss_packet_send_chat_message
+// scene_type_to_recv: message를 전달받을 Scene
+// (LobyScene의 Message인가, PlayGameScene의 Message인가)
+struct csss_packet_send_chat_message : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
+	char    scene_type_to_recv;
 	wchar_t message[255];
 
 	csss_packet_send_chat_message()
 	{
-		for (char i = 0; i < 255; ++i)
+		size = (unsigned char)sizeof(csss_packet_send_chat_message);
+		type = CSSS_SET_CHAT_LOG;
+
+		for (unsigned char i = 0; i < 255; ++i)
 			message[i] = 0x00;
 	}
-};
-struct csss_packet_set_game_playtime_limit
-{
-	unsigned char size;
-	unsigned char type;
+	csss_packet_send_chat_message(
+		char SceneTypeToRecv,
+		const wchar_t* message_text, int message_text_size)
+	{
+		size = (unsigned char)sizeof(csss_packet_send_chat_message);
+		type = CSSS_SET_CHAT_LOG;
 
+		scene_type_to_recv = SceneTypeToRecv;
+		unsigned char Message_Text_size = (message_text_size > 255) ? 255 : (unsigned char)message_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (Message_Text_size > i) message[i] = message_text[i];
+			else message[i] = 0x00;
+		}
+	}
+};
+struct csss_packet_set_game_playtime_limit : packet_inheritance
+{
 	// contents ref.
 	unsigned int remain_sec;
-};
-struct csss_packet_set_character_hp
-{
-	unsigned char size;
-	unsigned char type;
 
+	csss_packet_set_game_playtime_limit()
+	{
+		size = (unsigned char)sizeof(csss_packet_set_game_playtime_limit);
+		type = CSSS_SET_GAME_PLAY_TIME_LIMIT;
+	}
+	csss_packet_set_game_playtime_limit(
+		unsigned int RemainSec)
+	{
+		size = (unsigned char)sizeof(csss_packet_set_game_playtime_limit);
+		type = CSSS_SET_GAME_PLAY_TIME_LIMIT;
+
+		remain_sec = RemainSec;
+	}
+};
+struct csss_packet_set_character_hp : packet_inheritance
+{
 	// contents ref.
+	int object_id;
 	int hp;
+
+	csss_packet_set_character_hp()
+	{
+		size = (unsigned char)sizeof(csss_packet_set_character_hp);
+		type = CSSS_SET_PLAYER_HP;
+	}
+	csss_packet_set_character_hp(
+		int obj_ID,
+		int HP)
+	{
+		size = (unsigned char)sizeof(csss_packet_set_character_hp);
+		type = CSSS_SET_PLAYER_HP;
+
+		object_id = obj_ID;
+		hp = HP;
+	}
 };
 // GameOverScene에 출력할 매칭 결과
 // played_character_type에 따라
 // GameOverScene에 렌더링되는 캐릭터가 달라진다.
-struct csss_packet_send_match_statistic
+struct csss_packet_send_match_statistic : packet_inheritance
 {
-	unsigned char size;
-	unsigned char type;
-
 	// contents ref.
 	wchar_t       user_name[255]; // nick name
 	int           user_rank;
@@ -523,20 +933,40 @@ struct csss_packet_send_match_statistic
 	int           totalscore_damage;
 	int           totalscore_heal;
 	char          played_character_type;
-};
-struct csss_packet_send_user_info
-{
-	unsigned char size;
-	unsigned char type;
-
-	// contents ref.
-	wchar_t user_name[255]; // nick name
-	int     user_rank;
-
-	sscs_packet_user_info()
+	csss_packet_send_match_statistic()
 	{
+		size = (unsigned char)sizeof(csss_packet_send_match_statistic);
+		type = CSSS_SET_MATCH_STATISTIC_INFO;
+
 		for (unsigned char i = 0; i < 255; ++i)
 			user_name[i] = 0x00;
+	}
+	csss_packet_send_match_statistic(
+		const wchar_t* userName_text, int userName_text_size,
+		int userRank,
+		unsigned char CountKill,
+		unsigned char CountDeath,
+		unsigned char CountAssistance,
+		int TotalScoreDamage,
+		int TotalScoreHeal,
+		char PlayedCharacterType)
+	{
+		size = (unsigned char)sizeof(csss_packet_send_match_statistic);
+		type = CSSS_SET_MATCH_STATISTIC_INFO;
+
+		unsigned char UserName_Text_size = (userName_text_size > 255) ? 255 : (unsigned char)userName_text_size;
+		for (unsigned char i = 0; i < 255; ++i)
+		{
+			if (UserName_Text_size > i) user_name[i] = userName_text[i];
+			else user_name[i] = 0x00;
+		}
+		user_rank = userRank;
+		count_kill = CountKill;
+		count_death = CountDeath;
+		count_assistance = CountAssistance;
+		totalscore_damage = TotalScoreDamage;
+		totalscore_heal = TotalScoreHeal;
+		played_character_type = PlayedCharacterType;
 	}
 };
 #pragma pack(pop)

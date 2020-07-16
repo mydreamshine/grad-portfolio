@@ -221,6 +221,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EventProcessor.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="Common\FileLoader\DDSLoader.h" />
     <ClInclude Include="Common\FileLoader\ModelLoader.h" />

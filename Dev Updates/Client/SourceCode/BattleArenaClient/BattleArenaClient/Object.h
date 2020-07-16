@@ -10,8 +10,9 @@
 #include "Common/Util/d3d12/MathHelper.h"
 #include "Common/Timer/Timer.h"
 #include "Common/FileLoader/SpriteFontLoader.h"
+#include "FrameworkEvent.h"
 
-#define MAX_WORLD_OBJECT 1024
+#define MAX_WORLD_OBJECT 2000
 #define MAX_CHARACTER_OBJECT 100
 
 // rel. Text
@@ -64,6 +65,7 @@ struct TransformInfo
 	DirectX::XMFLOAT4X4 m_WorldTransform = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_TexTransform = MathHelper::Identity4x4();
 	float m_TexAlpha = 1.0f;
+	bool  m_nonShadowRender = false;
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjCBIndex = -1;
@@ -210,7 +212,7 @@ struct Object
 	// rel. MaterialConstants
 	// Ritem에 대해선 인스턴싱을 하지 않으므로
 	// Object별로 unique하게 다룰 필욘 없다.
-	RenderItem*   m_RenderItem = nullptr;
+	std::vector<RenderItem*> m_RenderItems;
 
 	bool Activated = false;
 	bool SelfDeActivated = false;
@@ -381,7 +383,7 @@ public:
 
 	void SetObjectComponent(Object* obj,
 		const std::string& Name,
-		RenderItem* Ritem = nullptr,
+		const std::vector<RenderItem*>& Ritems,
 		aiModelData::aiSkeleton* Skeleton = nullptr,
 		const DirectX::XMFLOAT3* LocalScale = nullptr,
 		const DirectX::XMFLOAT3* LocalRotationEuler = nullptr,
@@ -391,7 +393,7 @@ public:
 		const DirectX::XMFLOAT3* WorldPosition = nullptr)
 	{
 		obj->m_Name = Name;
-		obj->m_RenderItem = Ritem;
+		obj->m_RenderItems = Ritems;
 
 		if (obj->m_SkeletonInfo != nullptr)
 			obj->m_SkeletonInfo->m_Skeleton = Skeleton;
@@ -399,7 +401,7 @@ public:
 		if (obj->m_TransformInfo != nullptr)
 		{
 			auto ObjInfo = obj->m_TransformInfo.get();
-			ObjInfo->SetBound(Ritem->Geo->DrawArgs[Ritem->Name].Bounds, TransformInfo::BoundPivot::Center);
+			ObjInfo->SetBound(Ritems[0]->Geo->DrawArgs[Ritems[0]->Name].Bounds, TransformInfo::BoundPivot::Center);
 			if (LocalScale)
 			{
 				DirectX::XMFLOAT3 L_S = *LocalScale;
@@ -521,7 +523,7 @@ public:
 		obj->m_Name.clear();
 		obj->m_Parent = nullptr;
 		obj->m_Childs.clear();
-		obj->m_RenderItem = nullptr;
+		obj->m_RenderItems.clear();
 		obj->Activated = false;
 		obj->SelfDeActivated = false;
 		obj->DeActivatedTime = 0.0f;

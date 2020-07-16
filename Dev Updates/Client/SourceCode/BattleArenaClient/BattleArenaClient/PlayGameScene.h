@@ -52,16 +52,16 @@ public:
     // Control Element ID, Player State
     void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState);
     // Deactivated Poison Gas Area
-    //void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea);
+    void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea);
     // Control Element ID
     void DeActivateObject(int CE_ID);
 
     // Count Score(Kill, Death, Assistance)
     void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance);
-    // Do_UserName, Target_UserName
-    void SetKillLog(std::wstring Do_UserName, std::wstring Target_UserName);
-    // UserName, Message
-    void SetChatLog(std::wstring UserName, std::wstring Message);
+    // Message ([Do_UserName] Killed [Target_UserName])
+    void SetKillLog(std::wstring Message);
+    // Message ([Do_UserName]: Chat Message)
+    void SetChatLog(std::wstring Message);
     // Remaining Sec
     void SetGamePlayTimeLimit(unsigned int Sec);
     // Remaining HP
@@ -71,9 +71,10 @@ public:
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
-    const UINT m_MaxTextObject = 9 + MAX_CHARACTER_OBJECT;
-    UINT       m_MaxUILayOutObject = MAX_CHARACTER_OBJECT * 3; // Number of HP Bar(테두리 + 증감HP Bar + HP Bar)
+    const UINT m_MaxTextObject = 8 + MAX_CHARACTER_OBJECT;
     std::uint64_t m_EffectInstancingNum = 0;
+
+    std::vector<RenderItem*> m_CharacterRitems[(int)CHARACTER_TYPE::COUNT];
 
     Object* m_GroundObj = nullptr;
     Player* m_MainPlayer = nullptr;
@@ -87,10 +88,15 @@ private:
     const size_t MaxChatLog = 20;
     std::list<std::wstring> KillLogList;
     std::list<std::wstring> ChattingList;
+    std::wstring inputChat;
 
     unsigned int TimeLimit_Sec = 0;
 
     bool ChattingMode = false;
+
+    bool OnceSendChatLog = false;
+
+    RECT DeActPoisonGasArea = {-3423, 4290, 4577, -3710 };
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,

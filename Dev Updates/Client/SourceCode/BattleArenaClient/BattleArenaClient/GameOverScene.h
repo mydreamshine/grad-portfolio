@@ -48,6 +48,8 @@ private:
     const UINT m_MaxCharacterObject = 4;
     const UINT m_MaxTextObject = 3;
 
+    std::vector<RenderItem*> m_CharacterRitems[(int)CHARACTER_TYPE::COUNT];
+
     std::wstring UserInfo_UserName;
     int UserInfo_UserRank = 0;
 
@@ -57,4 +59,6 @@ private:
     int GameMatchingResult_TotalDamage = 0;
     int GameMatchingResult_TotalHeal = 0;
     CHARACTER_TYPE GameMatchingResult_PlayedCharacterType = CHARACTER_TYPE::NON;
+
+    bool OnceTryReturnLoby = false;
 };

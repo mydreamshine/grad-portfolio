@@ -27,6 +27,7 @@ enum class EVENT_DATA_TYPE : char
 	KILL_LOG,
 	GAME_MATCHING,
 	GAME_PLAY_TIME_LIMIT,
+	NORMAL_ATTACK_INFO,
 	SKILL_USE_INFO,
 	SKILL_OBJ_SPAWN_INFO,
 	EFFECT_OBJ_SPAWN_INFO,
@@ -49,11 +50,12 @@ enum class OBJECT_PROPENSITY : char
 
 enum class CHARACTER_TYPE : char
 {
-	NON,
-	WARRIOR,
+	WARRIOR = 0,
 	BERSERKER,
 	ASSASSIN,
-	PRIEST
+	PRIEST,
+	COUNT,
+	NON
 };
 
 enum class SKILL_TYPE : char
@@ -78,7 +80,7 @@ enum class EFFECT_TYPE : char
 // aiModelDataÀÇ AnimActionType°ú 1:1 ¸ÅÄªµÊ
 enum class MOTION_TYPE : char
 {
-	IDLE,
+	IDLE = 0,
 	WALK,
 	ATTACK,
 	IMPACT, // be attacked
@@ -100,6 +102,10 @@ enum class PLAYER_STATE : char
 	ACT_DIE
 };
 
+namespace AnimNotifyTime
+{
+	constexpr float Warrior_SwordSlashStart = 0.6f;
+}
 enum class ANIM_NOTIFY_TYPE : char
 {
 	NON,
@@ -138,13 +144,18 @@ struct EVENT_DATA_PLAYER_SPAWN_INFO : EVENT_DATA_OBJ_TRANSFORM
 
 struct EVENT_DATA_SKILL_USE_INFO : EVENT_DATA
 {
-	SKILL_TYPE        SkillType;
+	float      Character_Yaw_angle;
 };
 
 struct EVENT_DATA_SKILL_OBJ_SPAWN_INFO : EVENT_DATA_OBJ_TRANSFORM
 {
 	SKILL_TYPE        SkillType;
 	OBJECT_PROPENSITY Propensity;
+};
+
+struct EVENT_DATA_NORMAL_ATTACK_INFO : EVENT_DATA
+{
+	float Character_Yaw_angle;
 };
 
 struct EVENT_DATA_EFFECT_OBJ_SPAWN_INFO : EVENT_DATA
@@ -200,13 +211,11 @@ struct EVENT_DATA_KDA_SCORE : EVENT_DATA
 
 struct EVENT_DATA_KILL_LOG : EVENT_DATA
 {
-	std::wstring Do_UserName;
-	std::wstring Target_UserName;
+	std::wstring Message;
 };
 
 struct EVENT_DATA_CHAT_LOG : EVENT_DATA
 {
-	std::wstring UserName;
 	std::wstring Message;
 };
 
@@ -248,14 +257,13 @@ struct EVENT_DATA_SENDING_CHAT_LOG : EVENT_DATA
 	std::wstring Message;
 };
 
+namespace CharacterSpeed
+{
+	constexpr float Warrior_Speed = 360.0f;
+}
 struct EVENT_DATA_MOVE_INFO : EVENT_DATA
 {
 	float MoveDirection_Yaw_angle;
-};
-
-struct EVENT_DATA_ROTATION_INFO : EVENT_DATA
-{
-	float Yaw_angle;
 };
 
 #pragma pack(pop)
@@ -357,7 +365,7 @@ struct TIME_EVENT : EVENT
 #define FEC_TRY_GAME_MATCHING                   0x13
 #define FEC_SEND_CHAT_LOG                       0x14
 #define FEC_TRY_MOVE_CHARACTER                  0x15
-#define FEC_TRY_ROTATION_CHARACTER              0x16
+#define FEC_TRY_MOVESTOP_CHARACTER              0x16
 #define FEC_TRY_NORMAL_ATTACK                   0x17
 #define FEC_TRY_USE_SKILL                       0x18
 #define FEC_DONE_CHARACTER_MOTION               0x19
@@ -512,7 +520,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ResrvateEvent_SetKDAScore(std::queue<std::unique_ptr<EVENT>>& Events,
+	void ReservateEvent_SetKDAScore(std::queue<std::unique_ptr<EVENT>>& Events,
 		unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_KDA_SCORE);
@@ -525,31 +533,29 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ResrvateEvent_SetKillLog(std::queue<std::unique_ptr<EVENT>>& Events,
-		std::wstring Do_UserName, std::wstring Target_UserName)
+	void ReservateEvent_SetKillLog(std::queue<std::unique_ptr<EVENT>>& Events,
+		std::wstring Message)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_KILL_LOG);
 		auto newEventData = std::make_unique<EVENT_DATA_KILL_LOG>();
 		newEventData->EventType = EVENT_DATA_TYPE::KILL_LOG;
-		newEventData->Do_UserName = Do_UserName;
-		newEventData->Target_UserName = Target_UserName;
-		newEvent->Data = std::move(newEventData);
-		Events.push(std::move(newEvent));
-	}
-
-	void ResrvateEvent_SetChatLog(std::queue<std::unique_ptr<EVENT>>& Events, char Act_Place,
-		std::wstring UserName, std::wstring Message)
-	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, Act_Place, FEC_SET_CHAT_LOG);
-		auto newEventData = std::make_unique<EVENT_DATA_CHAT_LOG>();
-		newEventData->EventType = EVENT_DATA_TYPE::SETTING_CHAT_LOG;
-		newEventData->UserName = UserName;
 		newEventData->Message = Message;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}
 
-	void ResrvateEvent_GamePlayTimeLimit(std::queue<std::unique_ptr<EVENT>>& Events,
+	void ReservateEvent_SetChatLog(std::queue<std::unique_ptr<EVENT>>& Events, char Act_Place,
+		std::wstring Message)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, Act_Place, FEC_SET_CHAT_LOG);
+		auto newEventData = std::make_unique<EVENT_DATA_CHAT_LOG>();
+		newEventData->EventType = EVENT_DATA_TYPE::SETTING_CHAT_LOG;
+		newEventData->Message = Message;
+		newEvent->Data = std::move(newEventData);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_GamePlayTimeLimit(std::queue<std::unique_ptr<EVENT>>& Events,
 		unsigned int Sec)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_GAME_PLAY_TIME_LIMIT);
@@ -560,7 +566,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ResrvateEvent_SetPlayerHP(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
+	void ReservateEvent_SetPlayerHP(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
 		int HP)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_SET_PLAYER_HP);
@@ -571,7 +577,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ResrvateEvent_SetMatchStatisticInfo(std::queue<std::unique_ptr<EVENT>>& Events,
+	void ReservateEvent_SetMatchStatisticInfo(std::queue<std::unique_ptr<EVENT>>& Events,
 		std::wstring UserName,
 		int UserRank,
 		unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance,
@@ -593,7 +599,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReseravateEvent_TryLogin(std::queue<std::unique_ptr<EVENT>>& Events,
+	void ReservateEvent_TryLogin(std::queue<std::unique_ptr<EVENT>>& Events,
 		std::wstring ID, std::wstring Password)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOGIN_SCENE, FEC_TRY_LOGIN);
@@ -605,13 +611,13 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReseravateEvent_GetUserInfo(std::queue<std::unique_ptr<EVENT>>& Events)
+	void ReservateEvent_GetUserInfo(std::queue<std::unique_ptr<EVENT>>& Events)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_GET_USER_INFO);
 		Events.push(std::move(newEvent));
 	}
 
-	void ReseravateEvent_TryGameMatching(std::queue<std::unique_ptr<EVENT>>& Events,
+	void ReservateEvent_TryGameMatching(std::queue<std::unique_ptr<EVENT>>& Events,
 		CHARACTER_TYPE SelectedCharacter)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_TRY_GAME_MATCHING);
@@ -622,7 +628,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReseravateEvent_SendChatLog(std::queue<std::unique_ptr<EVENT>>& Events, char Act_Place,
+	void ReservateEvent_SendChatLog(std::queue<std::unique_ptr<EVENT>>& Events, char Act_Place,
 		std::wstring Message)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, Act_Place, FEC_SEND_CHAT_LOG);
@@ -644,30 +650,30 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReservateEvent_TryRotationCharacter(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
-		float Yaw_angle)
+	void ReservateEvent_TryMoveStopCharacter(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object)
 	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_TRY_ROTATION_CHARACTER);
-		auto newEventData = std::make_unique<EVENT_DATA_ROTATION_INFO>();
-		newEventData->EventType = EVENT_DATA_TYPE::MOVE_INFO;
-		newEventData->Yaw_angle = Yaw_angle;
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_TRY_MOVESTOP_CHARACTER);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_TryNormalAttack(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
+		float Character_Yaw_angle)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_TRY_NORMAL_ATTACK);
+		auto newEventData = std::make_unique<EVENT_DATA_NORMAL_ATTACK_INFO>();
+		newEventData->EventType = EVENT_DATA_TYPE::NORMAL_ATTACK_INFO;
+		newEventData->Character_Yaw_angle = Character_Yaw_angle;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}
 
-	void ReservateEvent_TryNormalAttack(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object)
-	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_TRY_NORMAL_ATTACK);
-		Events.push(std::move(newEvent));
-	}
-
 	void ReservateEvent_TryUseSkill(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
-		SKILL_TYPE SkillType)
+		float Character_Yaw_angle)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_TRY_USE_SKILL);
 		auto newEventData = std::make_unique<EVENT_DATA_SKILL_USE_INFO>();
 		newEventData->EventType = EVENT_DATA_TYPE::SKILL_USE_INFO;
-		newEventData->SkillType = SkillType;
+		newEventData->Character_Yaw_angle = Character_Yaw_angle;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}
@@ -706,7 +712,7 @@ public:
 		Events.push(std::move(newEvent));
 	}
 
-	void ReseravateEvent_TryReturnLoby(std::queue<std::unique_ptr<EVENT>>& Events)
+	void ReservateEvent_TryReturnLoby(std::queue<std::unique_ptr<EVENT>>& Events)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(EVENT_TYPE::DO_DIRECT, -1, -1, FEP_GAMEOVER_SCENE, FEC_TRY_RETURN_LOBY);
 		Events.push(std::move(newEvent));

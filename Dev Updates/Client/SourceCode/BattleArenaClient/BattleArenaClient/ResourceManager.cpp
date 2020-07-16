@@ -333,6 +333,7 @@ void ResourceManager::LoadSkinnedModelData(
         std::vector<std::uint32_t>   indices;
 
         int sm_id = 0;
+        std::unordered_map<std::string, int> same_mesh_num;
         for (size_t m = 0; m < model_loader.mMeshes.size(); ++m)
         {
             std::vector<aiModelData::aiVertex>& aiVertices = model_loader.mMeshes[m].mVertices;
@@ -370,9 +371,14 @@ void ResourceManager::LoadSkinnedModelData(
                 (aabb.mMax.z - aabb.mMin.z) * 0.5f };
             submesh.ParentBoneID = model_loader.mMeshes[m].mParentBoneIndex;
 
-            std::string& meshName = model_loader.mMeshes[m].mName;
+            std::string meshName = ModelName + "-" + model_loader.mMeshes[m].mName;
             if (meshGeo->DrawArgs.find(meshName) != meshGeo->DrawArgs.end())
-                meshName = meshName + "_" + std::to_string(sm_id++);
+            {
+                if (same_mesh_num.find(meshName) == same_mesh_num.end())
+                    same_mesh_num.insert(std::make_pair(meshName, 0));
+                int sm_id = ++same_mesh_num[meshName];
+                meshName = meshName + "_" + std::to_string(sm_id);
+            }
             meshGeo->DrawArgs[meshName] = submesh;
         }
 
@@ -407,25 +413,20 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
 
-    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshtint Free Knight.fbx";
+    model_loader.ImportingAllMeshAsSkinned(true);
+
+    mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Male Knight 01.fbx";
     anim_paths = {
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Battle Idle.fbx",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Stride Walking.fbx",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Walk.fbx",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Slash.fbx",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Impact.fbx",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Animations/Meshtint Free Knight@Sword And Shield Death.fbx" };
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Attack Action - Sword And Shield Slash (total 46Frmes).fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Dieing Action - Death Crouching Headshot Front (total 58Frames).fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Idle Action - Sword And Shield Idle (total 111Frames).fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Impact Action - Sword And Shield Impact (total 22Frames).fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action - Sword And Shield Casting (total 45Frames).fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action - Sword And Shield Run (total 27Frames).fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
 
-    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshes/Shield.fbx";
-    anim_paths.clear();
-    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
-    ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-
-    mesh_path = m_additionalAssetPath + "Models/Meshtint Free Knight/Meshes/Sword.fbx";
-    anim_paths.clear();
-    execptProcessing_file_nodes = { "PreRotation", "RootNode" };
-    ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], KnightModelBoundingBox);
 }
 
 std::vector<UINT8> ResourceManager::GenerateTexture_chechboardPattern()
@@ -480,7 +481,24 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/CrossTarget.png",
         m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
-        m_additionalAssetPath + "Models/Meshtint Free Knight/Materials/Meshtint Free Knight.tga"
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Blue Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Brown Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Brown Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Red Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS White Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Blue Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Brown Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Brown Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Grey Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Purple Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS Red Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS White Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/LS White Silver.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/MS Purple Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/MS Red Gold.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/Hair Black.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/Hair Grey.tga",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/Hair Red.tga",
     };
 
     for (auto& texture_path : texture_filepaths)
@@ -687,14 +705,6 @@ void ResourceManager::BuildRenderItems()
         for (auto& subMesh : m_Geometries["Environment"]->DrawArgs)
             SceneRitems[subMesh.first]->Mat = m_Materials["TextureWorld"].get();
 
-        ResourceManager::BuildRenderItem(SceneRitems, m_Geometries["Shield"].get());
-        for (auto& subMesh : m_Geometries["Shield"]->DrawArgs)
-            SceneRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-
-        ResourceManager::BuildRenderItem(SceneRitems, m_Geometries["Sword"].get());
-        for (auto& subMesh : m_Geometries["Sword"]->DrawArgs)
-            SceneRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-
         ResourceManager::BuildRenderItem(SceneRitems, m_Geometries["PlayGameSceneUIGeo"].get());
         for (auto& subMesh_iter : m_Geometries["PlayGameSceneUIGeo"]->DrawArgs)
         {
@@ -743,14 +753,59 @@ void ResourceManager::BuildRenderItems()
         auto& PlayGameSceneRitems = m_AllRitems[(int)RenderTargetScene::PlayGameScene];
         auto& GameOverSceneRitems = m_AllRitems[(int)RenderTargetScene::GameOverScene];
 
-        ResourceManager::BuildRenderItem(LobySceneRitems,     m_Geometries["Meshtint Free Knight"].get());
-        ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Meshtint Free Knight"].get());
-        ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Meshtint Free Knight"].get());
-        for (auto& subMesh : m_Geometries["Meshtint Free Knight"]->DrawArgs)
+        ResourceManager::BuildRenderItem(LobySceneRitems,     m_Geometries["Male Knight 01"].get());
+        ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Male Knight 01"].get());
+        ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Male Knight 01"].get());
+        for (auto& subMesh : m_Geometries["Male Knight 01"]->DrawArgs)
         {
-            LobySceneRitems[subMesh.first]->Mat     = m_Materials["Meshtint Free Knight"].get();
-            PlayGameSceneRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
-            GameOverSceneRitems[subMesh.first]->Mat = m_Materials["Meshtint Free Knight"].get();
+            string subMeshName = subMesh.first;
+            Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
+            if (subMeshName.find("01 Head") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+            else if (subMeshName.find("02 Torso") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("03 Bottom") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS White Gold"].get();
+            else if (subMeshName.find("04 Feet") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("05 Hand") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+            else if (subMeshName.find("06 Belt") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("Poleyn 01") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("Necklace 08") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName == "Male Knight 01-Pauldron 01")
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+            else if (subMeshName == "Male Knight 01-Pauldron 01_1")
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("Shield_02") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else if (subMeshName.find("Brow 01") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
+            else if (subMeshName.find("Eyes 02") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+            else if (subMeshName.find("Hair Male 09") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
+            else if (subMeshName.find("Mouth 03") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Silver"].get();
+            else if (subMeshName.find("Bracer 05") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+            else if (subMeshName.find("Sword_02") != std::string::npos)
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+            else
+                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
+
+            LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
+            PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
+            GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
         }
     }
+}
+
+void ResourceManager::aiBB2dxBB(BoundingBox& dest, const aiModelData::aiBoundingBox source)
+{
+    dest.Center = { source.vCenter.x, source.vCenter.y, source.vCenter.z };
+    dest.Extents = { source.vExtents.x, source.vExtents.y, source.vExtents.z };
 }

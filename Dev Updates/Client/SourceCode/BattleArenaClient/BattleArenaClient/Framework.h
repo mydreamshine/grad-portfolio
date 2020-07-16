@@ -23,8 +23,8 @@ public:
     BYTE* GetFrameData();
 
 public:
-    void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events);
-    void ProcessEvent(EVENT& Event);
+    virtual void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events);
+    virtual void ProcessEvent(EVENT& Event);
 
 private:
     void LoadPipeline();
@@ -44,6 +44,8 @@ private:
 
     void PopulateCommandList();
     void DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std::vector<Object*>& ObjLayer);
+    // NonShadowRender로 지정되어 있는 오브젝트를 제외한 렌더 레이어 재구성
+    void ExcludeNonShadowRenderObjects(std::vector<Object*>& newRednerLayer, const std::vector<Object*> sourceRenderLayer);
     void DrawSceneToShadowMap();
     void DrawSceneToBackBuffer();
     void DrawSceneToUI();

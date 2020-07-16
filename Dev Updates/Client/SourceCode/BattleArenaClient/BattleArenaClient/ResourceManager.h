@@ -77,7 +77,12 @@ public:
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>& GetModelSkeltons() { return m_ModelSkeltons; }
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>& GetFonts() { return m_Fonts; }
 
+    std::unordered_map<std::string, DirectX::BoundingBox>& GetCharacterModelBoundingBoxes() { return m_CharacterModelBoundingBoxes; }
+
     std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GetRenderItems(RenderTargetScene TargetScene) { return m_AllRitems[(int)TargetScene]; }
+
+private:
+    void aiBB2dxBB(DirectX::BoundingBox& dest, const aiModelData::aiBoundingBox source);
 
 private:
     // Original Resource
@@ -86,6 +91,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
+    std::unordered_map<std::string, DirectX::BoundingBox> m_CharacterModelBoundingBoxes;
 
     // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems[(int)RenderTargetScene::Count];

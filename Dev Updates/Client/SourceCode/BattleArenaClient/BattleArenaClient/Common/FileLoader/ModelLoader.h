@@ -51,6 +51,12 @@ namespace aiModelData
 		}
 	};
 
+	struct aiBoundingBox
+	{
+		aiVector3D vCenter;
+		aiVector3D vExtents;
+	};
+
 	struct AnimNotify
 	{
 		float TimePos = FLT_MAX;
@@ -234,13 +240,13 @@ namespace aiModelData
 		}
 		bool AnimIsPlaying(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
 		{
-			if (Actions[(int)ActionType].size() == 0) return;
+			if (Actions[(int)ActionType].size() == 0) return false;
 			std::string AnimName = Actions[(int)ActionType][IndexAction];
 			return AnimInfo::AnimIsPlaying(AnimName, isSetted);
 		}
 		bool AnimOnceDone(const AnimActionType& ActionType, bool& isSetted, int IndexAction = 0)
 		{
-			if (Actions[(int)ActionType].size() == 0) return;
+			if (Actions[(int)ActionType].size() == 0) return false;
 			std::string AnimName = Actions[(int)ActionType][IndexAction];
 			return AnimInfo::AnimOnceDone(AnimName, isSetted);
 		}
@@ -248,11 +254,8 @@ namespace aiModelData
 		// 애니메이션 파일 이름에 ActionType이 있을 경우에만 호출 가능한 메소드
 	    // ex) "Meshtint Free Knight@Idle.fbx"와 같이 애니메이션 파일이름에 "Idle"이 들어가 있으면
 	    // ActionType의 Idle과 부합하므로 해당 애니메이션을 Action으로 등록 가능
-		void AutoApplyActionFromSkeleton(aiSkeleton* Skeleton)
+		void AutoApplyActionFromSkeleton(const std::set<std::string>& AnimNameList)
 		{
-			if (Skeleton == nullptr) return;
-			std::set<std::string> AnimNameList;
-			Skeleton->GetAnimationList_Name(AnimNameList);
 			for (auto& AnimName : AnimNameList)
 			{
 				if      (AnimName.find("Idle") != std::string::npos)      this->SetAction(AnimName, aiModelData::AnimActionType::Idle);
@@ -468,6 +471,19 @@ namespace aiModelData
 			}
 		}
 
+		void GetAnimationList_ClipEndTime(std::unordered_map<std::string, float>& AnimClipEndTimeList)
+		{
+			for (auto& Joint : mJoints)
+			{
+				for (auto& Anim_iter : Joint.mAnimations)
+				{
+					if (AnimClipEndTimeList.find(Anim_iter.first) != AnimClipEndTimeList.end()) continue;
+					auto& AnimClip = Anim_iter.second;
+					AnimClipEndTimeList[Anim_iter.first] = AnimClip.mDuration / AnimClip.mTickPerSecond;
+				}
+			}
+		}
+
 		void UpdateAnimationTransforms(AnimInfo& Anim_info, float deltaTime)
 		{
 			std::string AnimName = Anim_info.CurrPlayingAnimName;
@@ -553,17 +569,24 @@ class ModelLoader
 {
 private:
 	Assimp::Importer mImporter;
-	float mImportUnit = 1.0f;
+	bool mAllMeshToSkinned = false;
 
 	const aiScene* loadScene(std::string filepath);
 
 public:
 	std::vector<aiModelData::aiMesh> mMeshes;
 	std::unique_ptr<aiModelData::aiSkeleton> mSkeleton = nullptr;
+	std::unordered_map<std::string, aiModelData::aiBoundingBox> mBoundingBoxes;
 
 public:
+	// true: Static Mesh도 부모 뼈대 ID를 갖게 한다.
+	// false: Static Mesh의 뼈대가 존재하지 않게 한다. (Attaching을 요구하는 Mesh일 경우 외부에서 따로 구현한다.)
+	void ImportingAllMeshAsSkinned(bool IsAccept) { mAllMeshToSkinned = IsAccept; }
 	bool loadMeshAndSkeleton(std::string filepath, std::vector<std::string>* execpt_nodes = nullptr);
 	bool loadAnimation(std::string filepath);
+	bool loadBoundingBox(std::string filepath, std::vector<std::string>* execpt_nodes = nullptr);
+	// SkinnedMesh에 한해서만 BoundingBox를 Merge한다.
+	bool loadMergedBoundingBox(std::string filepath, aiModelData::aiBoundingBox& MergedBoundingBox, std::vector<std::string>* execpt_nodes = nullptr);
 
 private:
 	void processNode(
@@ -575,6 +598,9 @@ private:
 		std::vector<aiModelData::aiVertex>& pOut,
 		aiBone** Bones_intoMesh, unsigned int numBone,
 		aiMatrix4x4 BindPose);
+	void processBoundingBox(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, std::vector<std::string>* execpt_nodes = nullptr);
+	void processMergedAABB(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, aiAABB& mergedAABB,
+		std::vector<std::string>* execpt_nodes = nullptr);
 
 private:
 	void generateSkeleton(

@@ -36,6 +36,8 @@ public:
 
 private:
     const UINT m_MaxTextObject = 4;
-    std::string m_IDText;
-    std::string m_PasswordText;
+    std::wstring IDText;
+    std::wstring PasswordText;
+
+    bool OnceSendChatLog = false;
 };

@@ -17,24 +17,27 @@ void GameOverScene::OnInitProperties(CTimer& gt)
 {
     for (auto& obj : m_CharacterObjects)
     {
-        if (obj->m_Name == "Meshtint Free Knight")
+        if (obj->Activated != true) continue;
+
+        if (obj->m_Name.find("Warrior") != std::string::npos)
         {
             auto transformInfo = obj->m_TransformInfo.get();
-            float ConvertModelUnit = ModelFileUnit::meter;
+            float ConvertModelUnit = 125.0f;
             XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
             XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
             XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
             XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
             transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
             transformInfo->SetLocalRotationEuler(LocalRotationEuler);
-
-            auto skeletonInfo = obj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
-            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
+
+        auto skeletonInfo = obj->m_SkeletonInfo.get();
+        auto animInfo = skeletonInfo->m_AnimInfo.get();
+        animInfo->Init();
+        std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
+        animInfo->AutoApplyActionFromSkeleton(AnimNameList);
+        animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+        animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
     }
 
     m_LightRotationAngle = 0.0f;
@@ -48,6 +51,8 @@ void GameOverScene::OnInitProperties(CTimer& gt)
     GameMatchingResult_TotalDamage = 0;
     GameMatchingResult_TotalHeal = 0;
     GameMatchingResult_PlayedCharacterType = CHARACTER_TYPE::NON;
+
+    OnceTryReturnLoby = false;
 }
 
 void GameOverScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -71,42 +76,26 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     const UINT maxUILayOutObject = (UINT)Geometries["GameOverSceneUIGeo"]->DrawArgs.size();
     for (auto& Ritem_iter : AllRitems)
     {
+        auto& Ritem_name = Ritem_iter.first;
         auto Ritem = Ritem_iter.second.get();
-        if (Ritem_iter.first == "Meshtint Free Knight")
-        {
-            auto newObj = objManager.CreateCharacterObject(
-                objCB_index++, skinnedCB_index++,
-                m_AllObjects,
-                m_CharacterObjects, m_MaxCharacterObject,
-                m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
 
-            std::string objName = Ritem_iter.first;
+        if (Ritem_name.find("Male Knight 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].push_back(Ritem);
+        if (Ritem_name.find("Male Warrior 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER].push_back(Ritem);
+        if (Ritem_name.find("Male Mage 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST].push_back(Ritem);
+        if (Ritem_name.find("Female Warrior 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN].push_back(Ritem);
 
-            float ConvertModelUnit = ModelFileUnit::meter;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
-            objManager.SetObjectComponent(newObj, objName, Ritem,
-                ModelSkeletons["Meshtint Free Knight"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
-                &WorldScale, &WorldRotationEuler, &WorldPosition);
-
-            auto skeletonInfo = newObj->m_SkeletonInfo.get();
-            auto animInfo = newObj->m_SkeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
-            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
-        }
         if (Ritem_iter.first.find("UI") != std::string::npos)
         {
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
-            objManager.SetObjectComponent(newObj, objName, Ritem);
+            std::vector<RenderItem*> Ritems = { Ritem };
+            objManager.SetObjectComponent(newObj, objName, Ritems);
 
             if (objName.find("Background") != std::string::npos) continue;
 
@@ -118,11 +107,43 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
             text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
             text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
-            text_info->TextBatchIndex = textBatch_index++;
 
             if (objName == "UI_Layout_GameOverInfo")        text_info->m_Text = L"Game Over Info\n\nTotal Damage,\nTotal Kill,\nTotal Death,\n etc.";
             else if (objName == "UI_Layout_GameOverResult") text_info->m_Text = L"Game Over";
             else if (objName == "UI_Layout_ReturnLoby")     text_info->m_Text = L"Retrun Loby";
+        }
+    }
+
+    // Create Character Object
+    {
+        if (!m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].empty())
+        {
+            auto newObj = objManager.CreateCharacterObject(
+                objCB_index++, skinnedCB_index++,
+                m_AllObjects,
+                m_CharacterObjects, m_MaxCharacterObject,
+                m_WorldObjects, m_MaxWorldObject);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+
+            std::string objName = "Warrior Instancing";
+
+            float ConvertModelUnit = 125.0f;
+            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+            objManager.SetObjectComponent(newObj, objName, m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR],
+                ModelSkeletons["Male Knight 01"].get(),
+                nullptr, &LocalRotationEuler, nullptr,
+                &WorldScale, &WorldRotationEuler, &WorldPosition);
+
+            auto skeletonInfo = newObj->m_SkeletonInfo.get();
+            auto animInfo = skeletonInfo->m_AnimInfo.get();
+            animInfo->Init();
+            std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
+            animInfo->AutoApplyActionFromSkeleton(AnimNameList);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
     }
 
@@ -195,12 +216,12 @@ void GameOverScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
 
     auto& GameOverInfo = GameOverInfoObject->m_Textinfo->m_Text;
 
-    GameOverInfo  = L"UserName: " + UserInfo_UserName + L'\n';
-    GameOverInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank);
-    GameOverInfo += L"Total Kill: " + std::to_wstring(GameMatchingResult_CountKill);
-    GameOverInfo += L"Total Death: " + std::to_wstring(GameMatchingResult_CountDeath);
-    GameOverInfo += L"Total Assistance: " + std::to_wstring(GameMatchingResult_CountAssistance);
-    GameOverInfo += L"Total Damage: " + std::to_wstring(GameMatchingResult_TotalDamage);
+    GameOverInfo  = L"UserName: " + UserInfo_UserName + L"\n";
+    GameOverInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank) + L"\n";
+    GameOverInfo += L"Total Kill: " + std::to_wstring(GameMatchingResult_CountKill) + L"\n";
+    GameOverInfo += L"Total Death: " + std::to_wstring(GameMatchingResult_CountDeath) + L"\n";
+    GameOverInfo += L"Total Assistance: " + std::to_wstring(GameMatchingResult_CountAssistance) + L"\n";
+    GameOverInfo += L"Total Damage: " + std::to_wstring(GameMatchingResult_TotalDamage) + L"\n";
     GameOverInfo += L"Total Heal: " + std::to_wstring(GameMatchingResult_TotalHeal);
 }
 
@@ -256,6 +277,15 @@ void GameOverScene::AnimateCameras(CTimer& gt)
 
 void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+    // Process Return Loby Button
+    {
+    }
+
+    if (OnceTryReturnLoby == true)
+    {
+        EventManager eventManger;
+        eventManger.ReservateEvent_TryReturnLoby(GeneratedEvents);
+    }
 }
 
 void GameOverScene::SetMatchStatisticInfo(std::wstring UserName, int UserRank,

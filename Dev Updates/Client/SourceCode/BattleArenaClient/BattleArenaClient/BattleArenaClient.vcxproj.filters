@@ -301,5 +301,8 @@
     <ClInclude Include="ResourceManager.h">
       <Filter>Common\FileLoaders</Filter>
     </ClInclude>
+    <ClInclude Include="EventProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

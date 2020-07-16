@@ -18,10 +18,10 @@ void LobyScene::OnInitProperties(CTimer& gt)
     {
         if (obj->Activated != true) continue;
 
-        if (obj->m_Name == "Meshtint Free Knight")
+        if (obj->m_Name.find("Warrior") != std::string::npos)
         {
             auto transformInfo = obj->m_TransformInfo.get();
-            float ConvertModelUnit = ModelFileUnit::meter;
+            float ConvertModelUnit = 125.0f;
             XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
             XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
             XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
@@ -33,7 +33,8 @@ void LobyScene::OnInitProperties(CTimer& gt)
         auto skeletonInfo = obj->m_SkeletonInfo.get();
         auto animInfo = skeletonInfo->m_AnimInfo.get();
         animInfo->Init();
-        animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
+        std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
+        animInfo->AutoApplyActionFromSkeleton(AnimNameList);
         animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
         animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
     }
@@ -43,13 +44,19 @@ void LobyScene::OnInitProperties(CTimer& gt)
     camAngle = -90.0f * (MathHelper::Pi / 180.0f);
 
     ChattingList.clear();
+    inputChat.clear();
     UserInfo_UserName.clear();
     UserInfo_UserRank = 0;
 
     SelectedCharacterType = CHARACTER_TYPE::NON;
 
     ChattingMode = false;
+    StartMatching = false;
     MouseLeftButtonClick = false;
+
+    OnceGetUserInfo = true;
+    OnceTryGameMatching = false;
+    OnceSendChatLog = false;
 }
 
 void LobyScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -71,50 +78,35 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
 
     ObjectManager objManager;
     const UINT maxUILayOutObject = (UINT)Geometries["LobySceneUIGeo"]->DrawArgs.size();
+
     for (auto& Ritem_iter : AllRitems)
     {
+        auto& Ritem_name = Ritem_iter.first;
         auto Ritem = Ritem_iter.second.get();
-        if (Ritem_iter.first == "Meshtint Free Knight")
-        {
-            auto newObj = objManager.CreateCharacterObject(
-                objCB_index++, skinnedCB_index++,
-                m_AllObjects,
-                m_CharacterObjects, m_MaxCharacterObject,
-                m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
 
-            std::string objName = Ritem_iter.first;
+        if (Ritem_name.find("Male Knight 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].push_back(Ritem);
+        if (Ritem_name.find("Male Warrior 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER].push_back(Ritem);
+        if (Ritem_name.find("Male Mage 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST].push_back(Ritem);
+        if (Ritem_name.find("Female Warrior 01") != std::string::npos)
+            m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN].push_back(Ritem);
 
-            float ConvertModelUnit = ModelFileUnit::meter;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
-            objManager.SetObjectComponent(newObj, objName, Ritem,
-                ModelSkeletons["Meshtint Free Knight"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
-                &WorldScale, &WorldRotationEuler, &WorldPosition);
-
-            auto skeletonInfo = newObj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
-            animInfo->AutoApplyActionFromSkeleton(skeletonInfo->m_Skeleton);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
-        }
-        if (Ritem_iter.first.find("UI") != std::string::npos)
+        if (Ritem_name.find("UI") != std::string::npos)
         {
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
-            objManager.SetObjectComponent(newObj, objName, Ritem);
+            std::vector<RenderItem*> Ritems = { Ritem };
+            objManager.SetObjectComponent(newObj, objName, Ritems);
 
             if (objName.find("CharacterSelection") != std::string::npos) continue;
             if (objName.find("Background") != std::string::npos) continue;
 
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
-            auto text_info = newObj->m_Textinfo.get();
+            auto text_info = newLayoutTextObj->m_Textinfo.get();
             newLayoutTextObj->m_Name = "Text" + objName;
             text_info->m_FontName = L"¸¼Àº °íµñ";
             text_info->m_TextColor = DirectX::Colors::Blue;
@@ -128,6 +120,39 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             else if (objName == "UI_Layout_LobyCharacterName")  text_info->m_Text = L"Character Name";
             else if (objName == "UI_Layout_LobyUserInfo")  text_info->m_Text = L"NickName:\nRank:";
             else if (objName == "UI_Layout_LobyCharacterDescrition")  text_info->m_Text = L"Chracter Info\n(Name, HP, etc.)";
+        }
+    }
+
+    // Create Character Object
+    {
+        if (!m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].empty())
+        {
+            auto newObj = objManager.CreateCharacterObject(
+                objCB_index++, skinnedCB_index++,
+                m_AllObjects,
+                m_CharacterObjects, m_MaxCharacterObject,
+                m_WorldObjects, m_MaxWorldObject);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+
+            std::string objName = "Warrior Instancing";
+
+            float ConvertModelUnit = 125.0f;
+            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+            objManager.SetObjectComponent(newObj, objName, m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR],
+                ModelSkeletons["Male Knight 01"].get(),
+                nullptr, &LocalRotationEuler, nullptr,
+                &WorldScale, &WorldRotationEuler, &WorldPosition);
+
+            auto skeletonInfo = newObj->m_SkeletonInfo.get();
+            auto animInfo = skeletonInfo->m_AnimInfo.get();
+            animInfo->Init();
+            std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
+            animInfo->AutoApplyActionFromSkeleton(AnimNameList);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
         }
     }
 
@@ -268,7 +293,7 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Movement Speed: 0.8\n";
         CharacterInfo += L"Attack Speed: 0.8\n";
         CharacterInfo += L"Skill Name: Holy Area";
-        CharacterInfo += L"Skill Desc: Creates a holy area\n  that restores 15 health every 1 sec\n  for 10 sec.";
+        CharacterInfo += L"Skill Desc: Creates a holy area\n  that restores 15 health every 1 sec\n  for 10 sec.\n";
         CharacterInfo += L"Skill CoolTime: 12 seconds.";
         break;
     case CHARACTER_TYPE::NON:
@@ -278,8 +303,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Damage: Non\n";
         CharacterInfo += L"Movement Speed: Non\n";
         CharacterInfo += L"Attack Speed: Non\n";
-        CharacterInfo += L"Skill Name: Non";
-        CharacterInfo += L"Skill Desc: Non";
+        CharacterInfo += L"Skill Name: Non\n";
+        CharacterInfo += L"Skill Desc: Non\n";
         CharacterInfo += L"Skill CoolTime: Non";
         break;
     }
@@ -346,6 +371,37 @@ void LobyScene::AnimateCameras(CTimer& gt)
 
 void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+    if (OnceGetUserInfo == true)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_GetUserInfo(GeneratedEvents);
+        OnceGetUserInfo = false;
+    }
+
+    // Process SelectedCharacter
+    {
+
+    }
+
+    // Process Chat
+    {
+
+    }
+
+    if (OnceTryGameMatching == true)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
+        OnceTryGameMatching = false;
+    }
+
+    if (OnceSendChatLog == true)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);
+        inputChat.clear();
+        OnceSendChatLog = false;
+    }
 }
 
 void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)

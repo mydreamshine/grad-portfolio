@@ -56,6 +56,8 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 	int Act_Object = m_CharacterObjRef->m_CE_ID;
 	aiModelData::AnimActionType ActionType = m_CharacterObjRef->m_SkeletonInfo->m_AnimInfo->CurrPlayingAction;
 
+	if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_DIE) return;
+
 	// Set Moving Direction
 	if (ActionType == aiModelData::AnimActionType::Idle
 		|| ActionType == aiModelData::AnimActionType::Walk)
@@ -89,6 +91,8 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		{
 			if (key_state[0x57] || key_state[0x41] || key_state[0x53] || key_state[0x44])
 				eventManager.ReservateEvent_TryMoveCharacter(GeneratedEvents, Act_Object, yaw_angle);
+			else
+				eventManager.ReservateEvent_TryMoveStopCharacter(GeneratedEvents, Act_Object);
 		}
 	}
 
@@ -98,31 +102,34 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		if (ActionType == aiModelData::AnimActionType::Attack) return;
 		if (ActionType == aiModelData::AnimActionType::SkillPose) return;
 
-		Player::ProcessPicking(oldCursorPos, ViewPort, gt, GroundObject, GeneratedEvents);
+		float Yaw_angle = 0.0f;
+		if (Player::ProcessPicking(oldCursorPos, ViewPort, gt, GroundObject, Yaw_angle, GeneratedEvents) == true)
+		{
 
-		if (key_state[VK_LBUTTON] == true)
-		{
-			eventManager.ReservateEvent_TryNormalAttack(GeneratedEvents, Act_Object);
-		}
-		else if (key_state[VK_RBUTTON] == true)
-		{
-			CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
-			SKILL_TYPE SkillType = SKILL_TYPE::NON;
-			switch (CharacterType)
+			if (key_state[VK_LBUTTON] == true)
 			{
-			case CHARACTER_TYPE::NON:       return;                             break;
-			case CHARACTER_TYPE::WARRIOR:   SkillType = SKILL_TYPE::SWORD_WAVE; break;
-			case CHARACTER_TYPE::BERSERKER: SkillType = SKILL_TYPE::FURY_ROAR;  break;
-			case CHARACTER_TYPE::ASSASSIN:  SkillType = SKILL_TYPE::STEALTH;    break;
-			case CHARACTER_TYPE::PRIEST:    SkillType = SKILL_TYPE::HOLY_AREA;  break;
+				eventManager.ReservateEvent_TryNormalAttack(GeneratedEvents, Act_Object, Yaw_angle);
 			}
-			eventManager.ReservateEvent_TryUseSkill(GeneratedEvents, Act_Object, SkillType);
+			else if (key_state[VK_RBUTTON] == true)
+			{
+				CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
+				SKILL_TYPE SkillType = SKILL_TYPE::NON;
+				switch (CharacterType)
+				{
+				case CHARACTER_TYPE::NON:       return;                             break;
+				case CHARACTER_TYPE::WARRIOR:   SkillType = SKILL_TYPE::SWORD_WAVE; break;
+				case CHARACTER_TYPE::BERSERKER: SkillType = SKILL_TYPE::FURY_ROAR;  break;
+				case CHARACTER_TYPE::ASSASSIN:  SkillType = SKILL_TYPE::STEALTH;    break;
+				case CHARACTER_TYPE::PRIEST:    SkillType = SKILL_TYPE::HOLY_AREA;  break;
+				}
+				eventManager.ReservateEvent_TryUseSkill(GeneratedEvents, Act_Object, Yaw_angle);
+			}
 		}
 	}
 }
 
-void Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt,
-	Object* GroundObject, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
+bool Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt,
+	Object* GroundObject, float& Yaw_angle, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
 	bool Picking = false;
 	XMFLOAT3 intersectPos;
@@ -157,7 +164,7 @@ void Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& V
 		XMFLOAT3 Dot; XMStoreFloat3(&Dot, XMVector3Dot(PlayerNewLOOK, Z_Axis));
 
 		float rad2deg = 180.0f / MathHelper::Pi;
-		float Yaw_angle = atanf(playerNewLook.x / (playerNewLook.z)) * rad2deg;
+		Yaw_angle = atanf(playerNewLook.x / (playerNewLook.z)) * rad2deg;
 		if (Dot.x < 0.0f)// PickedPos가 Player 뒤에 있을 때
 		{
 			if (Yaw_angle < 0.0f) // PickedPos가 우측후방에 있을때
@@ -165,9 +172,9 @@ void Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& V
 			else if (Yaw_angle > 0.0f) // PickedPos가 좌측후방에 있을때
 				Yaw_angle -= 180.0f;
 		}
-
-		eventManager.ReservateEvent_TryRotationCharacter(GeneratedEvents, Act_Object, Yaw_angle);
 	}
+
+	return Picking;
 }
 
 void Player::ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
@@ -188,7 +195,7 @@ void Player::ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& Gener
 	}
 
 	bool AnimNotifyIsSetted = false;
-	if (animInfo->CheckAnimTimeLineNotify("Meshtint Free Knight@Sword And Shield Slash-SlashGen", AnimNotifyIsSetted) == true)
+	if (animInfo->CheckAnimTimeLineNotify("Sword Slash Gen", AnimNotifyIsSetted) == true)
 		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::WARRIOR_SKILL_SWORD_WAVE_OBJ_GEN);
 	/*else if (animInfo->CheckAnimTimeLineNotify("Holy Area Gen", AnimNotifyIsSetted) == true)
 		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::PRIEST_SKILL_HOLY_AREA_OBJ_GEN);

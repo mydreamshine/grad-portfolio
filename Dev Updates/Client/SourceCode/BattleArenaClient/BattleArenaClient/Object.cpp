@@ -247,6 +247,7 @@ void TransformInfo::Init()
 	m_WorldTransform = MathHelper::Identity4x4();
 	m_TexTransform = MathHelper::Identity4x4();
 	m_TexAlpha = 1.0f;
+	m_nonShadowRender = false;
 
 	m_OriginBound.Center = { 0.0f, 0.0f, 0.0f };
 	m_OriginBound.Extents = { 0.0f, 0.0f, 0.0f };

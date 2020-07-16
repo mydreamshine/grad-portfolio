@@ -47,10 +47,13 @@ private:
     const UINT m_MaxCharacterObject = 4;
     const UINT m_MaxTextObject = 7;
 
+    std::vector<RenderItem*> m_CharacterRitems[(int)CHARACTER_TYPE::COUNT];
+
     float camAngle = -90.0f * (MathHelper::Pi / 180.0f);
 
     const size_t MaxChatLog = 20;
     std::list<std::wstring> ChattingList;
+    std::wstring inputChat;
 
     std::wstring UserInfo_UserName;
     int UserInfo_UserRank = 0;
@@ -60,4 +63,8 @@ private:
     bool ChattingMode = false;
     bool StartMatching = false;
     bool MouseLeftButtonClick = false;
+
+    bool OnceGetUserInfo = true;
+    bool OnceTryGameMatching = false;
+    bool OnceSendChatLog = false;
 };
