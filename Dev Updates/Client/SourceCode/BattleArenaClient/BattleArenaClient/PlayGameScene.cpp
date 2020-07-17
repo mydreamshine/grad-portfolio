@@ -612,7 +612,7 @@ void PlayGameScene::SpawnNormalAttackObject(int New_CE_ID,
         case CHARACTER_TYPE::WARRIOR:
         {
             objName = objName = "SwordNormalAttack - Instancing" + std::to_string(New_CE_ID);
-            //Ritem = ;
+            Ritems.push_back(AllRitems["SkillEffect_SwordSlash_a"].get());
         }
             break;
         case CHARACTER_TYPE::BERSERKER:

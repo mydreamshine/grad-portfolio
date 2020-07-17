@@ -825,8 +825,8 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
         m_nTextBatch += scene->m_nTextBatch;
     }
 
-    m_CurrSceneName = "PlayGameScene";
-    m_CurrScene = m_Scenes["PlayGameScene"].get();
+    m_CurrSceneName = "LobyScene";
+    m_CurrScene = m_Scenes["LobyScene"].get();
 }
 
 void Framework::BuildFontSpriteBatchs()
