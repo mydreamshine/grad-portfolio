@@ -57,14 +57,7 @@ void HERO::change_motion(char motion)
 	this->motion_type = motion;
 	anim_time_pos = 0.0f;
 
-	csss_packet_set_character_motion packet;
-	packet.size = sizeof(csss_packet_set_character_motion);
-	packet.type = CSSS_SET_CHARACTER_MOTION;
-	
-	packet.motion_type = motion_type;
-	packet.object_id = object_id;
-	packet.anim_time_pos = anim_time_pos;
-	packet.skill_type = 0;
+	csss_packet_set_character_motion packet{ object_id, motion_type, 0 };
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -75,11 +68,7 @@ void HERO::change_state(char state)
 
 	this->character_state = state;
 
-	csss_pacekt_set_character_state packet;
-	packet.type = CSSS_SET_CHARACTER_STATE;
-	packet.size = sizeof(csss_pacekt_set_character_state);
-	packet.object_id = object_id;
-	packet.character_state = character_state;
+	csss_pacekt_set_character_state packet{ object_id, character_state };
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -92,11 +81,7 @@ void HERO::set_hp(int hp)
 {
 	this->hp = (hp < 0) ? 0 : hp;
 
-	csss_packet_set_character_hp packet;
-	packet.type = CSSS_SET_CHARACTER_HP;
-	packet.size = sizeof(csss_packet_set_character_hp);
-	packet.object_id = object_id;
-	packet.hp = this->hp;
+	csss_packet_set_character_hp packet{ object_id, this->hp };
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -151,19 +136,13 @@ void HERO::do_attack()
 	normal_attack->propensity = propensity;
 	world->m_skills[object_id] = normal_attack;
 
-	csss_packet_spawn_normal_attack_obj packet;
-
-	packet.size = sizeof(csss_packet_spawn_normal_attack_obj);
-	packet.type = CSSS_SPAWN_NORMAL_ATTACK_OBJ;
-
-	packet.attack_order = character_type;
-	packet.object_id = object_id;
-	packet.propensity = propensity;
-
-	packet.position_x = normal_attack->pos.x; packet.position_y = normal_attack->pos.y; packet.position_z = normal_attack->pos.z;
-	packet.rotation_euler_x = normal_attack->rot.x; packet.rotation_euler_y = normal_attack->rot.y; packet.rotation_euler_z = normal_attack->rot.z;
-	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
-
+	csss_packet_spawn_normal_attack_obj packet{
+		object_id, character_type, 
+		1.0f, 1.0f, 1.0f, 
+		rot.x, rot.y, rot.z, 
+		pos.x, pos.y, pos.z, 
+		propensity
+	};
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -227,19 +206,19 @@ WARRIOR::~WARRIOR()
 void WARRIOR::do_skill()
 {
 	static float Deg[3]{ -30.0f, 0.0f, 30.0f };
-	int object_id;
+	int skill_id = 0;
 	NORMAL_ATTACK* normal_attack;
-	csss_packet_spawn_skill_obj packet;
-
-	packet.size = sizeof(csss_packet_spawn_skill_obj);
-	packet.type = CSSS_SPAWN_SKILL_OBJ;
-	packet.skill_type = (char)SKILL_TYPE::SWORD_WAVE;
-	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
-	
-	packet.propensity = propensity;
+	csss_packet_spawn_skill_obj packet{
+		skill_id,
+		(char)SKILL_TYPE::SWORD_WAVE,
+		1.0f, 1.0f, 1.0f,
+		rot.x, rot.y, rot.z,
+		pos.x, pos.y, pos.z,
+		propensity 
+	};
 
 	for (int i = 0; i < 3; ++i) {
-		object_id = world->skill_uid++;
+		skill_id = world->skill_uid++;
 		normal_attack = new NORMAL_ATTACK{};
 		normal_attack->pos = pos;
 		normal_attack->rot = rot; normal_attack->rot.y += Deg[i];
@@ -247,9 +226,9 @@ void WARRIOR::do_skill()
 		normal_attack->propensity = propensity;
 		normal_attack->damage = SWORD_WAVE_DAMAGE;
 		normal_attack->duration = SWORD_WAVE_DURATION;
-		world->m_skills[object_id] = normal_attack;
+		world->m_skills[skill_id] = normal_attack;
 
-		packet.object_id = object_id;
+		packet.object_id = skill_id;
 		packet.position_x = normal_attack->pos.x; packet.position_y = normal_attack->pos.y; packet.position_z = normal_attack->pos.z;
 		packet.rotation_euler_x = normal_attack->rot.x; packet.rotation_euler_y = normal_attack->rot.y; packet.rotation_euler_z = normal_attack->rot.z;
 		world->event_data.emplace_back(&packet, packet.size);
@@ -270,23 +249,22 @@ PRIEST::~PRIEST()
 
 void PRIEST::do_skill()
 {
-	int object_id = world->skill_uid++;
+	int skill_id = world->skill_uid++;
 	HOLY_AREA* holy_area = new HOLY_AREA{};
-	csss_packet_spawn_skill_obj packet;
+
 
 	holy_area->pos = pos;
 	holy_area->propensity = propensity;
-	world->m_skills[object_id] = holy_area;
+	world->m_skills[skill_id] = holy_area;
 
-	packet.size = sizeof(csss_packet_spawn_skill_obj);
-	packet.type = CSSS_SPAWN_SKILL_OBJ;
-
-	packet.propensity = propensity;
-	packet.skill_type = (char)SKILL_TYPE::HOLY_AREA;
-	packet.object_id = object_id;
-	packet.position_x = holy_area->pos.x; packet.position_y = holy_area->pos.y; packet.position_z = holy_area->pos.z;
-	packet.rotation_euler_x = holy_area->rot.x; packet.rotation_euler_y = holy_area->rot.y; packet.rotation_euler_z = holy_area->rot.z;
-	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
+	csss_packet_spawn_skill_obj packet{
+		skill_id,
+		(char)SKILL_TYPE::HOLY_AREA,
+		1.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -315,23 +293,21 @@ void BERSERKER::do_skill()
 		roar_skill = nullptr;
 	}
 
-	int object_id = world->skill_uid++;
+	int skill_id = world->skill_uid++;
 	roar_skill = new FURY_ROAR{};
-	csss_packet_spawn_skill_obj packet;
 
 	roar_skill->pos = pos;
 	roar_skill->propensity = propensity;
-	world->m_skills[object_id] = roar_skill;
+	world->m_skills[skill_id] = roar_skill;
 
-	packet.size = sizeof(csss_packet_spawn_skill_obj);
-	packet.type = CSSS_SPAWN_SKILL_OBJ;
-
-	packet.propensity = propensity;
-	packet.skill_type = (char)SKILL_TYPE::FURY_ROAR;
-	packet.object_id = object_id;
-	packet.position_x = roar_skill->pos.x; packet.position_y = roar_skill->pos.y; packet.position_z = roar_skill->pos.z;
-	packet.rotation_euler_x = roar_skill->rot.x; packet.rotation_euler_y = roar_skill->rot.y; packet.rotation_euler_z = roar_skill->rot.z;
-	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
+	csss_packet_spawn_skill_obj packet{
+		skill_id,
+		(char)SKILL_TYPE::FURY_ROAR,
+		1.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -392,23 +368,21 @@ void ASSASSIN::do_skill()
 		stelth_skill = nullptr;
 	}
 
-	int object_id = world->skill_uid++;
+	int skill_id = world->skill_uid++;
 	stelth_skill = new STELTH{};
 	
 	stelth_skill->pos = pos;
 	stelth_skill->propensity = propensity;
-	world->m_skills[object_id] = stelth_skill;
+	world->m_skills[skill_id] = stelth_skill;
 
-	csss_packet_spawn_skill_obj packet;
-	packet.size = sizeof(csss_packet_spawn_skill_obj);
-	packet.type = CSSS_SPAWN_SKILL_OBJ;
-
-	packet.propensity = propensity;
-	packet.skill_type = (char)SKILL_TYPE::STEALTH;
-	packet.object_id = object_id;
-	packet.position_x = stelth_skill->pos.x; packet.position_y = stelth_skill->pos.y; packet.position_z = stelth_skill->pos.z;
-	packet.rotation_euler_x = stelth_skill->rot.x; packet.rotation_euler_y = stelth_skill->rot.y; packet.rotation_euler_z = stelth_skill->rot.z;
-	packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
+	csss_packet_spawn_skill_obj packet{
+		skill_id,
+		(char)SKILL_TYPE::STEALTH,
+		1.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
 	world->event_data.emplace_back(&packet, packet.size);
 }
 

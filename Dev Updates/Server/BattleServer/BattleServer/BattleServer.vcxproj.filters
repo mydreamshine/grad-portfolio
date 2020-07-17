@@ -98,5 +98,8 @@
     <ClInclude Include="..\..\Common\Vector3d.h">
       <Filter>Common\Header</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

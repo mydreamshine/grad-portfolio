@@ -157,6 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\Server\Common\NWMODULE.cpp" />
     <ClCompile Include="Framework.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -220,6 +221,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\Server\Common\NWMODULE.h" />
     <ClInclude Include="EventProcessor.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="Common\FileLoader\DDSLoader.h" />

@@ -28,15 +28,11 @@ void DMRoom::init()
 bool DMRoom::regist(CLIENT* client)
 {
 	socket_lock.lock();
-	int cur_player = ++player_num;
+	short cur_player = ++player_num;
 	sockets.emplace(client->socket);
-	csss_packet_login_ok packet;
-	packet.client_id = cur_player;
-	packet.type = CSSS_LOGIN_OK;
-	packet.size = sizeof(csss_packet_login_ok);
+	csss_packet_login_ok packet{ cur_player };
 	send_packet(client->socket, &packet, packet.size);
 	socket_lock.unlock();
-
 	return cur_player == max_player;
 }
 
@@ -51,10 +47,7 @@ void DMRoom::disconnect(CLIENT* client)
 void DMRoom::start()
 {
 	//Insert changed scene packet.
-	csss_packet_change_scene packet;
-	packet.type = CSSS_CHANGE_SCENE;
-	packet.size = sizeof(csss_packet_change_scene);
-	//packet.scene_type = (char)
+	csss_packet_change_scene packet{(char)SCENE_TYPE::PLAYGMAE_SCENE};
 	event_data.emplace_back(&packet, packet.size);
 }
 
@@ -103,7 +96,7 @@ void DMRoom::process_packet_vector()
 	size_t packet_length = packets.len;
 	while (packet_length > 0)
 	{
-		default_packet* dp = reinterpret_cast<default_packet*>(packet_pos);
+		packet_inheritance* dp = reinterpret_cast<packet_inheritance*>(packet_pos);
 		packet_size = dp->size;
 		process_type_packet(packet_pos, dp->type);
 		packet_length -= packet_size;
@@ -167,15 +160,13 @@ void DMRoom::send_game_state()
 	for (const auto& hero : m_heros) {
 		if (false == hero.second->changed_transform) continue;
 		//Send hero transform.
-		csss_packet_set_obj_transform transform_packet;
-		transform_packet.size = sizeof(csss_packet_set_obj_transform);
-		transform_packet.type = CSSS_SET_OBJ_TRANSFORM;
-		transform_packet.object_id = hero.first;
-		transform_packet.position_x = hero.second->pos.x; transform_packet.position_y = hero.second->pos.y; transform_packet.position_z = hero.second->pos.z;
-		transform_packet.rotation_euler_x = hero.second->rot.x; transform_packet.rotation_euler_y = hero.second->rot.y; transform_packet.rotation_euler_z = hero.second->rot.z;
-		transform_packet.scale_x = transform_packet.scale_y = transform_packet.scale_z = 1.0f;
+		csss_packet_set_obj_transform transform_packet{
+			hero.first,
+			1.0f, 1.0f, 1.0f,
+			hero.second->rot.x, hero.second->rot.y, hero.second->rot.z,
+			hero.second->pos.x, hero.second->pos.y, hero.second->pos.z
+		};
 		info_data.emplace_back(&transform_packet, transform_packet.size);
-
 		hero.second->changed_transform = false;
 	}
 
@@ -183,20 +174,19 @@ void DMRoom::send_game_state()
 		if (false == skill.second->changed_transform) continue;
 
 		//Send skill transform.
-		csss_packet_set_obj_transform packet;
-		packet.size = sizeof(csss_packet_set_obj_transform);
-		packet.type = CSSS_SET_OBJ_TRANSFORM;
-		packet.object_id = skill.first;
-		packet.position_x = skill.second->pos.x; packet.position_y = skill.second->pos.y; packet.position_z = skill.second->pos.z;
-		packet.rotation_euler_x = skill.second->rot.x; packet.rotation_euler_y = skill.second->rot.y; packet.rotation_euler_z = skill.second->rot.z;
-		packet.scale_x = packet.scale_y = packet.scale_z = 1.0f;
-		info_data.emplace_back(&packet, packet.size);
-
+		csss_packet_set_obj_transform transform_packet {
+			skill.first,
+			1.0f, 1.0f, 1.0f,
+			skill.second->rot.x, skill.second->rot.y, skill.second->rot.z,
+			skill.second->pos.x, skill.second->pos.y, skill.second->pos.z
+		};
+		info_data.emplace_back(&transform_packet, transform_packet.size);
 		skill.second->changed_transform = false;
 	}
-	event_data.emplace_back(info_data.data, info_data.len);
 
+	
 	//Send data to clients.
+	event_data.emplace_back(info_data.data, info_data.len);
 	socket_lock.lock();
 	for (const SOCKET& socket : sockets) {
 		send_packet(socket, event_data.data, event_data.len);
@@ -214,8 +204,8 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 		process_try_move_character(packet);
 		break;
 
-	case SSCS_TRY_ROTATION_CHARACTER:
-		process_try_rotation_character(packet);
+	case SSCS_TRY_MOVE_STOP_CHARACTER:
+		process_try_move_stop_character(packet);
 		break;
 
 	case SSCS_TRY_NORMAL_ATTACK:
@@ -242,25 +232,31 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 void DMRoom::process_try_move_character(void* packet)
 {
 	sscs_packet_try_move_character* data = reinterpret_cast<sscs_packet_try_move_character*>(packet);
-	m_heros[data->client_id]->rotate(data->MoveDirection_Yaw_angle);
-	m_heros[data->client_id]->move(delta_time);
+	if (m_heros[data->client_id]->motion_type == (char)MOTION_TYPE::IDLE) {
+		m_heros[data->client_id]->change_motion((char)MOTION_TYPE::WALK);
+		m_heros[data->client_id]->rotate(data->MoveDirection_Yaw_angle);
+		m_heros[data->client_id]->move(delta_time);
+	}
 }
 
-void DMRoom::process_try_rotation_character(void* packet)
+void DMRoom::process_try_move_stop_character(void* packet)
 {
-	sscs_packet_try_rotation_character* data = reinterpret_cast<sscs_packet_try_rotation_character*>(packet);
-	m_heros[data->client_id]->rotate(data->Yaw_angle);
+	sscs_packet_try_movestop_character* data = reinterpret_cast<sscs_packet_try_movestop_character*>(packet);
+	if(m_heros[data->client_id]->motion_type == (char)MOTION_TYPE::WALK)
+		m_heros[data->client_id]->change_motion((char)MOTION_TYPE::IDLE);
 }
 
 void DMRoom::process_try_normal_attack(void* packet)
 {
 	sscs_packet_try_normal_attack* data = reinterpret_cast<sscs_packet_try_normal_attack*>(packet);
+	m_heros[data->client_id]->rotate(data->character_yaw_angle);
 	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::ATTACK);
 }
 
 void DMRoom::process_try_use_skill(void* packet)
 {
 	sscs_packet_try_use_skill* data = reinterpret_cast<sscs_packet_try_use_skill*>(packet);
+	m_heros[data->client_id]->rotate(data->character_yaw_angle);
 	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::SKILL_POSE);
 }
 

@@ -4,7 +4,7 @@ constexpr int BASIC_HP = 100;
 constexpr float RESPAWN_TIME = 5.0f;
 constexpr float SEMI_INVINCIBLE_TIME = 3.0f;
 
-constexpr float NORMAL_ATTACK_DAMAGE = 10;
+constexpr int NORMAL_ATTACK_DAMAGE = 10;
 constexpr float NORMAL_ATTACK_VELOCITY = 10.0f;
 constexpr float NORMAL_ATTACK_DURATION = 5.0f;
 
@@ -19,6 +19,14 @@ constexpr float FURY_ROAR_DURATION = 8.0f;
 constexpr float FURY_ROAR_ACCELERATE = 2.0f;
 
 constexpr float STELTH_DURATION = 7.0f;
+
+enum class SCENE_TYPE : char
+{
+	LOGIN_SCENE,
+	LOBBY_SCENE,
+	PLAYGMAE_SCENE,
+	GAMEOVER_SCENE
+};
 
 enum class CHARACTER_TYPE : char
 {

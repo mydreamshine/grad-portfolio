@@ -42,6 +42,9 @@
     <Filter Include="Source Files\Scene">
       <UniqueIdentifier>{d706bd73-98dd-4a78-b6d2-84023109b731}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common\NWModule">
+      <UniqueIdentifier>{ec47b02b-5fdd-465f-bcb1-b7efdac8302f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DXSample.cpp">
@@ -148,6 +151,9 @@
     </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
       <Filter>Common\FileLoaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Server\Common\NWMODULE.cpp">
+      <Filter>Common\NWModule</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -303,6 +309,9 @@
     </ClInclude>
     <ClInclude Include="EventProcessor.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Server\Common\NWMODULE.h">
+      <Filter>Common\NWModule</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

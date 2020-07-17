@@ -24,8 +24,8 @@ public:
 	virtual void process_packet(CLIENT* client, int ReceivedBytes);
 
 private:
-	int max_player; ///< max connect user num.
-	int player_num; ///< current user num
+	short max_player; ///< max connect user num.
+	short player_num; ///< current user num
 
 	std::mutex packet_lock;
 	PACKET_VECTOR packet_vector;
@@ -48,7 +48,7 @@ private:
 
 	void process_type_packet(void* packet, PACKET_TYPE type);
 	void process_try_move_character(void* packet);
-	void process_try_rotation_character(void* packet);
+	void process_try_move_stop_character(void* packet);
 	void process_try_normal_attack(void* packet);
 	void process_try_use_skill(void* packet);
 	void process_done_character_motion(void* packet);

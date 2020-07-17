@@ -140,6 +140,7 @@
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h" />
     <ClInclude Include="..\..\Common\CLIENT.h" />
     <ClInclude Include="..\..\Common\csockaddr_in.h" />
     <ClInclude Include="..\..\Common\EVENT.h" />

@@ -58,8 +58,7 @@ enum SSCS_PACKET {
 	SSCS_TRY_GAME_MATCHING,
 	SSCS_SEND_CHAT,
 	SSCS_TRY_MOVE_CHARACTER,		//Done.
-	SSCS_TRY_MOVE_STOP_CHARACTER,
-	SSCS_TRY_ROTATION_CHARACTER,	//Done.
+	SSCS_TRY_MOVE_STOP_CHARACTER,	//Done.
 	SSCS_TRY_NORMAL_ATTACK,			//DOne.
 	SSCS_TRY_USE_SKILL,				//Done.
 	SSCS_DONE_CHARACTER_MOTION,		//Done.
@@ -137,8 +136,8 @@ struct tss_packet_mouse_button_up
 struct sscs_packet_try_login : packet_inheritance
 {
 	// contents ref.
-	wchar_t id[string_len];
-	wchar_t password[string_len];
+	wchar_t id[string_len]{};
+	wchar_t password[string_len]{};
 
 	sscs_packet_try_login()
 	{
@@ -170,7 +169,7 @@ struct sscs_packet_try_login : packet_inheritance
 };
 struct sscs_packet_request_user_info : packet_inheritance
 {
-	short client_id;
+	short client_id{0};
 	sscs_packet_request_user_info()
 	{
 		size = (PACKET_SIZE)sizeof(sscs_packet_request_user_info);
@@ -188,8 +187,8 @@ struct sscs_packet_request_user_info : packet_inheritance
 struct sscs_packet_try_game_matching : packet_inheritance
 {
 	// contents ref.
-	short client_id;
-	char selected_character_type;
+	short client_id{0};
+	char selected_character_type{0};
 
 	sscs_packet_try_game_matching()
 	{
@@ -207,8 +206,8 @@ struct sscs_packet_try_game_matching : packet_inheritance
 struct sscs_packet_send_chat_message : packet_inheritance
 {
 	// contents ref.
-	short client_id;
-	wchar_t message[string_len];
+	short client_id{0};
+	wchar_t message[string_len]{};
 
 	sscs_packet_send_chat_message()
 	{
@@ -236,8 +235,8 @@ struct sscs_packet_send_chat_message : packet_inheritance
 struct sscs_packet_try_move_character : packet_inheritance
 {
 	// contents ref.
-	short client_id;
-	float MoveDirection_Yaw_angle;
+	short client_id{0};
+	float MoveDirection_Yaw_angle{0};
 
 	sscs_packet_try_move_character()
 	{
@@ -254,7 +253,7 @@ struct sscs_packet_try_move_character : packet_inheritance
 };
 struct sscs_packet_try_movestop_character : packet_inheritance
 {
-	short client_id;
+	short client_id{0};
 
 	sscs_packet_try_movestop_character()
 	{
@@ -295,8 +294,8 @@ struct sscs_packet_try_movestop_character : packet_inheritance
 struct sscs_packet_try_normal_attack : packet_inheritance
 {
 	// contents ref.
-	short         client_id;
-	float character_yaw_angle;
+	short         client_id{0};
+	float character_yaw_angle{0};
 
 	sscs_packet_try_normal_attack()
 	{
@@ -392,8 +391,8 @@ struct sscs_packet_try_normal_attack : packet_inheritance
 struct sscs_packet_try_use_skill : packet_inheritance
 {
 	// contents ref.
-	short         client_id;
-	float character_yaw_angle;
+	short         client_id{0};
+	float character_yaw_angle{0};
 
 	sscs_packet_try_use_skill()
 	{
@@ -415,9 +414,9 @@ struct sscs_packet_try_use_skill : packet_inheritance
 // 모션이 끝났음을 서버에게 통보할 필요는 없다.
 struct sscs_packet_done_character_motion : packet_inheritance
 {
-	short         client_id;
+	short         client_id{ 0 };
 	// contents ref.
-	char motion_type;
+	char motion_type{ 0 };
 
 	sscs_packet_done_character_motion()
 	{
@@ -437,10 +436,10 @@ struct sscs_packet_done_character_motion : packet_inheritance
 // skill 오브젝트가 생성된다.
 struct sscs_packet_activate_anim_notify : packet_inheritance
 {
-	short         client_id;
+	short         client_id{0};
 
 	// contents ref.
-	char anim_notify_type;
+	char anim_notify_type{0};
 
 	sscs_packet_activate_anim_notify()
 	{
@@ -460,16 +459,16 @@ struct sscs_packet_activate_anim_notify : packet_inheritance
 // 해당 클라이언트가 matching room에서 빠져나가게 된다.
 struct sscs_try_return_lobby : packet_inheritance
 {
-	short         client_id;
+	short         client_id{0};
 
-	sscs_try_return_loby()
+	sscs_try_return_lobby()
 	{
-		size = (PACKET_SIZE)sizeof(sscs_try_return_loby);
+		size = (PACKET_SIZE)sizeof(sscs_try_return_lobby);
 		type = SSCS_TRY_RETURN_LOBBY;
 	}
-	sscs_try_return_loby(short clientID)
+	sscs_try_return_lobby(short clientID)
 	{
-		size = (PACKET_SIZE)sizeof(sscs_try_return_loby);
+		size = (PACKET_SIZE)sizeof(sscs_try_return_lobby);
 		type = SSCS_TRY_RETURN_LOBBY;
 
 		client_id = clientID;
@@ -481,7 +480,7 @@ struct sscs_try_return_lobby : packet_inheritance
 // Contents Server -> Streaming Server
 struct csss_packet_login_ok : packet_inheritance
 {
-	short client_id;
+	short client_id{0};
 
 	csss_packet_login_ok()
 	{
@@ -498,7 +497,7 @@ struct csss_packet_login_ok : packet_inheritance
 struct csss_packet_change_scene : packet_inheritance
 {
 	// contents ref.
-	char scene_type;
+	char scene_type{0};
 
 	csss_packet_change_scene()
 	{
@@ -519,14 +518,14 @@ struct csss_packet_change_scene : packet_inheritance
 struct csss_packet_spawn_player : packet_inheritance
 {
 	// contents ref.
-	int     object_id;
-	wchar_t user_name[string_len]; // nick name
-	char    character_type;
-	float   scale_x, scale_y, scale_z;
-	float   rotation_euler_x, rotation_euler_y, rotation_euler_z;
-	float   position_x, position_y, position_z;
-	char    propensity;// 성향 (적 오브젝트인지, 아군 오브젝트인지)
-	bool    is_main_character;
+	int     object_id{0};
+	wchar_t user_name[string_len]{}; // nick name
+	char    character_type{0};
+	float   scale_x{}, scale_y{}, scale_z{};
+	float   rotation_euler_x{}, rotation_euler_y{}, rotation_euler_z{};
+	float   position_x{}, position_y{}, position_z{};
+	char    propensity{};// 성향 (적 오브젝트인지, 아군 오브젝트인지)
+	bool    is_main_character{};
 
 	csss_packet_spawn_player()
 	{
@@ -980,7 +979,7 @@ struct csss_packet_set_game_playtime_limit : packet_inheritance
 // GameOverScene에 출력할 매칭 결과
 // played_character_type에 따라
 // GameOverScene에 렌더링되는 캐릭터가 달라진다.
-struct csss_packet_send_match_statistic
+struct csss_packet_send_match_statistic : packet_inheritance
 {
 	// contents ref.
 	wchar_t       user_name[string_len]; // nick name

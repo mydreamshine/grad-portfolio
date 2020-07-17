@@ -90,7 +90,7 @@ public:
             break;
         case FEC_TRY_RETURN_LOBY:
         {
-            newPacket = std::make_unique<sscs_try_return_loby>(m_ClientID);
+            newPacket = std::make_unique<sscs_try_return_lobby>(m_ClientID);
         }
             break;
         default:
