@@ -14,7 +14,9 @@ void LoginScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* command
 
 void LoginScene::OnInitProperties(CTimer& gt)
 {
-    
+    OnceSendChatLog = false;
+    IDText.clear();
+    PasswordText.clear();
 }
 
 void LoginScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -37,14 +39,16 @@ void LoginScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textB
     const UINT maxUILayOutObject = (UINT)Geometries["LoginSceneUIGeo"]->DrawArgs.size();
     for (auto& Ritem_iter : AllRitems)
     {
+        auto& Ritem_name = Ritem_iter.first;
         auto Ritem = Ritem_iter.second.get();
-        if (Ritem_iter.first.find("UI") != std::string::npos)
+        if (Ritem_name.find("UI") != std::string::npos)
         {
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
-            objManager.SetObjectComponent(newObj, objName, Ritem);
+            std::vector<RenderItem*> Ritems = { Ritem };
+            objManager.SetObjectComponent(newObj, objName, Ritems);
 
             if (objName.find("Id") != std::string::npos || objName.find("Password") != std::string::npos)
             {
@@ -123,4 +127,17 @@ void LoginScene::UpdateShadowTransform(CTimer& gt)
 
 void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+    // Process Input Box (ID, Password)
+    {
+
+    }
+
+    if (OnceSendChatLog == true)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryLogin(GeneratedEvents, IDText, PasswordText);
+        IDText.clear();
+        PasswordText.clear();
+        OnceSendChatLog = false;
+    }
 }

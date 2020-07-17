@@ -37,6 +37,7 @@ public:
     virtual void SetMaterialsRef(std::unordered_map<std::string, std::unique_ptr<Material>>* Materials) { m_MaterialsRef = Materials; }
     virtual void SetTexturesRef(std::unordered_map<std::string, std::unique_ptr<Texture>>* Textures) { m_TexturesRef = Textures; }
     virtual void SetModelSkeletonsRef(std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* Skeletons) { m_ModelSkeltonsRef = Skeletons; }
+    virtual void SetCharacterModelBoundingBoxesRef(std::unordered_map<std::string, BoundingBox>* CharacterModelBoundingBoxes) { m_CharacterModelBoundingBoxesRef = CharacterModelBoundingBoxes; }
     virtual void SetRederItemsRef(std::unordered_map<std::string, std::unique_ptr<RenderItem>>* RenderItems) { m_AllRitemsRef = RenderItems; }
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index) = 0;
 
@@ -71,6 +72,7 @@ public:
     const std::vector<Object*> GetCharacterObjects() { return m_CharacterObjects; }
     const std::vector<Object*> GetWorldObjects() { return m_WorldObjects; }
     const std::vector<Object*> GetUILayOutObjects() { return m_UILayOutObjects; }
+    const std::vector<Object*> GetTextObjects() { return m_TextObjects; }
 
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
@@ -97,10 +99,10 @@ public:
     void SetUserInfo(std::wstring UserName, int UserRank) {}
     // Count Score(Kill, Death, Assistance)
     void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance) {}
-    // Do_UserName, Target_UserName
-    void SetKillLog(std::wstring Do_UserName, std::wstring Target_UserName) {}
-    // UserName, Message
-    void SetChatLog(std::wstring UserName, std::wstring Message) {}
+    // Message ([Do_UserName] Killed [Target_UserName])
+    void SetKillLog(std::wstring Message) {}
+    // Message ([Do_UserName]: Chat Message)
+    void SetChatLog(std::wstring Message) {}
     // Remaining Sec
     void SetGamePlayTimeLimit(unsigned int Sec) {}
     // Remaining HP
@@ -127,6 +129,8 @@ protected:
     std::unordered_map<std::string, std::unique_ptr<Material>>* m_MaterialsRef = nullptr;
     std::unordered_map<std::string, std::unique_ptr<Texture>>* m_TexturesRef = nullptr;
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* m_ModelSkeltonsRef = nullptr;
+
+    std::unordered_map<std::string, BoundingBox>* m_CharacterModelBoundingBoxesRef = nullptr;
 
     // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>>* m_AllRitemsRef = nullptr;

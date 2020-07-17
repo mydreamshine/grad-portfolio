@@ -63,6 +63,52 @@ bool ModelLoader::loadAnimation(std::string filepath)
 	return true;
 }
 
+bool ModelLoader::loadBoundingBox(std::string filepath, std::vector<std::string>* execpt_nodes)
+{
+	const aiScene* pScene = ModelLoader::loadScene(filepath);
+
+	if (pScene == NULL)
+		return false;
+
+	char _Drive[_MAX_DRIVE];
+	char _Dir[_MAX_DIR];
+	char _Filename[_MAX_FNAME];
+	char _Ext[_MAX_EXT];
+	_splitpath_s(filepath.c_str(), _Drive, _Dir, _Filename, _Ext);
+
+	ModelLoader::processBoundingBox(pScene->mRootNode, pScene, aiMatrix4x4(), execpt_nodes);
+
+	return true;
+}
+
+bool ModelLoader::loadMergedBoundingBox(std::string filepath, aiModelData::aiBoundingBox& MergedBoundingBox, std::vector<std::string>* execpt_nodes)
+{
+	const aiScene* pScene = ModelLoader::loadScene(filepath);
+
+	if (pScene == NULL)
+		return false;
+
+	char _Drive[_MAX_DRIVE];
+	char _Dir[_MAX_DIR];
+	char _Filename[_MAX_FNAME];
+	char _Ext[_MAX_EXT];
+	_splitpath_s(filepath.c_str(), _Drive, _Dir, _Filename, _Ext);
+
+	aiAABB MergedAABB;
+	ModelLoader::processMergedAABB(pScene->mRootNode, pScene, aiMatrix4x4(), MergedAABB, execpt_nodes);
+
+	MergedBoundingBox.vCenter = {
+				(MergedAABB.mMax.x + MergedAABB.mMin.x) * 0.5f,
+				(MergedAABB.mMax.y + MergedAABB.mMin.y) * 0.5f,
+				(MergedAABB.mMax.z + MergedAABB.mMin.z) * 0.5f };
+	MergedBoundingBox.vExtents = {
+		(MergedAABB.mMax.x - MergedAABB.mMin.x) * 0.5f,
+		(MergedAABB.mMax.y - MergedAABB.mMin.y) * 0.5f,
+		(MergedAABB.mMax.z - MergedAABB.mMin.z) * 0.5f };
+
+	return true;
+}
+
 aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene, aiMatrix4x4 matrix, aiNode* parentNode)
 {
 	std::vector<aiModelData::aiVertex> Vertices;
@@ -122,6 +168,15 @@ aiModelData::aiMesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene,
 			{
 				aiMatrix4x4 bindPose = BindPoseTransform; // BindPoseTransform.Inverse()를 하면 BindPoseTransform자체가 Inverse된다.
 				mSkeleton->mJoints[parentBoneID].mOffsetTransform = bindPose.Inverse();
+
+				if (mAllMeshToSkinned == true)
+				{
+					for (auto& vertex : Vertices)
+					{
+						vertex.fBoneWeights[0] = 1.0f;
+						vertex.i32BoneIndices[0] = parentBoneID;
+					}
+				}
 			}
 		}
 	}
@@ -169,6 +224,99 @@ void ModelLoader::processBoneWeights(
 				else throw std::invalid_argument("The vertex has exceeded the maximum number of BoneWeights it can have.");
 			}
 		}
+	}
+}
+
+void ModelLoader::processBoundingBox(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, std::vector<std::string>* execpt_nodes)
+{
+	aiMatrix4x4 curMat = matrix * node->mTransformation;
+
+	bool execpt_processing = false;
+	if (execpt_nodes)
+		execpt_processing = ModelLoader::execptNodeProcessing(node, *execpt_nodes);
+
+	if (execpt_processing != true)
+	{
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			
+			aiMatrix4x4 BindPoseTransform = curMat;
+			aiAABB AABB;
+			AABB.mMin = { FLT_MAX, FLT_MAX, FLT_MAX };
+			AABB.mMax = BindPoseTransform * mesh->mVertices[0];
+
+			// read mesh's vertices
+			for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+			{
+				aiVector3D vPosition = BindPoseTransform * mesh->mVertices[i];;
+
+				AABB.mMin.x = fminf(AABB.mMin.x, vPosition.x);
+				AABB.mMin.y = fminf(AABB.mMin.y, vPosition.y);
+				AABB.mMin.z = fminf(AABB.mMin.z, vPosition.z);
+				AABB.mMax.x = fmaxf(AABB.mMax.x, vPosition.x);
+				AABB.mMax.y = fmaxf(AABB.mMax.y, vPosition.y);
+				AABB.mMax.z = fmaxf(AABB.mMax.z, vPosition.z);
+			}
+
+			aiModelData::aiBoundingBox BoundingBox;
+			BoundingBox.vCenter = {
+				(AABB.mMax.x + AABB.mMin.x) * 0.5f,
+				(AABB.mMax.y + AABB.mMin.y) * 0.5f,
+				(AABB.mMax.z + AABB.mMin.z) * 0.5f };
+			BoundingBox.vExtents = {
+				(AABB.mMax.x - AABB.mMin.x) * 0.5f,
+				(AABB.mMax.y - AABB.mMin.y) * 0.5f,
+				(AABB.mMax.z - AABB.mMin.z) * 0.5f };
+
+			mBoundingBoxes[mesh->mName.C_Str()] = BoundingBox;
+		}
+	}
+
+	for (unsigned int i = 0; i < node->mNumChildren; i++)
+	{
+		this->processBoundingBox(node->mChildren[i], scene, curMat, execpt_nodes);
+	}
+}
+
+void ModelLoader::processMergedAABB(aiNode* node, const aiScene* scene, aiMatrix4x4 matrix, aiAABB& mergedAABB,
+	std::vector<std::string>* execpt_nodes)
+{
+	aiMatrix4x4 curMat = matrix * node->mTransformation;
+
+	bool execpt_processing = false;
+	if (execpt_nodes)
+		execpt_processing = ModelLoader::execptNodeProcessing(node, *execpt_nodes);
+
+	if (execpt_processing != true)
+	{
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			// Skinned Mesh에 한해서만 Bounding Box를 구한다.
+			if (mesh->HasBones() != true) continue;
+
+			aiMatrix4x4 BindPoseTransform = curMat;
+
+			// read mesh's vertices
+			for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+			{
+				aiVector3D vPosition = BindPoseTransform * mesh->mVertices[i];;
+
+				mergedAABB.mMin.x = fminf(mergedAABB.mMin.x, vPosition.x);
+				mergedAABB.mMin.y = fminf(mergedAABB.mMin.y, vPosition.y);
+				mergedAABB.mMin.z = fminf(mergedAABB.mMin.z, vPosition.z);
+				mergedAABB.mMax.x = fmaxf(mergedAABB.mMax.x, vPosition.x);
+				mergedAABB.mMax.y = fmaxf(mergedAABB.mMax.y, vPosition.y);
+				mergedAABB.mMax.z = fmaxf(mergedAABB.mMax.z, vPosition.z);
+			}
+
+		}
+	}
+
+	for (unsigned int i = 0; i < node->mNumChildren; i++)
+	{
+		this->processMergedAABB(node->mChildren[i], scene, curMat, mergedAABB, execpt_nodes);
 	}
 }
 

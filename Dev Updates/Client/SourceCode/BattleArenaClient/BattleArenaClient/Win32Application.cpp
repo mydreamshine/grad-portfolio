@@ -2,6 +2,9 @@
 #include "Win32Application.h"
 
 HWND Win32Application::m_hwnd = nullptr;
+EventProcessor Win32Application::m_eventProcessor;
+std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_packetList;
+
 
 HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT width, UINT height, std::wstring name)
 {
@@ -117,14 +120,17 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
     case WM_PAINT:
         if (pSample)
         {
+            std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
             if (ChangeWndSize == true)
             {
                 RECT ClientRect;
                 ::GetClientRect(m_hwnd, &ClientRect);
-                pSample->OnUpdate(&ClientRect);
+                pSample->OnUpdate(GeneratedEvents, &ClientRect);
             }
-            else pSample->OnUpdate();
+            else pSample->OnUpdate(GeneratedEvents);
             pSample->OnRender();
+
+            m_eventProcessor.ProcessGeneratedEvents(GeneratedEvents, m_packetList);
         }
         return 0;
 

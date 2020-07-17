@@ -2,6 +2,7 @@
 
 #include "DXSampleHelper.h"
 #include "Win32Application.h"
+#include "FrameworkEvent.h"
 
 class DXSample
 {
@@ -11,7 +12,7 @@ public:
     virtual ~DXSample();
 
     virtual void OnInit(HWND hwnd, UINT width, UINT height, std::wstring name);
-    virtual void OnUpdate(RECT* pClientRect = nullptr) = 0;
+    virtual void OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RECT* pClientRect = nullptr) = 0;
     virtual void OnRender() = 0;
     virtual void OnDestroy() = 0;
 
@@ -48,4 +49,8 @@ private:
 
     // Window title.
     std::wstring m_title;
+
+public:
+    virtual void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events) = 0;
+    virtual void ProcessEvent(EVENT& Event) = 0;
 };

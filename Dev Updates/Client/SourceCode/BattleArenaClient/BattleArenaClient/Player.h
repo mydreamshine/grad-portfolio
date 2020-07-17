@@ -7,16 +7,6 @@
 #include "Common/Util/d3d12/Camera.h"
 #include "Common/Timer/Timer.h"
 
-namespace ActionNotifyTime
-{
-	constexpr float MeshtintFreeKnight_SwordSlashStart = 0.6f;
-}
-
-namespace CharacterSpeed
-{
-	constexpr float MeshtintFreeKnightSpeed = 360.0f;
-}
-
 struct Player
 {
 	std::wstring m_Name;
@@ -42,8 +32,9 @@ public:
 		Object* GroundObject,
 		std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
-	void ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt,
-		Object* GroundObject, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
+	// return Yaw_angle
+	bool ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt,
+		Object* GroundObject, float& Yaw_angle, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 	void ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 

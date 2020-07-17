@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DXSample.h"
+#include "EventProcessor.h"
 
 class DXSample;
 
@@ -16,4 +17,6 @@ protected:
 
 private:
     static HWND m_hwnd;
+    static EventProcessor m_eventProcessor;
+    static std::queue<std::unique_ptr<packet_inheritance>> m_packetList;
 };

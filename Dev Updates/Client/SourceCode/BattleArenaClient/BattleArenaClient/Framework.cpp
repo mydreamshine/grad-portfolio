@@ -74,52 +74,123 @@ void Framework::ProcessEvent(EVENT& Event)
 
     switch (Event.Command)
     {
-    case FEC_SPAWN_CHARACTER                     :
-    case FEC_SPAWN_SKILL_OBJ_SWORD_WAVES         :
-    case FEC_SPAWN_SKILL_OBJ_HOLY_AREA           :
-    case FEC_SPAWN_SKILL_EFFECT_OBJ_HEAL         :
-    case FEC_SPAWN_SKILL_EFFECT_OBJ_ROAR         :
-    case FEC_SPAWN_SKILL_EFFECT_OBJ_STEALTH_SMOKE:
-    case FEC_SPAWN_POISON_GAS                    :
+    case FEC_CHANGE_SCENE:
     {
-        // Create Character
-        // Create World Object
-        // Create Skill Effect Object
-        // Return Object Ref (해당 오브젝트의 속성값을 바꿀 수 있도록, 아니면 Create 메소드를 호출할 때 파라미터로 전달.)
-        break;
+        if (Event.Act_Place == FEP_LOGIN_SCENE)         m_CurrSceneName = "GameOverScene";
+        else if (Event.Act_Place == FEP_LOBY_SCENE)     m_CurrSceneName = "GameOverScene";
+        else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) m_CurrSceneName = "GameOverScene";
+        else if (Event.Act_Place == FEP_GAMEOVER_SCENE) m_CurrSceneName = "GameOverScene";
+        m_CurrScene = m_Scenes[m_CurrSceneName].get();
+        m_CurrScene->OnInitProperties(m_Timer);
     }
+    break;
+    case FEC_SPAWN_PLAYER:
+    {
+        EVENT_DATA_PLAYER_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_SPAWN_INFO*>(Event.Data.get());
+        Event_Act_Place->SpawnPlayer(Event.Act_Object,
+            EventData->Name, EventData->CharacterType, EventData->IsMainCharacter, EventData->Propensity,
+            EventData->Scale, EventData->RotationEuler, EventData->Position);
+    }
+    break;
+    case FEC_SPAWN_NORMAL_ATTACK_OBJ:
+    {
+        EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO*>(Event.Data.get());
+        Event_Act_Place->SpawnNormalAttackObject(Event.Act_Object,
+            EventData->AttackOrder, EventData->Propensity,
+            EventData->Scale, EventData->RotationEuler, EventData->Position);
+    }
+    break;
+    case FEC_SPAWN_SKILL_OBJ:
+    {
+        EVENT_DATA_SKILL_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_SKILL_OBJ_SPAWN_INFO*>(Event.Data.get());
+        Event_Act_Place->SpawnSkillObject(Event.Act_Object,
+            EventData->SkillType, EventData->Propensity,
+            EventData->Scale, EventData->RotationEuler, EventData->Position);
+    }
+    break;
+    case FEC_SPAWN_PICKING_EFFECT_OBJ:
+    case FEC_SPAWN_EFFECT_OBJ:
+    {
+        EVENT_DATA_EFFECT_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_EFFECT_OBJ_SPAWN_INFO*>(Event.Data.get());
+        Event_Act_Place->SpawnEffectObjects(EventData->EffectType, EventData->Position);
+    }
+    break;
+    case FEC_SET_TRANSFORM_WORLD_OBJECT:
+    {
+        EVENT_DATA_OBJ_TRANSFORM* EventData = reinterpret_cast<EVENT_DATA_OBJ_TRANSFORM*>(Event.Data.get());
+        Event_Act_Place->SetObjectTransform(Event.Act_Object,
+            EventData->Scale, EventData->RotationEuler, EventData->Position);
+    }
+    break;
+    case FEC_SET_CHARACTER_MOTION:
+    {
+        EVENT_DATA_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_CHARACTER_MOTION_INFO*>(Event.Data.get());
+        Event_Act_Place->SetCharacterMotion(Event.Act_Object,
+            EventData->MotionType, EventData->SkillMotionType);
+    }
+    break;
+    case FEC_SET_PLAYER_STATE:
+    {
+        EVENT_DATA_PLAYER_STATE_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_STATE_INFO*>(Event.Data.get());
+        Event_Act_Place->SetPlayerState(Event.Act_Object, EventData->PlayerState);
+    }
+    break;
+    case FEC_UPDATE_POISON_FOG_DEACT_AREA:
+    {
+        EVENT_DATA_POISON_FOG_DEACT_AREA* EventData = reinterpret_cast<EVENT_DATA_POISON_FOG_DEACT_AREA*>(Event.Data.get());
+        Event_Act_Place->UpdateDeActPoisonGasArea(EventData->Area);
+    }
+    break;
     case FEC_DEACTIVATE_OBJ:
     {
-        // DeActivate Object (Find Object in All Object List by CE_ID)
-        break;
+        Event_Act_Place->DeActivateObject(Event.Act_Object);
     }
-    case FEC_SET_TRANSFORM_WORLD_OBJECT:
-    case FEC_SET_CHARACTER_ATTACK_MOTION:
-    case FEC_SET_CHARACTER_BE_ATTACKED_MOTION:
-    case FEC_SET_CHARACTER_DEAD_MOTION:
-    case FEC_SET_CHARACTER_SWORD_WAVE_MOTION:
-    case FEC_SET_CHARACTER_HEAL_MOTION:
-    case FEC_SET_ROAR_MOTION:
-    case FEC_ACTIVE_CHARACTER_STEALTH_MODE:
-    case FEC_DEACTIVE_CHARACTER_STEALTH_MODE:
-    {
-        // Find Object by CE_ID
-        // Update Object Property
-        break;
-    }
+    break;
     case FEC_SET_USER_INFO:
+    {
+        EVENT_DATA_USER_INFO* EventData = reinterpret_cast<EVENT_DATA_USER_INFO*>(Event.Data.get());
+        Event_Act_Place->SetUserInfo(EventData->UserName, EventData->UserRank);
+    }
+    break;
     case FEC_SET_KDA_SCORE:
+    {
+        EVENT_DATA_KDA_SCORE* EventData = reinterpret_cast<EVENT_DATA_KDA_SCORE*>(Event.Data.get());
+        Event_Act_Place->SetKDAScore(EventData->Count_Kill, EventData->Count_Death, EventData->Count_Assistance);
+    }
+    break;
     case FEC_SET_KILL_LOG:
+    {
+        EVENT_DATA_KILL_LOG* EventData = reinterpret_cast<EVENT_DATA_KILL_LOG*>(Event.Data.get());
+        Event_Act_Place->SetKillLog(EventData->Message);
+    }
+    break;
     case FEC_SET_CHAT_LOG:
+    {
+        EVENT_DATA_CHAT_LOG* EventData = reinterpret_cast<EVENT_DATA_CHAT_LOG*>(Event.Data.get());
+        Event_Act_Place->SetChatLog(EventData->Message);
+    }
+    break;
     case FEC_SET_GAME_PLAY_TIME_LIMIT:
-    case FEC_SET_SKILL_INFO:
-    case FEC_SET_CHARACTER_HP:
+    {
+        EVENT_DATA_GAME_PLAY_TIME_LIMIT* EventData = reinterpret_cast<EVENT_DATA_GAME_PLAY_TIME_LIMIT*>(Event.Data.get());
+        Event_Act_Place->SetGamePlayTimeLimit(EventData->Sec);
+    }
+    break;
+    case FEC_SET_PLAYER_HP:
+    {
+        EVENT_DATA_PLAYER_HP* EventData = reinterpret_cast<EVENT_DATA_PLAYER_HP*>(Event.Data.get());
+        Event_Act_Place->SetPlayerHP(Event.Act_Object, EventData->HP);
+    }
+    break;
     case FEC_SET_MATCH_STATISTIC_INFO:
     {
-        // Find_UI_Object by CE_ID or Obj_Name
-        // Update UI info
-        break;
+        EVENT_DATA_MATCH_STATISTIC_INFO* EventData = reinterpret_cast<EVENT_DATA_MATCH_STATISTIC_INFO*>(Event.Data.get());
+        Event_Act_Place->SetMatchStatisticInfo(EventData->UserName, EventData->UserRank,
+            EventData->Count_Kill, EventData->Count_Death, EventData->Count_Assistance,
+            EventData->TotalScore_Damage, EventData->TotalScore_Heal,
+            EventData->PlayedCharacterType);
     }
+    break;
     default:
         MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
         while (true);
@@ -736,6 +807,7 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
             scene->SetTexturesRef(&(ExternalResource->GetTextures()));
             scene->SetMaterialsRef(&(ExternalResource->GetMaterials()));
             scene->SetModelSkeletonsRef(&(ExternalResource->GetModelSkeltons()));
+            scene->SetCharacterModelBoundingBoxesRef(&(ExternalResource->GetCharacterModelBoundingBoxes()));
 
             RenderTargetScene target_scene = RenderTargetScene::LoginScene;
             if      (scene_name == "LoginScene")    target_scene = RenderTargetScene::LoginScene;
@@ -753,8 +825,8 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
         m_nTextBatch += scene->m_nTextBatch;
     }
 
-    m_CurrSceneName = "PlayGameScene";
-    m_CurrScene = m_Scenes["PlayGameScene"].get();
+    m_CurrSceneName = "LobyScene";
+    m_CurrScene = m_Scenes["LobyScene"].get();
 }
 
 void Framework::BuildFontSpriteBatchs()
@@ -826,7 +898,7 @@ void Framework::OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RE
     RECT ClientRect;
     if (pClientRect != nullptr) ClientRect = *pClientRect;
     else ClientRect = { 0, 0, (LONG)m_width, (LONG)m_height };
-    m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_KeyState, m_OldCursorPos, ClientRect, m_Timer);
+    m_CurrScene->OnUpdate(m_CurrFrameResource, m_ShadowMap.get(), m_KeyState, m_OldCursorPos, ClientRect, m_Timer, GeneratedEvents);
 }
 
 // Render the scene.
@@ -938,15 +1010,19 @@ void Framework::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std
         if (obj->Activated == false) continue;
         if (obj->m_Name == "SpawnStageGround") continue;
         if (obj->m_Name.find("Background") != std::string::npos) continue;
-        auto Ritem = obj->m_RenderItem;
         UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
         UINT SkinCBIndex = -1;
         if (obj->m_SkeletonInfo != nullptr)
             SkinCBIndex = obj->m_SkeletonInfo->SkinCBIndex;
 
-        m_commandList->IASetVertexBuffers(0, 1, &Ritem->Geo->VertexBufferView());
-        m_commandList->IASetIndexBuffer(&Ritem->Geo->IndexBufferView());
-        m_commandList->IASetPrimitiveTopology(Ritem->PrimitiveType);
+        // 오브젝트가 동일한 Geo를 갖는 렌더아이템들로 구성되어 있을 경우에만 가능.
+        // 현재 애플리케이션에선 캐릭터가 이에 해당됨.
+        // (나머지 오브젝트는 오브젝트당 1개의 렌더아이템만 가지고 있으므로 아래의 메소드로도 처리 가능)
+        auto& mainRitem = obj->m_RenderItems[0];
+
+        m_commandList->IASetVertexBuffers(0, 1, &mainRitem->Geo->VertexBufferView());
+        m_commandList->IASetIndexBuffer(&mainRitem->Geo->IndexBufferView());
+        m_commandList->IASetPrimitiveTopology(mainRitem->PrimitiveType);
 
         D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
         if (ObjCBIndex != -1) objCBAddress += ObjCBIndex * objCBByteSize;
@@ -956,25 +1032,43 @@ void Framework::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std
         if (SkinCBIndex != -1) skinnedCBAddress += SkinCBIndex * skinnedCBByteSize;
         m_commandList->SetGraphicsRootConstantBufferView(1, skinnedCBAddress);
 
-        if (Ritem->Mat != nullptr)
+        for (auto& Ritem : obj->m_RenderItems)
         {
-            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + Ritem->Mat->MatCBIndex * matCBByteSize;
-            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+            // 렌더 아이템별로 매터리얼이 다르기 때문에 아래와 같이 렌더 아이템별로 MatCB를 따로 등록한다.
+            if (Ritem->Mat != nullptr)
+            {
+                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + Ritem->Mat->MatCBIndex * matCBByteSize;
+                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
 
-            int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + Ritem->Mat->DiffuseSrvHeapIndex;
-            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-            TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
-            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+                int TexIndex = (int)m_Textures.size() * m_CurrFrameResourceIndex + Ritem->Mat->DiffuseSrvHeapIndex;
+                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+                TexSrvHandle.Offset(TexIndex, m_cbvsrvuavDescriptorSize);
+                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+            }
+            else
+            {
+                D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
+                m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+                auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+                m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+            }
+
+            m_commandList->DrawIndexedInstanced(Ritem->IndexCount, 1, Ritem->StartIndexLocation, Ritem->BaseVertexLocation, 0);
         }
-        else
+    }
+}
+
+void Framework::ExcludeNonShadowRenderObjects(std::vector<Object*>& newRednerLayer, const std::vector<Object*> sourceRenderLayer)
+{
+    for (auto& obj : sourceRenderLayer)
+    {
+        auto TransformInfo = obj->m_TransformInfo.get();
+        if (TransformInfo != nullptr)
         {
-            D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
-            m_commandList->SetGraphicsRootConstantBufferView(2, matCBAddress);
-            auto TexSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-            m_commandList->SetGraphicsRootDescriptorTable(4, TexSrvHandle);
+            if (TransformInfo->m_nonShadowRender == true) continue;
+            if (TransformInfo->m_TexAlpha == 0.0f) continue;
         }
-
-        m_commandList->DrawIndexedInstanced(Ritem->IndexCount, 1, Ritem->StartIndexLocation, Ritem->BaseVertexLocation, 0);
+        newRednerLayer.push_back(obj);
     }
 }
 
@@ -1004,11 +1098,15 @@ void Framework::DrawSceneToShadowMap()
 
     m_commandList->SetPipelineState(m_PSOs["shadow_opaque"].Get());
     auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
-    DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
+    std::vector<Object*> OnlyOpaqueObjRenderLayer;
+    Framework::ExcludeNonShadowRenderObjects(OnlyOpaqueObjRenderLayer, OpaqueObjRenderLayer);
+    DrawObjRenderLayer(m_commandList.Get(), OnlyOpaqueObjRenderLayer);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedShadow_opaque"].Get());
     auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
-    DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
+    std::vector<Object*> OnlySkinnedOpaqueObjRenderLayer;
+    Framework::ExcludeNonShadowRenderObjects(OnlySkinnedOpaqueObjRenderLayer, SkinnedOpaqueObjRenderLayer);
+    DrawObjRenderLayer(m_commandList.Get(), OnlySkinnedOpaqueObjRenderLayer);
 
     // Change back to GENERIC_READ so we can read the texture in a shader.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
@@ -1061,22 +1159,20 @@ void Framework::DrawSceneToUI()
     auto& UIObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::UILayout_Background);
     DrawObjRenderLayer(m_commandList.Get(), UIObjRenderLayer);
 
-    for (auto& obj : UIObjRenderLayer)
+    auto& TextObjects = m_CurrScene->GetTextObjects();
+    for (auto& obj : TextObjects)
     {
-        if (obj->m_UIinfos.empty() != true)
-        {
-            for (auto& ui_info_iter : obj->m_UIinfos)
-            {
-                auto ui_info = ui_info_iter.second.get();
+        if (obj->Activated == false) continue;
+        if (obj->m_Textinfo == nullptr) continue;
 
-                auto font_iter = m_FontsRef->find(ui_info->m_FontName);
-                if (font_iter != m_FontsRef->end())
-                {
-                    auto font_render = font_iter->second.get();
-                    auto TextBatch = m_FontSpriteBatchs[ui_info->TextBatchIndex].get();
-                    font_render->DrawString(m_commandList.Get(), TextBatch, ui_info->m_TextPos, ui_info->m_TextColor, ui_info->m_Text);
-                }
-            }
+        auto TextInfo = obj->m_Textinfo.get();
+        if (TextInfo->m_Text.empty() == true) continue;
+        auto font_iter = m_FontsRef->find(TextInfo->m_FontName);
+        if (font_iter != m_FontsRef->end())
+        {
+            auto font_render = font_iter->second.get();
+            auto TextBatch = m_FontSpriteBatchs[TextInfo->TextBatchIndex].get();
+            font_render->DrawString(m_commandList.Get(), TextBatch, TextInfo->m_TextPos, TextInfo->m_TextColor, TextInfo->m_Text);
         }
     }
 }
@@ -1101,11 +1197,16 @@ void Framework::DrawSceneToBackground()
     {
         if (obj->Activated == false) continue;
         if (obj->m_Name.find("Background") == std::string::npos) continue;
-        auto Ritem = obj->m_RenderItem;
+
         UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
         UINT SkinCBIndex = -1;
         if (obj->m_SkeletonInfo != nullptr)
             SkinCBIndex = obj->m_SkeletonInfo->SkinCBIndex;
+
+        // 오브젝트가 동일한 Geo를 갖는 렌더아이템들로 구성되어 있을 경우에만 가능.
+        // 현재 애플리케이션에선 캐릭터가 이에 해당됨.
+        // (나머지 오브젝트는 오브젝트당 1개의 렌더아이템만 가지고 있으므로 아래의 메소드로도 처리 가능)
+        auto& Ritem = obj->m_RenderItems[0];
 
         m_commandList->IASetVertexBuffers(0, 1, &Ritem->Geo->VertexBufferView());
         m_commandList->IASetIndexBuffer(&Ritem->Geo->IndexBufferView());
