@@ -12,6 +12,7 @@
 #include "stdafx.h"
 #include "Global_Config.h"
 #include "packet_struct.h"
+#include "EventProcessor.h"
 #include "ID_POOLER.h"
 #include "Framework.h"
 #include "encoder/encoder.h"
@@ -36,6 +37,8 @@ struct CLIENT {
 	bool connect;
 	SOCKET socket;
 	Framework GameFramework;
+	EventProcessor FrameworkEventProcessor;
+	std::queue<std::unique_ptr<packet_inheritance>> sscs_packetList; // Streaming -> Server
 	ENCODER encoder{ SCREEN_WIDTH, SCREEN_HEIGHT, 6000 * 1000, 60 };
 };
 
@@ -207,15 +210,19 @@ void do_worker() {
 			break;
 
 		case EV_UPDATE:
+		{
 			if (clients[key].connect != true) {
 				delete over_ex;
 				break;
 			}
-			clients[key].GameFramework.OnUpdate();
+			std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
+			clients[key].GameFramework.OnUpdate(GeneratedEvents);
 			clients[key].GameFramework.OnRender();
+			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents, clients[key].sscs_packetList);
 			delete over_ex;
 			PostEvent((int)key, EV_ENCODE);
-			break;
+		}
+		break;
 
 		case EV_ENCODE:
 			if (clients[key].connect != true) {
@@ -270,15 +277,15 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 }
 
 _Use_decl_annotations_
-#define MAX_CORES 16
+#define MAX_CORES 4
 int main()
 {
 	wcout.imbue(std::locale("korean"));
 	setlocale(LC_ALL, "korean");
 	//쓰레드 갯수 (코어 개수만큼)
-	size_t concurrentThreadsSupported = thread::hardware_concurrency();
+	//size_t concurrentThreadsSupported = thread::hardware_concurrency();
+	size_t concurrentThreadsSupported = MAX_CORES;
 	cout << "Concurrent Threads Supported By H/W Cores: " << concurrentThreadsSupported << endl;
-	//concurrentThreadsSupported = MAX_CORES;
 
 	BOOL fSuccess = SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 

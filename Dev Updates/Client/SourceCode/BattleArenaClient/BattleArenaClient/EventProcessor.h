@@ -3,7 +3,7 @@
 #include <memory>
 #include <list>
 #include "FrameworkEvent.h"
-#include "packet_struct.h"
+#include "../../../../Streaming/Streaming_Server/Streaming_Server/packet_struct.h"
 
 class EventProcessor
 {

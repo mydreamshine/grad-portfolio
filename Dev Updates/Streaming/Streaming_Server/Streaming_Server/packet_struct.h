@@ -360,7 +360,7 @@ struct sscs_packet_try_use_skill : packet_inheritance
 		size = (unsigned char)sizeof(sscs_packet_try_use_skill);
 		type = SSCS_TRY_USE_SKILL;
 	}
-	sscs_packet_try_use_skill(short clientID, char SkillType, float yaw_angle)
+	sscs_packet_try_use_skill(short clientID, float yaw_angle)
 	{
 		size = (unsigned char)sizeof(sscs_packet_try_use_skill);
 		type = SSCS_TRY_USE_SKILL;
