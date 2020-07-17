@@ -3,7 +3,8 @@
 
 HWND Win32Application::m_hwnd = nullptr;
 EventProcessor Win32Application::m_eventProcessor;
-std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_packetList;
+std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_SendpacketList;
+std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_RecvpacketList;
 
 
 HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT width, UINT height, std::wstring name)
@@ -120,7 +121,9 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
     case WM_PAINT:
         if (pSample)
         {
-            //NWMODULE UPDATE.
+            //NWMODULE UPDATE. (Generate RecevPacketList)
+            m_eventProcessor.GenerateExternalEventsFrom(m_RecvpacketList);
+            pSample->ProcessEvents(m_eventProcessor.GetExternalEvents());
 
             std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
             if (ChangeWndSize == true)
@@ -132,7 +135,7 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
             else pSample->OnUpdate(GeneratedEvents);
             pSample->OnRender();
 
-            m_eventProcessor.ProcessGeneratedEvents(GeneratedEvents, m_packetList);
+            m_eventProcessor.ProcessGeneratedEvents(GeneratedEvents, m_SendpacketList);
             //NWMODULE WILL SEND PACKET in m_packetList.
         }
         return 0;

@@ -1,5 +1,6 @@
 #include "ModelLoader.h"
 
+#include <fstream>
 #include <stdexcept>
 
 const aiScene* ModelLoader::loadScene(std::string filepath)
@@ -105,6 +106,87 @@ bool ModelLoader::loadMergedBoundingBox(std::string filepath, aiModelData::aiBou
 		(MergedAABB.mMax.x - MergedAABB.mMin.x) * 0.5f,
 		(MergedAABB.mMax.y - MergedAABB.mMin.y) * 0.5f,
 		(MergedAABB.mMax.z - MergedAABB.mMin.z) * 0.5f };
+
+	return true;
+}
+
+bool ModelLoader::loadBoundingBoxesToTXTfile(const std::string& filepath_ToWrite, const std::string& soruce_path,
+	float CovertUnit, bool MergeBoundingBoxes, std::vector<std::string>* execpt_nodes)
+{
+	const aiScene* pScene = ModelLoader::loadScene(soruce_path);
+
+	if (pScene == NULL)
+		return false;
+
+	char _Drive[_MAX_DRIVE];
+	char _Dir[_MAX_DIR];
+	char _Filename[_MAX_FNAME];
+	char _Ext[_MAX_EXT];
+	_splitpath_s(soruce_path.c_str(), _Drive, _Dir, _Filename, _Ext);
+
+	if (MergeBoundingBoxes == true)
+	{
+		aiAABB MergedAABB;
+		ModelLoader::processMergedAABB(pScene->mRootNode, pScene, aiMatrix4x4(), MergedAABB, execpt_nodes);
+
+		aiModelData::aiBoundingBox MergedBoundingBox;
+		MergedBoundingBox.vCenter = {
+				(MergedAABB.mMax.x + MergedAABB.mMin.x) * 0.5f,
+				(MergedAABB.mMax.y + MergedAABB.mMin.y) * 0.5f,
+				(MergedAABB.mMax.z + MergedAABB.mMin.z) * 0.5f };
+		MergedBoundingBox.vExtents = {
+			(MergedAABB.mMax.x - MergedAABB.mMin.x) * 0.5f,
+			(MergedAABB.mMax.y - MergedAABB.mMin.y) * 0.5f,
+			(MergedAABB.mMax.z - MergedAABB.mMin.z) * 0.5f };
+
+		std::ofstream writeFile(filepath_ToWrite.c_str());
+		if (writeFile.is_open() != true) return false;
+
+		// write file as format
+		// Name: BoundingBoxName, Center (x, y, z), Extents (x, y, z)\n
+		writeFile << "Name: " + std::string(_Filename);
+		writeFile
+			<< ", Center: ("
+			<< " " << std::to_string(MergedBoundingBox.vCenter.x * CovertUnit)
+			<< " " << std::to_string(MergedBoundingBox.vCenter.y * CovertUnit)
+			<< " " << std::to_string(MergedBoundingBox.vCenter.z * CovertUnit)
+			<< "), Exetents: ("
+			<< " " << std::to_string(MergedBoundingBox.vExtents.x * CovertUnit)
+			<< " " << std::to_string(MergedBoundingBox.vExtents.y * CovertUnit)
+			<< " " << std::to_string(MergedBoundingBox.vExtents.z * CovertUnit)
+			<< ")\n";
+
+		writeFile.close();
+	}
+	else
+	{
+		ModelLoader::processBoundingBox(pScene->mRootNode, pScene, aiMatrix4x4(), execpt_nodes);
+
+		std::ofstream writeFile(filepath_ToWrite.c_str());
+		if (writeFile.is_open() != true) return false;
+
+		for (auto& BoundingBox_iter : mBoundingBoxes)
+		{
+			auto& BoudingBoxName = BoundingBox_iter.first;
+			auto& BoudingBox = BoundingBox_iter.second;
+
+			// write file as format
+			// Name: BoundingBoxName, Center (x, y, z), Extents (x, y, z)\n
+			writeFile << "Name: " + BoudingBoxName;
+			writeFile
+				<< ", Center: ("
+				<< " " << std::to_string(BoudingBox.vCenter.x * CovertUnit)
+				<< " " << std::to_string(BoudingBox.vCenter.y * CovertUnit)
+				<< " " << std::to_string(BoudingBox.vCenter.z * CovertUnit)
+				<< "), Exetents: ("
+				<< " " << std::to_string(BoudingBox.vExtents.x * CovertUnit)
+				<< " " << std::to_string(BoudingBox.vExtents.y * CovertUnit)
+				<< " " << std::to_string(BoudingBox.vExtents.z * CovertUnit)
+				<< ")\n";
+		}
+
+		writeFile.close();
+	}
 
 	return true;
 }

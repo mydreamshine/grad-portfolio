@@ -412,6 +412,7 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
     std::vector<std::string> anim_paths;
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
+    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
 
     model_loader.ImportingAllMeshAsSkinned(true);
 
@@ -424,8 +425,9 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action - Sword And Shield Casting (total 45Frames).fbx",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action - Sword And Shield Run (total 27Frames).fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
+    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
 
+    aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
     ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], KnightModelBoundingBox);
 }
 

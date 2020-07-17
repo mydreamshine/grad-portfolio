@@ -587,6 +587,8 @@ public:
 	bool loadBoundingBox(std::string filepath, std::vector<std::string>* execpt_nodes = nullptr);
 	// SkinnedMesh에 한해서만 BoundingBox를 Merge한다.
 	bool loadMergedBoundingBox(std::string filepath, aiModelData::aiBoundingBox& MergedBoundingBox, std::vector<std::string>* execpt_nodes = nullptr);
+	bool loadBoundingBoxesToTXTfile(const std::string& filepath_ToWrite, const std::string& soruce_path,
+		float CovertUnit = 1.0f, bool MergeBoundingBoxes = false, std::vector<std::string>* execpt_nodes = nullptr);
 
 private:
 	void processNode(

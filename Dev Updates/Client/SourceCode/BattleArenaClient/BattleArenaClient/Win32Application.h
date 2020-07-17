@@ -18,8 +18,9 @@ protected:
 
 private:
     static HWND m_hwnd;
-    static NWMODULE nwmodule;
+    //static NWMODULE nwmodule;
     static EventProcessor m_eventProcessor;
-    static std::queue<std::unique_ptr<packet_inheritance>> m_packetList;
+    static std::queue<std::unique_ptr<packet_inheritance>> m_RecvpacketList;
+    static std::queue<std::unique_ptr<packet_inheritance>> m_SendpacketList;
 
 };
