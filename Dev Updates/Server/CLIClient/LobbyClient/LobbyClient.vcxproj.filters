@@ -33,7 +33,7 @@
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="NWMODULE.cpp">
+    <ClCompile Include="..\..\Common\NWMODULE.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -42,9 +42,6 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="NWMODULE.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\CSOCKADDR_IN.h">
@@ -58,6 +55,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\NWMODULE.h">
+      <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

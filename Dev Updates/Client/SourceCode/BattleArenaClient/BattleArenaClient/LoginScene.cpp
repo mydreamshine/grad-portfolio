@@ -127,9 +127,21 @@ void LoginScene::UpdateShadowTransform(CTimer& gt)
 
 void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+
     // Process Input Box (ID, Password)
     {
 
+    }
+
+    if (OnceSendLogin == false) {
+        if (true == key_state[VK_RETURN])
+        {
+            std::wstring id{ L"test001" };
+            std::wstring pw{ L"0000" };
+            EventManager eventManager;
+            eventManager.ReservateEvent_TryLogin(GeneratedEvents, id, pw);
+            OnceSendLogin = true;
+        }
     }
 
     if (OnceSendChatLog == true)

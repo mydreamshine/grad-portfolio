@@ -3,7 +3,7 @@
 #include "CharacterConfig.h"
 
 DMRoom::DMRoom() :
-	max_player(2),
+	max_player(1),
 	player_num(0),
 	delta_time(0),
 	skill_uid(4)
@@ -23,32 +23,47 @@ DMRoom::~DMRoom()
 void DMRoom::init()
 {
 	// Loading config from resource manager - Client will update this.
+
+	//Insert changed scene packet.
+	csss_packet_change_scene packet{ (char)SCENE_TYPE::PLAYGMAE_SCENE };
+	event_data.emplace_back(&packet, packet.size);
 }
 
-bool DMRoom::regist(CLIENT* client)
+bool DMRoom::regist(SOCKET client, void* buffer)
 {
+	sscs_packet_try_match_login* packet = reinterpret_cast<sscs_packet_try_match_login*>(buffer);
+
 	socket_lock.lock();
-	short cur_player = ++player_num;
-	sockets.emplace(client->socket);
-	csss_packet_login_ok packet{ cur_player };
-	send_packet(client->socket, &packet, packet.size);
+	short cur_player = player_num++;
+	sockets.emplace(client);
+	csss_packet_login_ok login_ok{ cur_player };
+	send_packet(client, &login_ok, login_ok.size);
+
+	//Spawn HERO, Scoreboard and reserve it to event.
+	m_heros[cur_player] = spawn_hero(cur_player, packet->selected_character, cur_player % 2);
+	char selected_character = (packet->selected_character == (char)CHARACTER_TYPE::NON) ? (char)CHARACTER_TYPE::WARRIOR : packet->selected_character;
+	m_score.emplace(std::make_pair(cur_player, packet->nickname));
+	csss_packet_spawn_player spawn_player{ cur_player, packet->nickname, (int)wcslen(packet->nickname), selected_character,
+		1.0f, 1.0f, 1.0f,
+		m_heros[cur_player]->rot.x, m_heros[cur_player]->rot.y, m_heros[cur_player]->rot.z,
+		m_heros[cur_player]->pos.x, m_heros[cur_player]->pos.y, m_heros[cur_player]->pos.z,
+		m_heros[cur_player]->propensity };
+	event_data.emplace_back(&spawn_player, spawn_player.size);
 	socket_lock.unlock();
-	return cur_player == max_player;
+	return (cur_player+1) == max_player;
 }
 
-void DMRoom::disconnect(CLIENT* client)
+void DMRoom::disconnect(SOCKET client)
 {
 	socket_lock.lock();
 	--player_num;
-	sockets.erase(client->socket);
+	sockets.erase(client);
 	socket_lock.unlock();
 }
 
 void DMRoom::start()
 {
-	//Insert changed scene packet.
-	csss_packet_change_scene packet{(char)SCENE_TYPE::PLAYGMAE_SCENE};
-	event_data.emplace_back(&packet, packet.size);
+
 }
 
 void DMRoom::end()
@@ -60,6 +75,7 @@ void DMRoom::end()
 	for (auto& hero : m_heros)
 		delete hero.second;
 	m_heros.clear();
+	m_score.clear();
 
 	for (auto& skill : m_skills)
 		delete skill.second;
@@ -81,6 +97,34 @@ bool DMRoom::update(float elapsedTime)
     bool retval = game_logic();
     send_game_state();
     return retval;
+}
+
+HERO* DMRoom::spawn_hero(short object_id, char character_type, char propensity)
+{
+	HERO* new_hero = nullptr;
+	switch (character_type)
+	{
+	case (char)CHARACTER_TYPE::WARRIOR:
+		new_hero = new WARRIOR{this, object_id, propensity};
+		break;
+
+	case (char)CHARACTER_TYPE::PRIEST:
+		new_hero = new PRIEST{ this, object_id, propensity };
+		break;
+
+	case (char)CHARACTER_TYPE::ASSASSIN:
+		new_hero = new ASSASSIN{ this, object_id, propensity };
+		break;
+
+	case (char)CHARACTER_TYPE::BERSERKER:
+		new_hero = new BERSERKER{ this, object_id, propensity };
+		break;
+
+	default:
+		new_hero = new WARRIOR{ this, object_id, propensity };
+		break;
+	}
+	return new_hero;
 }
 
 void DMRoom::process_packet_vector()
@@ -152,7 +196,7 @@ bool DMRoom::game_logic()
 
 	//Game End Check.
 
-	return true;
+	return false;
 }
 
 void DMRoom::send_game_state()

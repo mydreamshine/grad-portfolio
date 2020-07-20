@@ -16,6 +16,8 @@
 
 #include "DMRoom.h"
 
+#define TEST_FIELD
+
 namespace BattleArena {
 	constexpr auto MAX_ROOM = 100; ///< Max room count of server.
 	constexpr auto UPDATE_INTERVAL = 30; ///< Interval of updateing time. Millisecond.

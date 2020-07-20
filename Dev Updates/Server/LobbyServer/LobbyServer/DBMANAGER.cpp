@@ -1,6 +1,8 @@
 #include "DBMANAGER.h"
 #include <string>
 
+constexpr int string_len = 32;
+
 DBMANAGER::DBMANAGER() : 
 	henv(),
 	hdbc(),
@@ -49,12 +51,12 @@ void DBMANAGER::HandleDiagnosticRecord(SQLHANDLE hHandle, SQLSMALLINT hType, RET
 }
 
 
-int DBMANAGER::get_uid(const char* id)
+int DBMANAGER::get_uid(const wchar_t* id)
 {
 	SQLRETURN retcode;
 	SQLWCHAR query[] = { L"{call get_uid(?)}" };
 	SQLLEN idlen = SQL_NTS;
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 11, 0, (void*)id, 11, &idlen);
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)id, sizeof(wchar_t) * string_len, &idlen);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
@@ -73,13 +75,13 @@ int DBMANAGER::get_uid(const char* id)
 }
 
 
-std::vector<std::string> DBMANAGER::get_friendlist(const char* id)
+std::vector<std::string> DBMANAGER::get_friendlist(const wchar_t* id)
 {
 	std::vector<std::string> friendlist;
 	SQLRETURN retcode;
 	SQLWCHAR query[] = { L"{call get_friendlist(?)}" };
 	SQLLEN idlen = SQL_NTS;
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 11, 0, (void*)id, 11, &idlen);
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)id, sizeof(wchar_t) * string_len, &idlen);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);

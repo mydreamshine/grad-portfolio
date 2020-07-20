@@ -30,11 +30,12 @@ enum class SCENE_TYPE : char
 
 enum class CHARACTER_TYPE : char
 {
-	NON,
 	WARRIOR,
 	BERSERKER,
 	ASSASSIN,
-	PRIEST
+	PRIEST,
+	COUNT,
+	NON
 };
 
 enum class SKILL_TYPE : char

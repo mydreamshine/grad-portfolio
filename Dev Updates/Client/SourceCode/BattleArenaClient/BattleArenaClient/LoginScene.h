@@ -39,5 +39,6 @@ private:
     std::wstring IDText;
     std::wstring PasswordText;
 
+    bool OnceSendLogin = false;
     bool OnceSendChatLog = false;
 };

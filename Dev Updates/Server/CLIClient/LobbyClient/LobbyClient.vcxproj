@@ -126,20 +126,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\csockaddr_in.cpp" />
+    <ClCompile Include="..\..\Common\NWMODULE.cpp" />
     <ClCompile Include="..\..\Common\OVER_EX.cpp" />
     <ClCompile Include="..\..\Common\PACKET_BUFFER.cpp" />
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp" />
-    <ClCompile Include="NWMODULE.cpp" />
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\BattleServer\BattleServer\battle_protocol.h" />
     <ClInclude Include="..\..\Common\CSOCKADDR_IN.h" />
+    <ClInclude Include="..\..\Common\NWMODULE.h" />
     <ClInclude Include="..\..\Common\OVER_EX.h" />
     <ClInclude Include="..\..\Common\PACKET_BUFFER.h" />
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
-    <ClInclude Include="NWMODULE.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,14 +1,16 @@
 #include "stdafx.h"
 #include "Win32Application.h"
 
+
 HWND Win32Application::m_hwnd = nullptr;
 EventProcessor Win32Application::m_eventProcessor;
+
 std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_SendpacketList;
 std::queue<std::unique_ptr<packet_inheritance>> Win32Application::m_RecvpacketList;
 
-
 HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT width, UINT height, std::wstring name)
 {
+
     // Parse the command line parameters
     int argc;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -41,6 +43,11 @@ HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT wi
         nullptr,        // We aren't using menus.
         hInstance,
         pSample);
+
+    //m_nwmodule = new NWMODULE<EventProcessor>{ m_eventProcessor };
+    //for (int i = 0; i < SSCS_PACKET_COUNT; ++i)
+    //    m_nwmodule->enroll_callback(i, &EventProcessor::PacketToEvent);
+    //m_nwmodule->connect_lobby(0);
 
     return m_hwnd;
 }
@@ -121,8 +128,7 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
     case WM_PAINT:
         if (pSample)
         {
-            //NWMODULE UPDATE. (Generate RecevPacketList)
-            m_eventProcessor.GenerateExternalEventsFrom(m_RecvpacketList);
+            m_eventProcessor.GenerateExternalEventsFrom();
             pSample->ProcessEvents(m_eventProcessor.GetExternalEvents());
 
             std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
@@ -134,9 +140,7 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
             }
             else pSample->OnUpdate(GeneratedEvents);
             pSample->OnRender();
-
-            m_eventProcessor.ProcessGeneratedEvents(GeneratedEvents, m_SendpacketList);
-            //NWMODULE WILL SEND PACKET in m_packetList.
+            m_eventProcessor.ProcessGeneratedEvents(GeneratedEvents);
         }
         return 0;
 

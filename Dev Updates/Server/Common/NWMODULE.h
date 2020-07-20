@@ -11,9 +11,12 @@
 
 #include "PACKET_BUFFER.h"
 #include "OVER_EX.h"
+#include "CSOCKADDR_IN.h"
+#include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 
 using namespace std;
 
+#define NO_BASIC_FUNCTION
 
 /**
 @brief class for communicate battle and lobby server.
@@ -23,22 +26,18 @@ template <class T>
 class NWMODULE
 {
 public:
-	NWMODULE(T& MainModule, HANDLE iocp = INVALID_HANDLE_VALUE);
+	NWMODULE(T& MainModule, int buffer_size = 256, HANDLE iocp = INVALID_HANDLE_VALUE, int ev_send = 0, int ev_lobby = 0, int ev_battle = 0);
+
+
 	~NWMODULE();
 
 	/**
-	@brief enroll lobby packets callback.
+	@brief enroll packets callback.
 	@param packet_type target packet.
 	@param callback when packet_type arrived, this callback will execute.
 	*/
-	void enroll_lobby_callback(int packet_type, function<void(T&)> callback);
+	void enroll_callback(int packet_type, function<void(T&, packet_inheritance*)> callback);
 
-	/**
-	@brief enroll battle packets callback.
-	@param packet_type target packet.
-	@param callback when packet_type arrived, this callback will execute.
-	*/
-	void enroll_battle_callback(int packet_type, function<void(T&)> callback);
 
 	/**
 	@brief notify recv from lobby. - use with iocp env.
@@ -83,8 +82,14 @@ public:
 	*/
 	void disconnect_battle();
 
-	//Send Packet To Server
+	/**
+	@brief send packet to lobby or battle.
+	@param packet.
+	*/
+	void send_packet(packet_inheritance* packet);
 
+
+#ifndef NO_BASIC_FUNCTION
 	/**
 	@brief request login to lobby.
 	@param id login id. max 10 length.
@@ -112,6 +117,7 @@ public:
 	@brief reqeust client dequeue match_make pool to lobby.
 	*/
 	void match_dequeue();
+#endif
 
 private:
 	T& MainModule;									///< Main class need to attach NW MODULE.
@@ -119,14 +125,16 @@ private:
 	SOCKET lobby_socket;							///< Socket for lobby.
 	SOCKET battle_socket;							///< Socket for battle.
 	vector<thread> threads;							///< Thread list operated in NW MODULE.
-	vector<function<void(T&)>> lobby_callbacks;		///< Callbacks when lobby packet arrived.
-	vector<function<void(T&)>> battle_callbacks;	///< Callbacks when battle packet arrived.
+	vector<function<void(T&, packet_inheritance*)>> callbacks;			///< Callbacks when packet arrived.
 
 	OVER_EX lobby_over;								///< EXPENDED OVERLAPPED Structure for lobby.
 	PACKET_BUFFER lobby_buffer;						///< Buffer for complete packet.
 	OVER_EX battle_over;							///< EXPENDED OVERLAPPED Structure for battle.
 	PACKET_BUFFER battle_buffer;					///< Buffer for complete packet.
 
+	int ev_send;
+	int ev_lobby;
+	int ev_battle;
 private:
 
 	void error_display(const char* msg, int err_no);
@@ -169,8 +177,6 @@ private:
 	*/
 	void packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_t len);
 
-	void packet_parse();
-
 	/**
 	@brief process disconnect to socket and clear packet_buffer.
 	@param socket socket that want to disconnect.
@@ -179,19 +185,12 @@ private:
 	void process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer);
 
 	/**
-	@brief process lobby packet and call appropriate callback.
+	@brief process packet and call appropriate callback.
 	@param type packets type.
 	@param buffer packets data.
 	*/
-	void process_lobby_packet(int packet_type, const void* buffer);
-
-	/**
-	@brief process battle packet and call appropriate callback.
-	@param type packets type.
-	@param buffer packets data.
-	*/
-	void process_battle_packet(int packet_type, const void* buffer);
-
-
+	void process_packet(int packet_type, void* buffer);
 };
+
+
 

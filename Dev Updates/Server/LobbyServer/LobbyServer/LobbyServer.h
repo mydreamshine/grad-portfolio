@@ -9,21 +9,22 @@
 #include <iostream>
 #include <fstream>
 #include <set>
-#include "lobby_protocol.h"
+#include "..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 #include "DBMANAGER.h"
 
 //Commons
 #include "..\..\Common\CSOCKADDR_IN.h"
 #include "..\..\Common\OVER_EX.h"
 
-#define BATTLE_OFFLINE
+//#define BATTLE_OFFLINE
+#define FRIEND_OFFLINE
 
 
 namespace BattleArena {
 	constexpr auto RECV_BUFFER_SIZE = 200; /// max buffer size for socket communication
 	constexpr auto MAX_USER = 100; /// max user count that lobby server can hold
 	constexpr auto BATTLE_KEY = MAX_USER; /// last index for battle server
-	constexpr auto MATCHUP_NUM = 3; /// will deprecated. at least count for match-making.
+	constexpr auto MATCHUP_NUM = 1; /// will deprecated. at least count for match-making.
 
 	enum EVENT_TYPE {EV_CLIENT, EV_SEND, EV_BATTLE}; /// iocp events, EV_CLIENT : recv from clients, EV_SEND : send is done, EV_BATTLE : recv from battle server
 	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY }; /// client status, ST_QUEUE : client get queued, ST_IDLE : client do nothing, ST_PLAY : playing game.
@@ -41,7 +42,7 @@ namespace BattleArena {
 		CL_STATE state{ ST_IDLE }; ///< client status.
 
 		int uid{-1}; ///< clients uid
-		char id[ID_LENGTH]{0}; ///< clients id
+		wchar_t id[string_len]{0}; ///< clients id
 		std::set<int> friendlist; ///< clients friend list, ONLY index for client_table, show ONLY ONLINE friends
 
 		/**
@@ -136,14 +137,19 @@ namespace BattleArena {
 		void send_packet_default(int client, int type); ///< send default type packet to client.
 		void send_packet_room_info(int client, int room_id); ///< notify client to connect battle server with room_id
 		void send_packet_request_room(char mode); ///< request room to battle server.
+#ifndef FRIEND_OFFLINE
 		void send_packet_friend_status(int client, int who, int status); ///< notify client that friends status is changed.
+#endif
 
 		void process_client_packet(DWORD client, void* packet); ///< process clients packet.
 		void process_battle_packet(DWORD client, void* packet); ///< process battle server packet.
 		void process_packet_response_room(void* buffer); ///< process response room packet.
 		void process_packet_login(int client, void* buffer); ///< process clients login.
+
+#ifndef FRIEND_OFFLINE
 		void process_packet_request_friend(int client, void* buffer); ///< process add friend request.
 		void process_packet_accept_friend(int client, void* buffer); ///< process answer for add friend request.
+#endif
 
 		void match_enqueue(DWORD client); ///< enqueue client to match pool.
 		void match_dequeue(DWORD client); ///< dequeue client to match pool.
@@ -155,6 +161,6 @@ namespace BattleArena {
 
 		//is client connect?
 		int isConnect(int uid); ///< return clients index if uid is connected.
-		int isConnect(const char* id); ///< return clients index if id is connected.
+		int isConnect(const wchar_t* id); ///< return clients index if id is connected.
 	};
 }

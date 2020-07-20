@@ -88,7 +88,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Rooms;C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +132,7 @@
     <ClCompile Include="..\..\Common\HERO.cpp" />
     <ClCompile Include="..\..\Common\OVER_EX.cpp" />
     <ClCompile Include="..\..\Common\PACKET_VECTOR.cpp" />
+    <ClCompile Include="..\..\Common\SCOREBOARD.cpp" />
     <ClCompile Include="..\..\Common\SKILL.cpp" />
     <ClCompile Include="..\..\Common\Vector3d.cpp" />
     <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="..\..\Common\HERO.h" />
     <ClInclude Include="..\..\Common\OVER_EX.h" />
     <ClInclude Include="..\..\Common\PACKET_VECTOR.h" />
+    <ClInclude Include="..\..\Common\SCOREBOARD.h" />
     <ClInclude Include="..\..\Common\SKILL.h" />
     <ClInclude Include="..\..\Common\Vector3d.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />

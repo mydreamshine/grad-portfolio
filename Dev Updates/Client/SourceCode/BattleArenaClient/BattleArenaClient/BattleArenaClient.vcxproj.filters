@@ -42,8 +42,8 @@
     <Filter Include="Source Files\Scene">
       <UniqueIdentifier>{d706bd73-98dd-4a78-b6d2-84023109b731}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Common\NWModule">
-      <UniqueIdentifier>{ec47b02b-5fdd-465f-bcb1-b7efdac8302f}</UniqueIdentifier>
+    <Filter Include="Common\NWMODULE">
+      <UniqueIdentifier>{87936596-4c71-45d7-b678-65cc26aec036}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -153,7 +153,19 @@
       <Filter>Common\FileLoaders</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\Server\Common\NWMODULE.cpp">
-      <Filter>Common\NWModule</Filter>
+      <Filter>Common\NWMODULE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Server\Common\OVER_EX.cpp">
+      <Filter>Common\NWMODULE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Server\Common\PACKET_BUFFER.cpp">
+      <Filter>Common\NWMODULE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Server\Common\PACKET_VECTOR.cpp">
+      <Filter>Common\NWMODULE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Server\Common\csockaddr_in.cpp">
+      <Filter>Common\NWMODULE</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -310,8 +322,23 @@
     <ClInclude Include="EventProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\Server\Common\NWMODULE.h">
-      <Filter>Common\NWModule</Filter>
+      <Filter>Common\NWMODULE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Server\Common\OVER_EX.h">
+      <Filter>Common\NWMODULE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Server\Common\PACKET_BUFFER.h">
+      <Filter>Common\NWMODULE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Server\Common\PACKET_VECTOR.h">
+      <Filter>Common\NWMODULE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Server\Common\CSOCKADDR_IN.h">
+      <Filter>Common\NWMODULE</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

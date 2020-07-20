@@ -1,61 +1,42 @@
 #pragma once
+#include <wchar.h>
+
+constexpr short LOBBYSERVER_PORT = 15500;
+constexpr short BATTLESERVER_PORT = 15600;
 
 //////////////////// 통신 데이터 타입 + 이벤트 타입(혹은 State Machine) ///////////////////
-#define TSS_KEYDOWN_W          0
-#define TSS_KEYDOWN_S          1
-#define TSS_KEYDOWN_A          4
-#define TSS_KEYDOWN_D          5
-#define TSS_KEYUP_W            2
-#define TSS_KEYUP_S            3
-#define TSS_KEYUP_A            6
-#define TSS_KEYUP_D            7
-#define TSS_MOUSE_LBUTTON_DOWN 8
-#define TSS_MOUSE_LBUTTON_UP   9
+enum TSS {
+	TSS_KEYDOWN_W,
+	TSS_KEYDOWN_S,
+	TSS_KEYDOWN_A,
+	TSS_KEYDOWN_D,
+	TSS_KEYUP_W,
+	TSS_KEYUP_S,
+	TSS_KEYUP_A,
+	TSS_KEYUP_D,
+	TSS_MOUSE_LBUTTON_DOWN,
+	TSS_MOUSE_LBUTTON_UP,
+};
 
-//<<<<<<< HEAD
-//
-//=======
-//#define SSCS_TRY_LOGIN               10
-//#define SSCS_REQUEST_USER_INFO       11
-//#define SSCS_TRY_GAME_MATCHING       12
-//#define SSCS_SEND_CHAT               13
-//#define SSCS_TRY_MOVE_CHARACTER      14
-//#define SSCS_TRY_MOVE_STOP_CHARACTER 15
-//#define SSCS_TRY_NORMAL_ATTACK       16
-//#define SSCS_TRY_USE_SKILL           17
-//#define SSCS_DONE_CHARACTER_MOTION   18
-//#define SSCS_ACTIVATE_ANIM_NOTIFY    19
-//#define SSCS_TRY_RETURN_LOBY         20
-
-//#define CSSS_LOGIN_OK                     21
-//#define CSSS_CHANGE_SCENE                 22
-//#define CSSS_SPAWN_PLAYER                 23
-//#define CSSS_SPAWN_NORMAL_ATTACK_OBJ      24
-//#define CSSS_SPAWN_SKILL_OBJ              25
-//#define CSSS_SPAWN_EFFECT_OBJ             26
-//#define CSSS_SET_TRANSFORM_WORLD_OBJ      27
-//#define CSSS_SET_CHARACTER_MOTION         28
-//#define CSSS_SET_PLAYER_STATE             29
-//#define CSSS_UPDATE_POISON_FOG_DEACT_AREA 30
-//#define CSSS_DEACTIVATE_OBJ               31
-//#define CSSS_SET_USER_INFO                32
-//#define CSSS_SET_KDA_SCORE                33
-//#define CSSS_SET_KILL_LOG                 34
-//#define CSSS_SET_CHAT_LOG                 35
-//#define CSSS_SET_GAME_PLAY_TIME_LIMIT     36
-//#define CSSS_SET_PLAYER_HP                37
-//#define CSSS_SET_MATCH_STATISTIC_INFO     38
-//>>>>>>> master
-///////////////////////////////////////////////////////////////////////////////////////////
 
 using PACKET_SIZE = unsigned char;
 using PACKET_TYPE = unsigned char;
 constexpr int string_len = 32;
 
+enum ROOM_MODE {
+	GAMEMODE_DM,
+};
+
 enum SSCS_PACKET {
+	//To Lobby
 	SSCS_TRY_LOGIN,
 	SSCS_REQUEST_USER_INFO,
 	SSCS_TRY_GAME_MATCHING,
+	
+	SSCS_TO_LOBBY_TO_BATTLE,
+
+	//To Battle
+	SSCS_TRY_MATCH_LOGIN,
 	SSCS_SEND_CHAT,
 	SSCS_TRY_MOVE_CHARACTER,		//Done.
 	SSCS_TRY_MOVE_STOP_CHARACTER,	//Done.
@@ -70,6 +51,10 @@ enum SSCS_PACKET {
 
 enum CSSS_PACKET {
 	CSSS_LOGIN_OK,					//Done. but need to check player's hero pick.
+	CSSS_LOGIN_FAIL,
+	CSSS_MATCH_ENQUEUE,
+	CSSS_MATCH_DEQUEUE,
+	CSSS_ACCESS_MATCH,
 	CSSS_CHANGE_SCENE,				//Need check Type.
 	CSSS_SPAWN_PLAYER,				//Done.
 	CSSS_SPAWN_NORMAL_ATTACK_OBJ,	//Done.
@@ -90,6 +75,17 @@ enum CSSS_PACKET {
 	CSSS_SET_USER_INFO,
 
 	CSSS_PACKET_COUNT
+};
+
+//Lobby To Battle
+enum SB_PACKET {
+	SB_PACKET_REQUEST_ROOM,
+	SB_PACKET_COUNT
+};
+//Battle To Lobby
+enum BS_PACKET {
+	BS_PACKET_RESPONSE_ROOM,
+	BS_PACKET_COUNT
 };
 
 ////////////////////////////////////// 통신 패킷 타입 /////////////////////////////////////
@@ -126,12 +122,6 @@ struct tss_packet_mouse_button_up
 };
 
 
-//struct default_packet
-//{
-//	PACKET_SIZE size;
-//	PACKET_TYPE type;
-//};
-
 // Streaming Server -> Contents Server
 struct sscs_packet_try_login : packet_inheritance
 {
@@ -167,6 +157,23 @@ struct sscs_packet_try_login : packet_inheritance
 		}
 	}
 };
+
+struct sscs_packet_try_match_login : packet_inheritance
+{
+	int room_id{};
+	wchar_t nickname[string_len]{};
+	char selected_character{};
+
+	sscs_packet_try_match_login(int room_id, char selected_character, const wchar_t* nickname) :
+		room_id(room_id),
+		selected_character(selected_character)
+	{
+		size = (PACKET_SIZE)sizeof(sscs_packet_try_match_login);
+		type = SSCS_TRY_MATCH_LOGIN;
+		wcscpy_s(this->nickname, nickname);
+	}
+};
+
 struct sscs_packet_request_user_info : packet_inheritance
 {
 	short client_id{0};
@@ -182,6 +189,7 @@ struct sscs_packet_request_user_info : packet_inheritance
 		client_id = clientID;
 	}
 };
+
 // 해당 플레이어가 어떤 캐릭터를 선택했는가에 따라
 // PlayGameScene에 생성될 캐릭터들의 구성이 달라진다.
 struct sscs_packet_try_game_matching : packet_inheritance
@@ -494,6 +502,47 @@ struct csss_packet_login_ok : packet_inheritance
 		client_id = clientID;
 	}
 };
+
+struct csss_packet_login_fail : packet_inheritance {
+
+	csss_packet_login_fail() {
+		size = (PACKET_SIZE)sizeof(csss_packet_login_fail);
+		type = CSSS_LOGIN_FAIL;
+	}
+};
+
+struct csss_packet_match_enqueue : packet_inheritance {
+
+	csss_packet_match_enqueue() {
+		size = (PACKET_SIZE)sizeof(csss_packet_match_enqueue);
+		type = CSSS_MATCH_ENQUEUE;
+	}
+};
+
+struct csss_packet_match_dequeue : packet_inheritance {
+
+	csss_packet_match_dequeue() {
+		size = (PACKET_SIZE)sizeof(csss_packet_match_dequeue);
+		type = CSSS_MATCH_DEQUEUE;
+	}
+};
+struct csss_packet_access_match : packet_inheritance
+{
+	int room_id{ 0 };
+
+	csss_packet_access_match()
+	{
+		size = (PACKET_SIZE)sizeof(csss_packet_access_match);
+		type = CSSS_ACCESS_MATCH;
+	}
+	csss_packet_access_match(int room_id)
+	{
+		size = (PACKET_SIZE)sizeof(csss_packet_access_match);
+		type = CSSS_ACCESS_MATCH;
+		room_id = room_id;
+	}
+};
+
 struct csss_packet_change_scene : packet_inheritance
 {
 	// contents ref.
@@ -525,7 +574,6 @@ struct csss_packet_spawn_player : packet_inheritance
 	float   rotation_euler_x{}, rotation_euler_y{}, rotation_euler_z{};
 	float   position_x{}, position_y{}, position_z{};
 	char    propensity{};// 성향 (적 오브젝트인지, 아군 오브젝트인지)
-	bool    is_main_character{};
 
 	csss_packet_spawn_player()
 	{
@@ -542,8 +590,7 @@ struct csss_packet_spawn_player : packet_inheritance
 		float ScaleX, float ScaleY, float ScaleZ,
 		float RotationEulerX, float RotationEulerY, float RotationEulerZ,
 		float PositionX, float PositionY, float PositionZ,
-		char Propensity,
-		bool IsMainCharacter)
+		char Propensity)
 	{
 		size = (PACKET_SIZE)sizeof(csss_packet_spawn_player);
 		type = CSSS_SPAWN_PLAYER;
@@ -560,7 +607,6 @@ struct csss_packet_spawn_player : packet_inheritance
 		rotation_euler_x = RotationEulerX; rotation_euler_y = RotationEulerY; rotation_euler_z = RotationEulerZ;
 		position_x = PositionX; position_y = PositionY; position_z = PositionZ;
 		propensity = Propensity;
-		is_main_character = IsMainCharacter;
 	}
 };
 // 캐릭터 종류에 따라
@@ -839,7 +885,7 @@ struct csss_packet_set_character_hp : packet_inheritance
 struct csss_packet_send_user_info : packet_inheritance
 {
 	// contents ref.
-	wchar_t user_name[255]; // nick name
+	wchar_t user_name[string_len]; // nick name
 	int     user_rank;
 
 	csss_packet_send_user_info()
@@ -866,6 +912,7 @@ struct csss_packet_send_user_info : packet_inheritance
 		user_rank = userRank;
 	}
 };
+
 struct csss_packet_set_kda_score : packet_inheritance
 {
 	// contents ref.
@@ -975,7 +1022,6 @@ struct csss_packet_set_game_playtime_limit : packet_inheritance
 	}
 };
 
-
 // GameOverScene에 출력할 매칭 결과
 // played_character_type에 따라
 // GameOverScene에 렌더링되는 캐릭터가 달라진다.
@@ -1027,5 +1073,40 @@ struct csss_packet_send_match_statistic : packet_inheritance
 		played_character_type = PlayedCharacterType;
 	}
 };
+
+
+//
+
+//struct sc_packet_match_room_info : packet_inheritance
+//{
+//	int room_id{};
+//};
+//
+
+struct sb_packet_request_room : packet_inheritance
+{
+	char mode{};
+	sb_packet_request_room(char mode) {
+		size = (PACKET_SIZE)sizeof(sb_packet_request_room);
+		type = SB_PACKET_REQUEST_ROOM;
+		this->mode = mode;
+	}
+};
+
+struct bs_packet_response_room : packet_inheritance
+{
+	int room_id{};
+	bs_packet_response_room(int room_id) {
+		size = (PACKET_SIZE)sizeof(bs_packet_response_room);
+		type = BS_PACKET_RESPONSE_ROOM;
+		this->room_id = room_id;
+	}
+};
+
+//struct cb_packet_request_login : packet_inheritance
+//{
+//	int room_id{};
+//};
+
 #pragma pack(pop)
 ///////////////////////////////////////////////////////////////////////////////////////////

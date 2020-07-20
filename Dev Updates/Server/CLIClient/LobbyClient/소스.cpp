@@ -28,9 +28,9 @@ public:
 	void enque() { cout << "ENQUEUED" << endl; };
 	void deque() { cout << "DEQUEUED" << endl; };
 	testfunc() : nw(*this) {
-		nw.enroll_lobby_callback(SC_PACKET_LOGIN_OK, &testfunc::login_ok);
+		/*nw.enroll_lobby_callback(SC_PACKET_LOGIN_OK, &testfunc::login_ok);
 		nw.enroll_lobby_callback(SC_PACKET_MATCH_ENQUEUE, &testfunc::enque);
-		nw.enroll_lobby_callback(SC_PACKET_MATCH_DEQUEUE, &testfunc::deque);
+		nw.enroll_lobby_callback(SC_PACKET_MATCH_DEQUEUE, &testfunc::deque);*/
 	}
 };
 
@@ -62,7 +62,7 @@ int main()
 	//nw.enroll_lobby_callback(SC_PACKET_MATCH_DEQUEUE, &testfunc::deque);
 
 	a.nw.connect_lobby(0);
-	a.nw.request_login("test001");
+	//a.nw.request_login("test001");
 
 	cout << "[CLI CLIENT]" << endl;
 
@@ -77,18 +77,18 @@ int main()
 		if (chat[0] == '/')
 		{
 			vector<string> token = split(chat, ' ');
-			if (token[0] == "/enqueue") { a.nw.match_enqueue(); }
-			else if (token[0] == "/dequeue") { a.nw.match_dequeue(); }
-			else if (token[0] == "/add") { a.nw.add_friend(token[1].c_str()); }
-			else if (token[0] == "/accept") {
-				//if (friend_flag == false) continue;
-				//nw.accept_friend();
-			}
-			else if (token[0] == "/help") {
-				print_help();
-			}
-			else if (token[0] == "/quit")
-				a.nw.disconnect_lobby();
+			//if (token[0] == "/enqueue") { a.nw.match_enqueue(); }
+			//else if (token[0] == "/dequeue") { a.nw.match_dequeue(); }
+			//else if (token[0] == "/add") { a.nw.add_friend(token[1].c_str()); }
+			//else if (token[0] == "/accept") {
+			//	//if (friend_flag == false) continue;
+			//	//nw.accept_friend();
+			//}
+			//else if (token[0] == "/help") {
+			//	print_help();
+			//}
+			//else if (token[0] == "/quit")
+			//	a.nw.disconnect_lobby();
 		}
 		a.nw.update();
 	}

@@ -388,13 +388,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
 
     }
 
-    if (OnceTryGameMatching == true)
-    {
-        EventManager eventManager;
-        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
-        OnceTryGameMatching = false;
-    }
-
     if (OnceSendChatLog == true)
     {
         EventManager eventManager;
@@ -402,7 +395,35 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         inputChat.clear();
         OnceSendChatLog = false;
     }
+
+    //Try matchmaking. e -> enqueue, d -> dequeue.
+    if (key_state['E'] == true && StartMatching == false && OnceTryGameMatching == false)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
+        OnceTryGameMatching = true;
+    }
+    if (key_state['D'] == true && StartMatching == true && OnceTryGameMatching == false)
+    {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
+        OnceTryGameMatching = true;
+    }
+    if (OnceAccessMatch == true) {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
+        OnceAccessMatch = false;
+    }
+
+    //TestFunc. - Access battle directly.
+    if (key_state['R'] == true && OnceAccessBattleDirectly == false) {
+        EventManager eventManager;
+        eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
+        OnceAccessBattleDirectly = true;
+    }
 }
+
+
 
 void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)
 {
@@ -414,4 +435,15 @@ void LobyScene::SetChatLog(std::wstring UserName, std::wstring Message)
 {
     if (ChattingList.size() == MaxChatLog) ChattingList.pop_back();
     ChattingList.push_back(L"[" + UserName + L"]: " + Message);
+}
+
+void LobyScene::SetMatchStatus(bool status)
+{
+    StartMatching = status;
+    OnceTryGameMatching = false;
+}
+
+void LobyScene::SetAccessMatch(bool status)
+{
+    OnceAccessMatch = status;
 }

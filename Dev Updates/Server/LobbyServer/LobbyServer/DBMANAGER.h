@@ -28,14 +28,14 @@ public:
 	@param id clients id.
 	@return clients uid. if there's no id on DB, return -1.
 	*/
-	int get_uid(const char* id);
+	int get_uid(const wchar_t* id);
 
 	/**
 	@brief get clients friend list.
 	@param id clients id.
 	@return clients friend list.
 	*/
-	std::vector<std::string> get_friendlist(const char* id);
+	std::vector<std::string> get_friendlist(const wchar_t* id);
 
 	/**
 	@brief insert friend relationship.

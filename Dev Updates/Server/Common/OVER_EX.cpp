@@ -1,5 +1,5 @@
 #include "OVER_EX.h"
-#include "..//LobbyServer/LobbyServer/lobby_protocol.h"
+#include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 
 OVER_EX::~OVER_EX() {
 	if (packet != nullptr) {
@@ -30,7 +30,7 @@ OVER_EX::OVER_EX(int ev, size_t buf_size) :
 OVER_EX::OVER_EX(int ev, void* buff) :
 	OVER_EX(ev)
 {
-	common_default_packet* cdp = reinterpret_cast<common_default_packet*>(buff);
+	packet_inheritance* cdp = reinterpret_cast<packet_inheritance*>(buff);
 	init(cdp->size);
 	memcpy(packet, buff, cdp->size);
 }

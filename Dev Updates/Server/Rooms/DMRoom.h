@@ -8,6 +8,7 @@
 #include <DirectXCollision.h>
 #include "..\Common\HERO.h"
 #include "..\Common\SKILL.h"
+#include "..\Common\SCOREBOARD.h"
 #include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 
 class DMRoom : public ROOM
@@ -16,8 +17,8 @@ public:
 	DMRoom();
 	virtual ~DMRoom();
 	virtual void init();
-	virtual bool regist(CLIENT* client);
-	virtual void disconnect(CLIENT* client);
+	virtual bool regist(SOCKET client, void* buffer);
+	virtual void disconnect(SOCKET client);
 	virtual void start();
 	virtual void end();
 	virtual bool update(float elapsedTime);
@@ -38,9 +39,12 @@ private:
 	std::mutex socket_lock;
 	std::set<SOCKET> sockets;
 	std::map<short, HERO*> m_heros;
+	std::map<short, SCOREBOARD> m_score;
 	int skill_uid;
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;
+
+	HERO* spawn_hero(short object_id, char character_type, char propensity);
 
 	void process_packet_vector();
 	bool game_logic();

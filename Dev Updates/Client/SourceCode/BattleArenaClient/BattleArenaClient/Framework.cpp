@@ -76,9 +76,9 @@ void Framework::ProcessEvent(EVENT& Event)
     {
     case FEC_CHANGE_SCENE:
     {
-        if (Event.Act_Place == FEP_LOGIN_SCENE)         m_CurrSceneName = "GameOverScene";
-        else if (Event.Act_Place == FEP_LOBY_SCENE)     m_CurrSceneName = "GameOverScene";
-        else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) m_CurrSceneName = "GameOverScene";
+        if (Event.Act_Place == FEP_LOGIN_SCENE)         m_CurrSceneName = "LoginScene";
+        else if (Event.Act_Place == FEP_LOBY_SCENE)     m_CurrSceneName = "LobyScene";
+        else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) m_CurrSceneName = "PlayGameScene";
         else if (Event.Act_Place == FEP_GAMEOVER_SCENE) m_CurrSceneName = "GameOverScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
         m_CurrScene->OnInitProperties(m_Timer);
@@ -191,6 +191,28 @@ void Framework::ProcessEvent(EVENT& Event)
             EventData->PlayedCharacterType);
     }
     break;
+
+
+    case FEC_MATCH_ENQUEUE:
+    {
+        LobyScene* loby = reinterpret_cast<LobyScene*>(Event_Act_Place);
+        loby->SetMatchStatus(true);
+    }
+    break;
+    case FEC_MATCH_DEQUEUE:
+    {
+        LobyScene* loby = reinterpret_cast<LobyScene*>(Event_Act_Place);
+        loby->SetMatchStatus(false);
+    }
+    break;
+    case FEC_ACCESS_MATCH:
+    {
+        EVENT_DATA_ACCESS_MATCH* EventData = reinterpret_cast<EVENT_DATA_ACCESS_MATCH*>(Event.Data.get());
+        LobyScene* loby = reinterpret_cast<LobyScene*>(Event_Act_Place);
+        loby->SetAccessMatch(true);
+    }
+    break;
+
     default:
         MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
         while (true);

@@ -68,6 +68,7 @@ public:
 
 class BERSERKER : public HERO
 {
+public:
 	BERSERKER(DMRoom* world, short object_id, char propensity);
 	virtual ~BERSERKER();
 	virtual void do_skill();

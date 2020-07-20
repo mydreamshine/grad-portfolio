@@ -257,6 +257,12 @@ struct EVENT_DATA_SENDING_CHAT_LOG : EVENT_DATA
 	std::wstring Message;
 };
 
+struct EVENT_DATA_TRY_MATCH_LOGIN : EVENT_DATA
+{
+	char character_type;
+	std::wstring user_name;
+};
+
 namespace CharacterSpeed
 {
 	constexpr float Warrior_Speed = 360.0f;
@@ -265,6 +271,12 @@ struct EVENT_DATA_MOVE_INFO : EVENT_DATA
 {
 	float MoveDirection_Yaw_angle;
 };
+
+struct EVENT_DATA_ACCESS_MATCH : EVENT_DATA
+{
+	int room_id;
+};
+
 
 #pragma pack(pop)
 
@@ -336,44 +348,88 @@ struct TIME_EVENT : EVENT
 
 ////////////////////////////////////// 이벤트 커맨드 //////////////////////////////////////
 //// Framework Event Command (Framework 외부에서 발생한 이벤트) ////
-#define FEC_CHANGE_SCENE                        0x00
+enum FEC {
+    FEC_CHANGE_SCENE,
 
-// Scene Object Ref
-#define FEC_SPAWN_PLAYER                        0x01
-#define FEC_SPAWN_NORMAL_ATTACK_OBJ             0x02
-#define FEC_SPAWN_SKILL_OBJ                     0x03
-#define FEC_SPAWN_EFFECT_OBJ                    0x04
-#define FEC_SET_TRANSFORM_WORLD_OBJECT          0x05
-#define FEC_SET_CHARACTER_MOTION                0x06
-#define FEC_SET_PLAYER_STATE                    0x07
-#define FEC_UPDATE_POISON_FOG_DEACT_AREA        0x08
-#define FEC_DEACTIVATE_OBJ                      0x09
+    // Scene Object Ref
+    FEC_SPAWN_PLAYER,
+    FEC_SPAWN_NORMAL_ATTACK_OBJ,
+    FEC_SPAWN_SKILL_OBJ,
+    FEC_SPAWN_EFFECT_OBJ,
+    FEC_SET_TRANSFORM_WORLD_OBJECT,
+    FEC_SET_CHARACTER_MOTION,
+    FEC_SET_PLAYER_STATE,
+    FEC_UPDATE_POISON_FOG_DEACT_AREA,
+    FEC_DEACTIVATE_OBJ,
 
-// UI Info Ref
-#define FEC_SET_USER_INFO                       0x0A
-#define FEC_SET_KDA_SCORE                       0x0B
-#define FEC_SET_KILL_LOG                        0x0C
-#define FEC_SET_CHAT_LOG                        0x0D
-#define FEC_SET_GAME_PLAY_TIME_LIMIT            0x0E
-#define FEC_SET_PLAYER_HP                       0x0F
-#define FEC_SET_MATCH_STATISTIC_INFO            0x10
-////////////////////////////////////////////////////////////////////
+    // UI Info Ref
+    FEC_SET_USER_INFO,
+    FEC_SET_KDA_SCORE,
+    FEC_SET_KILL_LOG,
+    FEC_SET_CHAT_LOG,
+    FEC_SET_GAME_PLAY_TIME_LIMIT,
+    FEC_SET_PLAYER_HP,
+    FEC_SET_MATCH_STATISTIC_INFO,
 
-//// Framework Event Command (Framework 내부에서 발생한 이벤트) /////
-#define FEC_TRY_LOGIN                           0x11
-#define FEC_GET_USER_INFO                       0x12
-#define FEC_TRY_GAME_MATCHING                   0x13
-#define FEC_SEND_CHAT_LOG                       0x14
-#define FEC_TRY_MOVE_CHARACTER                  0x15
-#define FEC_TRY_MOVESTOP_CHARACTER              0x16
-#define FEC_TRY_NORMAL_ATTACK                   0x17
-#define FEC_TRY_USE_SKILL                       0x18
-#define FEC_DONE_CHARACTER_MOTION               0x19
-#define FEC_ACTIVATE_ANIM_NOTIFY                0x1A
-#define FEC_SPAWN_PICKING_EFFECT_OBJ            0x1B // 현재 클라이언트 화면에서만 스폰
-#define FEC_TRY_RETURN_LOBY                     0x1C
-/////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////
+	// For lobby.
+	FEC_MATCH_ENQUEUE,
+	FEC_MATCH_DEQUEUE,
+	FEC_ACCESS_MATCH,
+	FEC_TRY_MATCH_LOGIN,
+    ////////////////////////////////////////////////////////////////////
+
+    //// Framework Event Command (Framework 내부에서 발생한 이벤트) /////
+    FEC_TRY_LOBBY_LOGIN,
+    FEC_GET_USER_INFO,
+    FEC_TRY_GAME_MATCHING,
+    FEC_SEND_CHAT_LOG,
+    FEC_TRY_MOVE_CHARACTER,
+    FEC_TRY_MOVESTOP_CHARACTER,
+    FEC_TRY_NORMAL_ATTACK,
+    FEC_TRY_USE_SKILL,
+    FEC_DONE_CHARACTER_MOTION,
+    FEC_ACTIVATE_ANIM_NOTIFY,
+    FEC_SPAWN_PICKING_EFFECT_OBJ, //현재 클라이언트 화면에서만 스폰
+    FEC_TRY_RETURN_LOBY
+};
+//#define FEC_CHANGE_SCENE                        0x00
+
+//// Scene Object Ref
+//#define FEC_SPAWN_PLAYER                        0x01
+//#define FEC_SPAWN_NORMAL_ATTACK_OBJ             0x02
+//#define FEC_SPAWN_SKILL_OBJ                     0x03
+//#define FEC_SPAWN_EFFECT_OBJ                    0x04
+//#define FEC_SET_TRANSFORM_WORLD_OBJECT          0x05
+//#define FEC_SET_CHARACTER_MOTION                0x06
+//#define FEC_SET_PLAYER_STATE                    0x07
+//#define FEC_UPDATE_POISON_FOG_DEACT_AREA        0x08
+//#define FEC_DEACTIVATE_OBJ                      0x09
+//
+//// UI Info Ref
+//#define FEC_SET_USER_INFO                       0x0A
+//#define FEC_SET_KDA_SCORE                       0x0B
+//#define FEC_SET_KILL_LOG                        0x0C
+//#define FEC_SET_CHAT_LOG                        0x0D
+//#define FEC_SET_GAME_PLAY_TIME_LIMIT            0x0E
+//#define FEC_SET_PLAYER_HP                       0x0F
+//#define FEC_SET_MATCH_STATISTIC_INFO            0x10
+//////////////////////////////////////////////////////////////////////
+//
+////// Framework Event Command (Framework 내부에서 발생한 이벤트) /////
+//#define FEC_TRY_LOGIN                           0x11
+//#define FEC_GET_USER_INFO                       0x12
+//#define FEC_TRY_GAME_MATCHING                   0x13
+//#define FEC_SEND_CHAT_LOG                       0x14
+//#define FEC_TRY_MOVE_CHARACTER                  0x15
+//#define FEC_TRY_MOVESTOP_CHARACTER              0x16
+//#define FEC_TRY_NORMAL_ATTACK                   0x17
+//#define FEC_TRY_USE_SKILL                       0x18
+//#define FEC_DONE_CHARACTER_MOTION               0x19
+//#define FEC_ACTIVATE_ANIM_NOTIFY                0x1A
+//#define FEC_SPAWN_PICKING_EFFECT_OBJ            0x1B // 현재 클라이언트 화면에서만 스폰
+//#define FEC_TRY_RETURN_LOBY                     0x1C
+///////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -602,7 +658,7 @@ public:
 	void ReservateEvent_TryLogin(std::queue<std::unique_ptr<EVENT>>& Events,
 		std::wstring ID, std::wstring Password)
 	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOGIN_SCENE, FEC_TRY_LOGIN);
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOGIN_SCENE, FEC_TRY_LOBBY_LOGIN);
 		auto newEventData = std::make_unique<EVENT_DATA_LOGIN_INFO>();
 		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::LOGIN_INFO;
 		newEventData->ID = ID;
@@ -715,6 +771,37 @@ public:
 	void ReservateEvent_TryReturnLoby(std::queue<std::unique_ptr<EVENT>>& Events)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_GAMEOVER_SCENE, FEC_TRY_RETURN_LOBY);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_MatchEnqueue(std::queue<std::unique_ptr<EVENT>>& Events)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_MATCH_ENQUEUE);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_MatchDequeue(std::queue<std::unique_ptr<EVENT>>& Events)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_MATCH_DEQUEUE);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_AccessMatch(std::queue<std::unique_ptr<EVENT>>& Events, int room_id)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_ACCESS_MATCH);
+		auto newEventData = std::make_unique<EVENT_DATA_ACCESS_MATCH>();
+		newEventData->room_id = room_id;
+		newEvent->Data = std::move(newEventData);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_TryMatchLogin(std::queue<std::unique_ptr<EVENT>>& Events, std::wstring user_name, char character_type)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_LOBY_SCENE, FEC_TRY_MATCH_LOGIN);
+		auto newEventData = std::make_unique<EVENT_DATA_TRY_MATCH_LOGIN>();
+		newEventData->character_type = character_type;
+		newEventData->user_name = user_name;
+		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}
 };

@@ -40,6 +40,10 @@ public:
     void SetUserInfo(std::wstring UserName, int UserRank);
     // UserName, Message
     void SetChatLog(std::wstring UserName, std::wstring Message);
+    // Set match status.
+    void SetMatchStatus(bool status);
+    // Set match status.
+    void SetAccessMatch(bool status);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private:
@@ -67,4 +71,8 @@ private:
     bool OnceGetUserInfo = true;
     bool OnceTryGameMatching = false;
     bool OnceSendChatLog = false;
+    bool OnceAccessMatch = false;
+
+    //TestFunc.
+    bool OnceAccessBattleDirectly = false;
 };

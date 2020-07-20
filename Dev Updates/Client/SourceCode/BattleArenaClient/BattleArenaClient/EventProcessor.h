@@ -4,29 +4,37 @@
 #include <list>
 #include "FrameworkEvent.h"
 #include "../../../../Streaming/Streaming_Server/Streaming_Server/packet_struct.h"
+#include "..\..\..\..\Server\Common\NWMODULE.h"
 
+constexpr int CLIENT_BUFFER_SIZE = 1024;
 class EventProcessor
 {
 public:
-    std::queue<std::unique_ptr<EVENT>>& GetExternalEvents() { return m_ExternalEvents; }
+    std::queue<std::unique_ptr<EVENT>>& GetExternalEvents() { 
+        return m_ExternalEvents; 
+    }
 
     void EventToPacket(std::unique_ptr<packet_inheritance>& newPacket, EVENT& Event)
     {
         switch (Event.Command)
         {
-        case FEC_TRY_LOGIN:
+        case FEC_TRY_LOBBY_LOGIN:
         {
             EVENT_DATA_LOGIN_INFO* EventData = reinterpret_cast<EVENT_DATA_LOGIN_INFO*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_login>(
                 (const wchar_t*)EventData->ID.c_str(), (int)EventData->ID.size(),
                 (const wchar_t*)EventData->Password.c_str(), (int)EventData->Password.size());
+            nw_module.connect_lobby(0);
         }
             break;
+
         case FEC_GET_USER_INFO:
         {
             newPacket = std::make_unique<sscs_packet_request_user_info>(m_ClientID);
         }
             break;
+
+
         case FEC_TRY_GAME_MATCHING:
         {
             EVENT_DATA_GAME_MATCHING* EventData = reinterpret_cast<EVENT_DATA_GAME_MATCHING*>(Event.Data.get());
@@ -93,6 +101,15 @@ public:
             newPacket = std::make_unique<sscs_try_return_lobby>(m_ClientID);
         }
             break;
+
+        case FEC_TRY_MATCH_LOGIN: {
+            EVENT_DATA_TRY_MATCH_LOGIN* EventData = reinterpret_cast<EVENT_DATA_TRY_MATCH_LOGIN*>(Event.Data.get());
+            newPacket = std::make_unique<sscs_packet_try_match_login>(room_id, EventData->character_type,
+                (const wchar_t*)EventData->user_name.c_str());
+            nw_module.connect_battle(0);
+        }
+            break;
+
         default:
             MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
             while (true);
@@ -100,7 +117,7 @@ public:
         }
     }
 
-    void PacketToEvent(std::unique_ptr<EVENT>& newEvent, packet_inheritance* packet)
+    void PacketToEvent(packet_inheritance* packet)
     {
         switch (packet->type)
         {
@@ -120,13 +137,14 @@ public:
         case CSSS_SPAWN_PLAYER:
         {
             auto packetData = reinterpret_cast<csss_packet_spawn_player*>(packet);
+            bool is_main = packetData->object_id == m_ClientID;
             EventManager eventManager;
             eventManager.ReservateEvent_SpawnPlayer(m_ExternalEvents,
                 packetData->object_id, packetData->user_name, (CHARACTER_TYPE)packetData->character_type,
                 { packetData->scale_x, packetData->scale_y, packetData->scale_z },
                 { packetData->rotation_euler_x, packetData->rotation_euler_y, packetData->rotation_euler_z },
                 { packetData->position_x, packetData->position_y, packetData->position_z },
-                (OBJECT_PROPENSITY)packetData->propensity, packetData->is_main_character);
+                (OBJECT_PROPENSITY)packetData->propensity, is_main);
         }
         break;
         case CSSS_SPAWN_NORMAL_ATTACK_OBJ:
@@ -268,6 +286,31 @@ public:
                 (CHARACTER_TYPE)packetData->played_character_type);
         }
         break;
+
+        case CSSS_MATCH_ENQUEUE:
+        {
+            EventManager eventManager;
+            eventManager.ReservateEvent_MatchEnqueue(m_ExternalEvents);
+        }
+        break;
+
+        case CSSS_MATCH_DEQUEUE:
+        {
+            EventManager eventManager;
+            eventManager.ReservateEvent_MatchDequeue(m_ExternalEvents);
+        }
+        break;
+
+        case CSSS_ACCESS_MATCH:
+        {
+            auto packetData = reinterpret_cast<csss_packet_access_match*>(packet);
+            room_id = packetData->room_id;
+            nw_module.connect_battle(0);
+            EventManager eventManager;
+            eventManager.ReservateEvent_AccessMatch(m_ExternalEvents, packetData->room_id);
+            break;
+        }
+
         default:
             MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
             while (true);
@@ -275,7 +318,7 @@ public:
         }
     }
 
-    void ProcessGeneratedEvents(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, std::queue<std::unique_ptr<packet_inheritance>>& packetList)
+    void ProcessGeneratedEvents(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
     {
         std::unique_ptr<EVENT> Event = nullptr;
         while (GeneratedEvents.size() != 0)
@@ -293,28 +336,26 @@ public:
             {
                 std::unique_ptr<packet_inheritance> newPacket = nullptr;
                 EventProcessor::EventToPacket(newPacket, *Event);
-                if (newPacket != nullptr) packetList.push(std::move(newPacket));
+                if (newPacket != nullptr) 
+                    nw_module.send_packet(newPacket.get());
             }
             Event = nullptr;
         }
     }
 
-    void GenerateExternalEventsFrom(std::queue<std::unique_ptr<packet_inheritance>>& packetList)
+    void GenerateExternalEventsFrom()
     {
-        std::unique_ptr<packet_inheritance> Packet = nullptr;
-        while (packetList.size() != 0)
-        {
-            Packet = std::move(packetList.front());
-            packetList.pop();
-
-            std::unique_ptr<EVENT> newEvent = nullptr;
-            EventProcessor::PacketToEvent(newEvent, Packet.get());
-            if (newEvent != nullptr) m_ExternalEvents.push(std::move(newEvent));
-        }
+        nw_module.update();
     }
+
+    EventProcessor() {
+        for (int i = 0; i < CSSS_PACKET_COUNT; ++i)
+            nw_module.enroll_callback(i, &EventProcessor::PacketToEvent);
+    };
 
 private:
     short m_ClientID = 0;
+    int room_id = 0;
     std::queue<std::unique_ptr<EVENT>> m_ExternalEvents;
+    NWMODULE<EventProcessor> nw_module{ *this, CLIENT_BUFFER_SIZE };
 };
-

@@ -1,7 +1,6 @@
 #pragma comment(lib, "ws2_32")
 #include "BATTLESERVER.h"
 #include <iostream>
-#include "..//..//LobbyServer/LobbyServer/lobby_protocol.h"
 
 
 using namespace std;
@@ -60,6 +59,7 @@ namespace BattleArena {
 			error_display("Error at Listen()", WSAGetLastError());
 		wprintf(L" Done.\n");
 
+#ifndef TEST_FIELD
 		wprintf(L"Waiting LobbyServer...");
 		CSOCKADDR_IN LobbyAddr{};
 		m_Lobby.socket = accept(m_listenSocket, LobbyAddr.getSockAddr(), LobbyAddr.len());
@@ -68,6 +68,8 @@ namespace BattleArena {
 		m_Lobby.set_recv();
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_Lobby.socket), m_iocp, reinterpret_cast<ULONG_PTR>(&m_Lobby), 0);
 		wprintf(L" Done.\n");
+#endif
+		
 	}
 	void BATTLESERVER::InitThreads()
 	{
@@ -85,6 +87,12 @@ namespace BattleArena {
 			roomList.emplace_back(i);
 			m_Rooms[i] = nullptr;
 		}
+
+#ifdef TEST_FIELD
+		m_Rooms[0] = make_game_mode(GAMEMODE_DM);
+		m_Rooms[0]->init();
+#endif
+
 		roomListLock.unlock();
 		wprintf(L" Done.\n");
 	}
@@ -145,7 +153,7 @@ namespace BattleArena {
 			case EV_UPDATE:
 			{
 				duration<float> fElapsedTime { high_resolution_clock::now() - m_Rooms[key]->last_update_time };
-				wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
+				//wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
 				//if game is done.
 				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
@@ -176,7 +184,7 @@ namespace BattleArena {
 	{
 		std::wcout << L"[CLIENT - " << reinterpret_cast<int>(client) << L"] Disconnected" << std::endl;
 		if (client->room != nullptr)
-			client->room->disconnect(client);
+			client->room->disconnect(client->socket);
 		if (client->socket != INVALID_SOCKET) {
 			closesocket(client->socket);
 			client->socket = INVALID_SOCKET;
@@ -231,23 +239,20 @@ namespace BattleArena {
 	}
 	void BATTLESERVER::send_packet_default(CLIENT* client, int TYPE)
 	{
-		common_default_packet cdp;
+		packet_inheritance cdp;
 		cdp.size = sizeof(cdp);
 		cdp.type = TYPE;
 		send_packet(client, &cdp);
 	}
 	void BATTLESERVER::send_packet_response_room(int room_id)
 	{
-		bs_packet_response_room packet;
-		packet.cdp.size = sizeof(packet);
-		packet.cdp.type = BS_PACKET_RESPONSE_ROOM;
-		packet.room_id = room_id;
+		bs_packet_response_room packet{ room_id };
 		send_packet(&m_Lobby, &packet);
 	}
 
 	void BATTLESERVER::ProcessLobbyPacket(void* buffer)
 	{
-		common_default_packet* packet = reinterpret_cast<common_default_packet*>(buffer);
+		packet_inheritance* packet = reinterpret_cast<packet_inheritance*>(buffer);
 		switch (packet->type)
 		{
 		case SB_PACKET_REQUEST_ROOM: {
@@ -270,16 +275,16 @@ namespace BattleArena {
 	}
 	void BATTLESERVER::ProcessAuthoPacket(CLIENT* client, void* buffer)
 	{
-		common_default_packet* pk = reinterpret_cast<common_default_packet*>(buffer);
+		packet_inheritance* pk = reinterpret_cast<packet_inheritance*>(buffer);
 		switch (pk->type)
 		{
-		case CB_PACKET_REQUEST_LOGIN: {
-			cb_packet_request_login* packet = reinterpret_cast<cb_packet_request_login*>(buffer);
+		case SSCS_TRY_MATCH_LOGIN: {
+			sscs_packet_try_match_login* packet = reinterpret_cast<sscs_packet_try_match_login*>(buffer);
 			client->recv_over.set_event(EV_RECV);
 			client->room = m_Rooms[packet->room_id];
 
 			//if all users are Connected, Start Game
-			if (true == m_Rooms[packet->room_id]->regist(client)) {
+			if (true == m_Rooms[packet->room_id]->regist(client->socket, client->recv_over.data())) {
 				wprintf(L"[ROOM %d] - GAME START\n", packet->room_id);
 				m_Rooms[packet->room_id]->last_update_time = high_resolution_clock::now();
 				m_Rooms[packet->room_id]->start();
@@ -320,8 +325,9 @@ namespace BattleArena {
 	{
 		ROOM* newgame = nullptr;
 		switch (mode) {
-		case GAMEMODE_NGP:
+		default:
 			newgame = new DMRoom{};
+			break;
 		}
 		return newgame;
 	}

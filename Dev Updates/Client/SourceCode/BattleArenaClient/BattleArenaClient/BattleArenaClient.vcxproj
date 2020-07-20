@@ -157,7 +157,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\Server\Common\csockaddr_in.cpp" />
     <ClCompile Include="..\..\..\..\Server\Common\NWMODULE.cpp" />
+    <ClCompile Include="..\..\..\..\Server\Common\OVER_EX.cpp" />
+    <ClCompile Include="..\..\..\..\Server\Common\PACKET_BUFFER.cpp" />
+    <ClCompile Include="..\..\..\..\Server\Common\PACKET_VECTOR.cpp" />
     <ClCompile Include="Framework.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -221,7 +225,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\Server\Common\CSOCKADDR_IN.h" />
     <ClInclude Include="..\..\..\..\Server\Common\NWMODULE.h" />
+    <ClInclude Include="..\..\..\..\Server\Common\OVER_EX.h" />
+    <ClInclude Include="..\..\..\..\Server\Common\PACKET_BUFFER.h" />
+    <ClInclude Include="..\..\..\..\Server\Common\PACKET_VECTOR.h" />
+    <ClInclude Include="..\..\..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h" />
     <ClInclude Include="EventProcessor.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="Common\FileLoader\DDSLoader.h" />
