@@ -412,20 +412,20 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
     std::vector<std::string> anim_paths;
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
 
     model_loader.ImportingAllMeshAsSkinned(true);
 
     mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Male Knight 01.fbx";
     anim_paths = {
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Attack Action - Sword And Shield Slash (total 46Frmes).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Dieing Action - Death Crouching Headshot Front (total 58Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Idle Action - Sword And Shield Idle (total 111Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Impact Action - Sword And Shield Impact (total 22Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action - Sword And Shield Casting (total 45Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action - Sword And Shield Run (total 27Frames).fbx" };
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Attack Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Dieing Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Idle Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Impact Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
 
     aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
     ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], KnightModelBoundingBox);

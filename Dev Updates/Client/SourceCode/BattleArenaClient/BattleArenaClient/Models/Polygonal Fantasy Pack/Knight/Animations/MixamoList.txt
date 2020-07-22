@@ -1,0 +1,6 @@
+Attack Action - Sword And Shield Slash (total 46Frmes)
+Dieing Action - Death Crouching Headshot Front (total 58Frames)
+Idle Action - Sword And Shield Idle (total 111Frames)
+Impact Action - Sword And Shield Impact (total 22Frames)
+SkillPose Action - Sword And Shield Casting (total 45Frames)
+Walk Action - Sword And Shield Run (total 27Frames)

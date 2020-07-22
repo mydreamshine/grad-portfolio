@@ -91,7 +91,7 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 		{
 			if (key_state[0x57] || key_state[0x41] || key_state[0x53] || key_state[0x44])
 				eventManager.ReservateEvent_TryMoveCharacter(GeneratedEvents, Act_Object, yaw_angle);
-			else
+			else if(ActionType == aiModelData::AnimActionType::Walk)
 				eventManager.ReservateEvent_TryMoveStopCharacter(GeneratedEvents, Act_Object);
 		}
 	}
