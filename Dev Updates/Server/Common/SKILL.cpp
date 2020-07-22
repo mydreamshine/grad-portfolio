@@ -3,7 +3,7 @@
 #include "..\Rooms\DMRoom.h"
 #include "CharacterConfig.h"
 
-SKILL::SKILL() :
+SKILL::SKILL(DMRoom *world, short owner_id) :
 	pos(0, 0, 0),
 	rot(0, 0, 0),
 	dir(0, 0, 1.0f),
@@ -13,7 +13,9 @@ SKILL::SKILL() :
 	skill_type(0),
 	anim_time_pos(0),
 	propensity(0),
-	changed_transform(false)
+	changed_transform(false),
+	world(world),
+	owner_id(owner_id)
 {
 }
 
@@ -53,8 +55,8 @@ void SKILL::set_aabb()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-NORMAL_ATTACK::NORMAL_ATTACK() : 
-	SKILL(),
+NORMAL_ATTACK::NORMAL_ATTACK(DMRoom* world, short owner_id) :
+	SKILL(world, owner_id),
 	damage(NORMAL_ATTACK_DAMAGE)
 {
 	duration = NORMAL_ATTACK_DURATION;
@@ -75,11 +77,18 @@ void NORMAL_ATTACK::update(float elapsedTime)
 void NORMAL_ATTACK::effect(HERO* hero)
 {
 	if (hero->propensity == propensity) return;
-	if (hero->character_state == (char)PLAYER_STATE::ACT_SEMI_INVINCIBILITY) return;
+	if (hero->character_state == (char)PLAYER_STATE::ACT_SEMI_INVINCIBILITY) {
+		destroy();
+		return;
+	}
 
 	hero->set_hp(hero->hp - damage);
-	if (true == hero->is_die())
+	world->update_score_damage(owner_id, damage);
+	if (true == hero->is_die()) {
 		hero->death();
+		world->update_score_kill(owner_id);
+		world->update_score_death(hero->object_id);
+	}
 	else
 		hero->impact();
 
@@ -93,7 +102,7 @@ void NORMAL_ATTACK::collision_wall()
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-HOLY_AREA::HOLY_AREA() : SKILL()
+HOLY_AREA::HOLY_AREA(DMRoom* world, short owner_id) : SKILL(world, owner_id)
 {
 	duration = HOLY_AREA_DURATION;
 	effect_time = HOLY_AREA_EFFECT_RATE;
@@ -118,12 +127,13 @@ void HOLY_AREA::effect(HERO* hero)
 
 	if (effect_time >= HOLY_AREA_EFFECT_RATE) {
 		hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
+		world->update_score_heal(owner_id, HOLY_AREA_HEAL_AMOUNT);
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-FURY_ROAR::FURY_ROAR() : SKILL()
+FURY_ROAR::FURY_ROAR(DMRoom* world, short owner_id) : SKILL(world, owner_id)
 {
 	duration = FURY_ROAR_DURATION;
 }
@@ -135,7 +145,7 @@ FURY_ROAR::~FURY_ROAR()
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-STELTH::STELTH() : SKILL()
+STELTH::STELTH(DMRoom* world, short owner_id) : SKILL(world, owner_id)
 {
 	duration = STELTH_DURATION;
 }

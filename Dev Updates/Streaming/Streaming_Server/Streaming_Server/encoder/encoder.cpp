@@ -45,7 +45,8 @@ ENCODER::ENCODER(int width, int height, int bit_rate, int frame_rate) :
     width(width),
     height(height),
     bit_rate(bit_rate),
-    frame_rate(frame_rate)
+    frame_rate(frame_rate),
+    packet_size(0)
 {
 	av_log_set_level(AV_LOG_ERROR);
     internal_buffer = new char[3 * 1024 * 1024]; //Internal Buffer for Encoded data - 3MB
@@ -114,9 +115,9 @@ void ENCODER::encode(const char* buffer)
     }
 }
 
-int ENCODER::flush(char* buffer)
+int ENCODER::flush()
 {
-    int total = 0;
+    packet_size = 0;
     int ret = avcodec_send_frame(c, NULL);
     char* pot = internal_buffer;
     if (ret < 0) {
@@ -134,11 +135,21 @@ int ENCODER::flush(char* buffer)
         }
 
         memcpy(pot, pkt->data, pkt->size);
-        total += pkt->size;
+        packet_size += pkt->size;
         pot   += pkt->size;
         av_packet_unref(pkt);
     }
-    memcpy(buffer, internal_buffer, total);
+    
     alloc_codec_context(); // re-generate codec context for new encoding
-    return total;
+    return 0;
+}
+
+char* ENCODER::buffer()
+{
+    return internal_buffer;
+}
+
+int ENCODER::size()
+{
+    return packet_size;
 }

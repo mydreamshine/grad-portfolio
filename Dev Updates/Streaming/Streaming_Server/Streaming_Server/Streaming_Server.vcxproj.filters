@@ -49,6 +49,9 @@
     <Filter Include="Client\Common\Utilities\libpng">
       <UniqueIdentifier>{201f4efa-694a-46e7-a0de-85f6d0981959}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{84e9f92f-53fa-4f8d-b906-5591ec2330f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="encoder\encoder.cpp">
@@ -161,6 +164,21 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.cpp">
       <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Server\Common\OVER_EX.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Server\Common\csockaddr_in.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Server\Common\PACKET_BUFFER.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Server\Common\PACKET_VECTOR.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Server\Common\NWMODULE.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -322,6 +340,21 @@
     </ClInclude>
     <ClInclude Include="packet_struct.h">
       <Filter>Streaming</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Server\Common\OVER_EX.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Server\Common\CSOCKADDR_IN.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Server\Common\PACKET_BUFFER.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Server\Common\PACKET_VECTOR.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Server\Common\NWMODULE.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -143,8 +143,10 @@ void RecvFunc()
 				UINT copyBytes = needBytes - savedSize;
 				memcpy(savedPointer, receivedPointer, copyBytes);
 
-				if(needBytes == 4)
+				if (needBytes == 4) {
 					needBytes = *reinterpret_cast<int*>(savedPacket);
+					continue;
+				}
 				else {
 					//Process Packet
 					canRender = true;
@@ -178,6 +180,7 @@ void RecvFunc()
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
 			SDL_RenderPresent(renderer);
+			canRender = false;
 		}
 	}
 }

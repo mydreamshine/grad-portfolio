@@ -5,10 +5,12 @@ using namespace DirectX;
 
 
 class HERO;
+class DMRoom;
+
 class SKILL
 {
 public:
-	SKILL();
+	SKILL(DMRoom* world, short owner_id);
 	virtual ~SKILL();
 	bool is_die();
 	void destroy();
@@ -16,6 +18,8 @@ public:
 	virtual void effect(HERO* hero);
 	virtual void collision_wall();
 
+	DMRoom* world;
+	short owner_id;
 	Vector3d pos;
 	Vector3d rot;
 	Vector3d dir;
@@ -34,7 +38,7 @@ private:
 class NORMAL_ATTACK : public SKILL 
 {
 public:
-	NORMAL_ATTACK();
+	NORMAL_ATTACK(DMRoom* world, short owner_id);
 	virtual ~NORMAL_ATTACK();
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
@@ -45,7 +49,7 @@ public:
 class HOLY_AREA : public SKILL
 {
 public:
-	HOLY_AREA();
+	HOLY_AREA(DMRoom* world, short owner_id);
 	virtual ~HOLY_AREA();
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
@@ -57,13 +61,13 @@ private:
 class FURY_ROAR : public SKILL
 {
 public:
-	FURY_ROAR();
+	FURY_ROAR(DMRoom* world, short owner_id);
 	virtual ~FURY_ROAR();
 };
 
 class STELTH : public SKILL
 {
 public:
-	STELTH();
+	STELTH(DMRoom* world, short owner_id);
 	virtual ~STELTH();
 };

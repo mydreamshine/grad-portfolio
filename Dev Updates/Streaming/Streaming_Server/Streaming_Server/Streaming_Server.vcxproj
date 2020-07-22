@@ -187,6 +187,11 @@
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.cpp" />
+    <ClCompile Include="..\..\..\Server\Common\csockaddr_in.cpp" />
+    <ClCompile Include="..\..\..\Server\Common\NWMODULE.cpp" />
+    <ClCompile Include="..\..\..\Server\Common\OVER_EX.cpp" />
+    <ClCompile Include="..\..\..\Server\Common\PACKET_BUFFER.cpp" />
+    <ClCompile Include="..\..\..\Server\Common\PACKET_VECTOR.cpp" />
     <ClCompile Include="encoder\encoder.cpp" />
     <ClCompile Include="ID_POOLER.cpp" />
     <ClCompile Include="source.cpp" />
@@ -241,6 +246,11 @@
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.h" />
+    <ClInclude Include="..\..\..\Server\Common\CSOCKADDR_IN.h" />
+    <ClInclude Include="..\..\..\Server\Common\NWMODULE.h" />
+    <ClInclude Include="..\..\..\Server\Common\OVER_EX.h" />
+    <ClInclude Include="..\..\..\Server\Common\PACKET_BUFFER.h" />
+    <ClInclude Include="..\..\..\Server\Common\PACKET_VECTOR.h" />
     <ClInclude Include="encoder\encoder.h" />
     <ClInclude Include="Global_Config.h" />
     <ClInclude Include="ID_POOLER.h" />

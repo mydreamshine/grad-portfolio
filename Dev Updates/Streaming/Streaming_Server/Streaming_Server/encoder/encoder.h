@@ -18,6 +18,7 @@ private:
     AVFrame* frame;
     AVPacket* pkt;
     char* internal_buffer;
+    int packet_size;
     struct SwsContext* sws_ctx;
 
     int width;
@@ -31,5 +32,7 @@ public:
     ENCODER(int width, int height, int bit_rate, int frame_rate);
     ~ENCODER();
     void encode(const char* buffer);
-    int flush(char* buffer);
+    int flush();
+    char* buffer();
+    int size();
 };

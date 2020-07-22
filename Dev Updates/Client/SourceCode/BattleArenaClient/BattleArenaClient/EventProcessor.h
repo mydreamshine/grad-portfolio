@@ -24,7 +24,7 @@ public:
             newPacket = std::make_unique<sscs_packet_try_login>(
                 (const wchar_t*)EventData->ID.c_str(), (int)EventData->ID.size(),
                 (const wchar_t*)EventData->Password.c_str(), (int)EventData->Password.size());
-            nw_module.connect_lobby(0);
+            nw_module.connect_lobby();
         }
             break;
 
@@ -106,7 +106,7 @@ public:
             EVENT_DATA_TRY_MATCH_LOGIN* EventData = reinterpret_cast<EVENT_DATA_TRY_MATCH_LOGIN*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_match_login>(room_id, EventData->character_type,
                 (const wchar_t*)EventData->user_name.c_str());
-            nw_module.connect_battle(0);
+            nw_module.connect_battle();
         }
             break;
 
@@ -305,7 +305,7 @@ public:
         {
             auto packetData = reinterpret_cast<csss_packet_access_match*>(packet);
             room_id = packetData->room_id;
-            nw_module.connect_battle(0);
+            nw_module.connect_battle();
             EventManager eventManager;
             eventManager.ReservateEvent_AccessMatch(m_ExternalEvents, packetData->room_id);
             break;
@@ -353,9 +353,14 @@ public:
             nw_module.enroll_callback(i, &EventProcessor::PacketToEvent);
     };
 
+    void disconnect() {
+        nw_module.disconnect_lobby();
+        nw_module.disconnect_battle();
+    }
+
+    NWMODULE<EventProcessor> nw_module{ *this, CLIENT_BUFFER_SIZE };
 private:
     short m_ClientID = 0;
     int room_id = 0;
     std::queue<std::unique_ptr<EVENT>> m_ExternalEvents;
-    NWMODULE<EventProcessor> nw_module{ *this, CLIENT_BUFFER_SIZE };
 };

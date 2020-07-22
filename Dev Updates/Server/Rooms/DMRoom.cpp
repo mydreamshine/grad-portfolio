@@ -12,8 +12,10 @@ DMRoom::DMRoom() :
 	packets.clear();
 	event_data.clear();
 	info_data.clear();
-	for (int i = 0; i < max_player; ++i)
+	for (int i = 0; i < max_player; ++i) {
 		m_heros[i] = nullptr;
+		sockets[i] = INVALID_SOCKET;
+	}
 }
 
 DMRoom::~DMRoom()
@@ -35,7 +37,7 @@ bool DMRoom::regist(SOCKET client, void* buffer)
 
 	socket_lock.lock();
 	short cur_player = player_num++;
-	sockets.emplace(client);
+	sockets[cur_player] = client;
 	csss_packet_login_ok login_ok{ cur_player };
 	send_packet(client, &login_ok, login_ok.size);
 
@@ -57,7 +59,9 @@ void DMRoom::disconnect(SOCKET client)
 {
 	socket_lock.lock();
 	--player_num;
-	sockets.erase(client);
+	auto iter = sockets.find(client);
+	if (iter != sockets.end())
+		sockets.erase(iter);
 	socket_lock.unlock();
 }
 
@@ -232,8 +236,8 @@ void DMRoom::send_game_state()
 	//Send data to clients.
 	event_data.emplace_back(info_data.data, info_data.len);
 	socket_lock.lock();
-	for (const SOCKET& socket : sockets) {
-		send_packet(socket, event_data.data, event_data.len);
+	for (const auto& socket : sockets) {
+		send_packet(socket.second, event_data.data, event_data.len);
 	}
 	socket_lock.unlock();
 
@@ -328,4 +332,40 @@ void DMRoom::process_activate_anim_notify(void* packet)
 		m_heros[data->client_id]->do_skill();
 		break;
 	}
+}
+
+void DMRoom::update_score_packet(short obj_id)
+{
+	csss_packet_set_kda_score packet{
+		m_score[obj_id].count_kill,
+		m_score[obj_id].count_death,
+		m_score[obj_id].count_assistance
+	};
+
+	socket_lock.lock();
+	if (sockets[obj_id] != INVALID_SOCKET)
+		send_packet(sockets[obj_id], &packet, packet.size);
+	socket_lock.unlock();
+}
+
+void DMRoom::update_score_damage(short obj_id, int damage)
+{
+	m_score[obj_id].totalscore_damage += damage;
+}
+
+void DMRoom::update_score_heal(short obj_id, int heal)
+{
+	m_score[obj_id].totalscore_heal += heal;
+}
+
+void DMRoom::update_score_kill(short obj_id)
+{
+	m_score[obj_id].count_kill += 1;
+	update_score_packet(obj_id);
+}
+
+void DMRoom::update_score_death(short obj_id)
+{
+	m_score[obj_id].count_death += 1;
+	update_score_packet(obj_id);
 }

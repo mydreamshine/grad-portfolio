@@ -51,11 +51,11 @@ enum SSCS_PACKET {
 
 enum CSSS_PACKET {
 	CSSS_LOGIN_OK,					//Done. but need to check player's hero pick.
-	CSSS_LOGIN_FAIL,
-	CSSS_MATCH_ENQUEUE,
-	CSSS_MATCH_DEQUEUE,
-	CSSS_ACCESS_MATCH,
-	CSSS_CHANGE_SCENE,				//Need check Type.
+	CSSS_LOGIN_FAIL,				//Done.
+	CSSS_MATCH_ENQUEUE,				//Done.
+	CSSS_MATCH_DEQUEUE,				//Done.
+	CSSS_ACCESS_MATCH,				//Done.
+	CSSS_CHANGE_SCENE,				//Done.
 	CSSS_SPAWN_PLAYER,				//Done.
 	CSSS_SPAWN_NORMAL_ATTACK_OBJ,	//Done.
 	CSSS_SPAWN_SKILL_OBJ,			//Done.

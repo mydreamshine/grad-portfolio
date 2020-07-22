@@ -24,6 +24,12 @@ public:
 	virtual bool update(float elapsedTime);
 	virtual void process_packet(CLIENT* client, int ReceivedBytes);
 
+	std::map<short, SCOREBOARD> m_score;
+	void update_score_packet(short obj_id);
+	void update_score_damage(short obj_id, int damage);
+	void update_score_heal(short obj_id, int heal);
+	void update_score_kill(short obj_id);
+	void update_score_death(short obj_id);
 private:
 	short max_player; ///< max connect user num.
 	short player_num; ///< current user num
@@ -37,9 +43,9 @@ private:
 
 	float delta_time;
 	std::mutex socket_lock;
-	std::set<SOCKET> sockets;
+	std::map<short, SOCKET> sockets;
 	std::map<short, HERO*> m_heros;
-	std::map<short, SCOREBOARD> m_score;
+	
 	int skill_uid;
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;

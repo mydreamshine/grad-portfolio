@@ -192,7 +192,7 @@ NWMODULE<T>::~NWMODULE()
 
 
 template <class T>
-bool NWMODULE<T>::connect_lobby(int iocp_key)
+bool NWMODULE<T>::connect_lobby()
 {
 	bool retval = connect_server(lobby_socket, "127.0.0.1", LOBBYSERVER_PORT);
 	if (false == retval) return retval;
@@ -201,21 +201,29 @@ bool NWMODULE<T>::connect_lobby(int iocp_key)
 		threads.emplace_back(&NWMODULE<T>::RecvLobbyThread, this);
 	else {
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(lobby_socket), iocp, iocp_key, 0);
-		//WSARecv()
-	} // WSARecv 설정, 소켓등록
+		lobby_over.reset();
+		int ret = WSARecv(lobby_socket, lobby_over.buffer(), 1, NULL,
+			&lobby_recv_flag, lobby_over.overlapped(), NULL);
+		if (0 != ret) {
+			int err_no = WSAGetLastError();
+			if (WSA_IO_PENDING != err_no)
+				error_display("WSARecv Error :", err_no);
+		}
+	}
 	return retval;
 }
 
 template<class T>
 void NWMODULE<T>::disconnect_lobby()
 {
+	if (lobby_socket == INVALID_SOCKET) return;
 	SOCKET tmp = lobby_socket;
 	lobby_socket = INVALID_SOCKET;
 	closesocket(tmp);
 }
 
 template <class T>
-bool NWMODULE<T>::connect_battle(int iocp_key)
+bool NWMODULE<T>::connect_battle()
 {
 	bool retval = connect_server(battle_socket, "127.0.0.1", BATTLESERVER_PORT);
 	if (false == retval) return retval;
@@ -224,8 +232,15 @@ bool NWMODULE<T>::connect_battle(int iocp_key)
 		threads.emplace_back(&NWMODULE<T>::RecvBattleThread, this);
 	else {
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(battle_socket), iocp, iocp_key, 0);
-		//WSARecv()
-	} // WSARecv 설정, 소켓등록
+		battle_over.reset();
+		int ret = WSARecv(battle_socket, battle_over.buffer(), 1, NULL,
+			&battle_recv_flag, battle_over.overlapped(), NULL);
+		if (0 != ret) {
+			int err_no = WSAGetLastError();
+			if (WSA_IO_PENDING != err_no)
+				error_display("WSARecv Error :", err_no);
+		}
+	}
 
 	return retval;
 }
@@ -234,6 +249,7 @@ bool NWMODULE<T>::connect_battle(int iocp_key)
 template<class T>
 void NWMODULE<T>::disconnect_battle()
 {
+	if (battle_socket == INVALID_SOCKET) return;
 	SOCKET tmp = battle_socket;
 	battle_socket = INVALID_SOCKET;
 	closesocket(tmp);
@@ -298,10 +314,15 @@ void NWMODULE<T>::notify_lobby_recv(size_t length)
 		process_disconnect(lobby_socket, lobby_buffer);
 	else {
 		packet_drain(lobby_buffer, lobby_over.data(), length);
-		//recv 한번 더
-		/*DWORD flag = 0;
+		
 		lobby_over.reset();
-		WSARecv(lobby_socket, lobby_over.buffer, 1, nullptr, &flag, lobby_over.overlapped(), nullptr);*/
+		int ret = WSARecv(lobby_socket, lobby_over.buffer(), 1, NULL,
+			&lobby_recv_flag, lobby_over.overlapped(), NULL);
+		if (0 != ret) {
+			int err_no = WSAGetLastError();
+			if (WSA_IO_PENDING != err_no)
+				error_display("WSARecv Error :", err_no);
+		}
 	}
 }
 
@@ -312,10 +333,15 @@ void NWMODULE<T>::notify_battle_recv(size_t length)
 		process_disconnect(battle_socket, battle_buffer);
 	else {
 		packet_drain(battle_buffer, battle_over.data(), length);
-		//recv 한번 더
-		/*DWORD flag = 0;
+
 		battle_over.reset();
-		WSARecv(battle_socket, battle_over.buffer, 1, nullptr, &flag, battle_over.overlapped(), nullptr);*/
+		int ret = WSARecv(battle_socket, battle_over.buffer(), 1, NULL,
+			&battle_recv_flag, battle_over.overlapped(), NULL);
+		if (0 != ret) {
+			int err_no = WSAGetLastError();
+			if (WSA_IO_PENDING != err_no)
+				error_display("WSARecv Error :", err_no);
+		}
 	}
 }
 

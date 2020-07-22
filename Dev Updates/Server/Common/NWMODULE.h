@@ -63,7 +63,7 @@ public:
 	@param iocp_key key for iocp. if there's no iocp handle, no need.
 	@return bool that connection is estalished or not.
 	*/
-	bool connect_lobby(int iocp_key);
+	bool connect_lobby();
 
 	/**
 	@brief disconnect from lobby.
@@ -75,7 +75,7 @@ public:
 	@param iocp_key key for iocp. if there's no iocp handle, no need.
 	@return bool that connection is estalished or not.
 	*/
-	bool connect_battle(int iocp_key);
+	bool connect_battle();
 
 	/**
 	@brief disconnect from battle.
@@ -117,7 +117,23 @@ public:
 	@brief reqeust client dequeue match_make pool to lobby.
 	*/
 	void match_dequeue();
+	
+	
 #endif
+
+	/**
+	@brief Set iocp envionment.
+	*/
+	void set_iocp(HANDLE iocp, int iocp_key ,int ev_send, int ev_lobby, int ev_battle)
+	{
+		this->iocp = iocp;
+		this->iocp_key = iocp_key;
+		this->ev_send = ev_send;
+		this->ev_lobby = ev_lobby;
+		this->ev_battle = ev_battle;
+		lobby_over.set_event(ev_lobby);
+		battle_over.set_event(ev_battle);
+	}
 
 private:
 	T& MainModule;									///< Main class need to attach NW MODULE.
@@ -132,6 +148,10 @@ private:
 	OVER_EX battle_over;							///< EXPENDED OVERLAPPED Structure for battle.
 	PACKET_BUFFER battle_buffer;					///< Buffer for complete packet.
 
+	DWORD lobby_recv_flag{ 0 };
+	DWORD battle_recv_flag{ 0 };
+
+	int iocp_key;
 	int ev_send;
 	int ev_lobby;
 	int ev_battle;

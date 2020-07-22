@@ -16,21 +16,15 @@
 #include "ID_POOLER.h"
 #include "Framework.h"
 #include "encoder/encoder.h"
+#include "..\..\..\Server\Common\OVER_EX.h"
 
 using namespace std;
 
 constexpr auto FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
-constexpr auto MAX_BUFFER = 100;
-constexpr auto MAX_USER = 4;
+constexpr auto MAX_USER = 10;
 
-enum EVENT_TYPE{EV_SEND, EV_RECV, EV_UPDATE, EV_ENCODE};
+enum EVENT_TYPE{EV_SEND, EV_RECV, EV_LOBBY_NOTIFY, EV_MATCH_NOTIFY, EV_UPDATE, EV_ENCODE};
 
-struct OVER_EX {
-	WSAOVERLAPPED over;
-	WSABUF	wsabuf[1];
-	char	net_buf[FRAME_DATA_SIZE];
-	EVENT_TYPE	event_type;
-};
 struct CLIENT {
 	OVER_EX *recv_over;
 	int id;
@@ -81,12 +75,8 @@ void InitializeClients()
 		clients[user_id].socket = INVALID_SOCKET;
 		clients[user_id].connect = false;
 
-		clients[user_id].recv_over = new OVER_EX;
-		memset(clients[user_id].recv_over, 0, sizeof(OVER_EX));
-		clients[user_id].recv_over->event_type = EV_RECV;
-		clients[user_id].recv_over->wsabuf->buf = clients[user_id].recv_over->net_buf;
-		clients[user_id].recv_over->wsabuf->len = sizeof(clients[user_id].recv_over->net_buf);
-
+		clients[user_id].recv_over = new OVER_EX{ EV_RECV, MAX_BUFFER_SIZE };
+		clients[user_id].FrameworkEventProcessor.nw_module.set_iocp(g_iocp, user_id, EV_SEND, EV_LOBBY_NOTIFY, EV_MATCH_NOTIFY);
 		clients[user_id].GameFramework.OnInit(0, WND_WIDTH, WND_HEIGHT, L"Framework-" + std::to_wstring(user_id), &resourceManager, &additionalAssetPath);
 		//fence_events.emplace_back(clients[user_id].GameFramework.GetFenceEvent());
 	}
@@ -95,17 +85,12 @@ void InitializeClients()
 
 void SendFramePacket(int client, BYTE* frame)
 {
-	OVER_EX* send_over = new OVER_EX;
-	::memset(send_over, 0x00, sizeof(OVER_EX));
-	send_over->event_type = EV_SEND;
-
-	int* size = (int*)send_over->net_buf;
-	*size = clients[client].encoder.flush(send_over->net_buf + 4);
-	//memcpy(send_over->net_buf, frame, FRAME_DATA_SIZE);
-
-	send_over->wsabuf[0].buf = send_over->net_buf;
-	send_over->wsabuf[0].len = *size + 4;
-	WSASend(clients[client].socket, send_over->wsabuf, 1, nullptr, 0, &send_over->over, nullptr);
+	clients[client].encoder.flush();
+	OVER_EX* send_over = new OVER_EX{ EV_SEND, (size_t)clients[client].encoder.size() + 4 };
+	int* size = (int*)send_over->data();
+	*size = clients[client].encoder.size() + 4;
+	memcpy(send_over->data() + 4, clients[client].encoder.buffer(), clients[client].encoder.size());
+	WSASend(clients[client].socket, send_over->buffer(), 1, nullptr, 0, send_over->overlapped(), nullptr);
 }
 void ProcessPacket(int client, void* packet) 
 {
@@ -149,19 +134,18 @@ void ProcessPacket(int client, void* packet)
 	}
 };
 
-
 void PostEvent(int client, EVENT_TYPE ev_type)
 {
-	OVER_EX* over_ex = new OVER_EX;
-	over_ex->event_type = ev_type;
-	PostQueuedCompletionStatus(g_iocp, 1, client, &over_ex->over);
+	OVER_EX* over_ex = new OVER_EX{ev_type};
+	PostQueuedCompletionStatus(g_iocp, 1, client, over_ex->overlapped());
 }
 
 void DisconnectPlayer(int client)
 {
-	closesocket(clients[client].socket);
 	clients[client].connect = false;
+	closesocket(clients[client].socket);
 	clients[client].GameFramework.OnInitAllSceneProperties();
+	clients[client].FrameworkEventProcessor.disconnect();
 	IdPooler.DeleteClientId(client);
 	wcout << "[CLIENT] >> [Disconnect] >> [" << client << "]" << endl;
 }
@@ -190,18 +174,18 @@ void do_worker() {
 
 		if (num_byte == 0) {
 			DisconnectPlayer((int)key);
-			if (over_ex->event_type == EV_SEND) delete over_ex;
+			if (over_ex->event_type() == EV_SEND) delete over_ex;
 			continue;
 		}
 
-		switch (over_ex->event_type)
+		switch (over_ex->event_type())
 		{
 		case EV_RECV:
 		{
-			ProcessPacket((int)key, over_ex->net_buf);
+			ProcessPacket((int)key, over_ex->data());
 			DWORD flags = 0;
-			::memset(&over_ex->over, 0x00, sizeof(WSAOVERLAPPED));
-			WSARecv(clients[key].socket, over_ex->wsabuf, 1, 0, &flags, &over_ex->over, 0);
+			over_ex->reset();
+			WSARecv(clients[key].socket, over_ex->buffer(), 1, 0, &flags, over_ex->overlapped(), 0);
 		}
 		break;
 
@@ -215,10 +199,13 @@ void do_worker() {
 				delete over_ex;
 				break;
 			}
+			
+			clients[key].FrameworkEventProcessor.GenerateExternalEventsFrom();
+			clients[key].GameFramework.ProcessEvents(clients[key].FrameworkEventProcessor.GetExternalEvents());
 			std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
 			clients[key].GameFramework.OnUpdate(GeneratedEvents);
 			clients[key].GameFramework.OnRender();
-			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents, clients[key].sscs_packetList);
+			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents);
 			delete over_ex;
 			PostEvent((int)key, EV_ENCODE);
 		}
@@ -342,9 +329,9 @@ int main()
 		PostEvent(new_id, EV_UPDATE);
 
 		//Recv µî·Ï
-		::memset(&clients[new_id].recv_over->over, 0, sizeof(WSAOVERLAPPED));
-		int ret = WSARecv(clientSocket, clients[new_id].recv_over->wsabuf, 1, NULL,
-			&flags, &(clients[new_id].recv_over->over), NULL);
+		clients[new_id].recv_over->reset();
+		int ret = WSARecv(clientSocket, clients[new_id].recv_over->buffer(), 1, NULL,
+			&flags, clients[new_id].recv_over->overlapped(), NULL);
 		if (0 != ret) {
 			int err_no = WSAGetLastError();
 			if (WSA_IO_PENDING != err_no)
