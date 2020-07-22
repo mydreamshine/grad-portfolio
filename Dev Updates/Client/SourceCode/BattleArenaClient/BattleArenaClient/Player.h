@@ -12,10 +12,12 @@ struct Player
 	std::wstring m_Name;
 
 	Object* m_CharacterObjRef = nullptr;
-	Object* m_NickNameObjRef = nullptr; // Text Object
+	Object* m_CharacterInfoTextObjRef = nullptr; // Text Object
 	Object* m_HP_BarObjRef[3] = { nullptr, nullptr, nullptr }; // 0: 테두리, 1: 증감HP Bar, 2: HP Bar
 
 	Camera m_Camera;
+
+	int m_oldHP = 0;
 
 public:
 	void SetTransform(const DirectX::XMFLOAT3& Scale, const DirectX::XMFLOAT3& RotationEuler, const DirectX::XMFLOAT3& Position);

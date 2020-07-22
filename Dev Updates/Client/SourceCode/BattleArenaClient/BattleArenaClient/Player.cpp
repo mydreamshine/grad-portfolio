@@ -33,7 +33,23 @@ void Player::SetState(PLAYER_STATE PlayerState)
 
 void Player::SetHP(int HP)
 {
+	m_oldHP = m_CharacterObjRef->HP;
 	m_CharacterObjRef->HP = HP;
+
+	CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
+	auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();
+
+	TextInfo->m_Text = m_Name + L"\nHP: ";
+	TextInfo->m_Text += std::to_wstring(m_CharacterObjRef->HP) + L"/";
+	std::wstring MaxHPText;
+	switch (CharacterType)
+	{
+	case CHARACTER_TYPE::WARRIOR:   MaxHPText = L"100"; break;
+	case CHARACTER_TYPE::BERSERKER: MaxHPText = L"150"; break;
+	case CHARACTER_TYPE::ASSASSIN:  MaxHPText = L"100"; break;
+	case CHARACTER_TYPE::PRIEST:    MaxHPText = L"80"; break;
+	}
+	TextInfo->m_Text += MaxHPText;
 }
 
 void Player::Init()
@@ -42,7 +58,7 @@ void Player::Init()
 	for (auto& obj : m_CharacterObjRef->m_Childs)
 		ObjManager.DeActivateObj(obj);
 	ObjManager.DeActivateObj(m_CharacterObjRef);
-	ObjManager.DeActivateObj(m_NickNameObjRef);
+	ObjManager.DeActivateObj(m_CharacterInfoTextObjRef);
 	for (auto& obj : m_HP_BarObjRef)
 		ObjManager.DeActivateObj(obj);
 }
@@ -219,9 +235,10 @@ void Player::UpdateCamera(CTimer& gt, float aspect)
 
 	XMFLOAT3 LookTargetWorldScale = transformInfo->m_WorldScale;
 	XMFLOAT3 LookAtPosition = transformInfo->m_WorldPosition;
-	float Scale_average = (LookTargetWorldScale.x + LookTargetWorldScale.y + LookTargetWorldScale.z) * 0.333333f;
+	// Scale 250.0f가 ZoomFactor 1이라 가정
+	float Scale_average = (LookTargetWorldScale.x / 250.0f + LookTargetWorldScale.y / 250.0f + LookTargetWorldScale.z / 250.0f) * 0.333333f;
 	float phi = 30.0f * deg2rad;
-	float rad = 1500.0f * Scale_average;
+	float rad = 3000.0f * Scale_average;
 	XMVECTOR Eye_Pos = MathHelper::SphericalToCartesian(rad, camAngle, phi);
 	Eye_Pos = XMVectorAdd(Eye_Pos, XMLoadFloat3(&LookAtPosition));
 	XMFLOAT3 EyePosition;

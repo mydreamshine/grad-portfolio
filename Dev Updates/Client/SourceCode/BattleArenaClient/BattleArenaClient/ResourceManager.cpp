@@ -273,6 +273,10 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         UILayerBacground_Meshes["UI_Layout_Skill2"]        = geoGen.CreateQuad( -80.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Skill3"]        = geoGen.CreateQuad(  30.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Skill4"]        = geoGen.CreateQuad( 140.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"] = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.11f);
+        UILayerBacground_Meshes["UI_Layout_HPBarBack"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.12f);
+
 
         m_Geometries["PlayGameSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UILayerBacground_Meshes));
@@ -480,6 +484,9 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/RightButton.png",
         m_additionalAssetPath + "UI/Layout/White_Transparency50.png",
         m_additionalAssetPath + "UI/Layout/LightGreen_Transparency50.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Dest.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Increase.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Back.png",
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/CrossTarget.png",
         m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
@@ -717,6 +724,16 @@ void ResourceManager::BuildRenderItems()
                     SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
                 else
                     SceneRitems[subMeshName]->Mat = m_Materials["LightGreen_Transparency50"].get();
+            }
+            else if (subMeshName.find("HP") != std::string::npos)
+            {
+                if (subMeshName.find("Dest") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Dest"].get();
+                else if (subMeshName.find("Increase") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Increase"].get();
+                else if (subMeshName.find("Back") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Back"].get();
+
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }

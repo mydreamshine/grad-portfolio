@@ -31,6 +31,7 @@ public:
     virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateCameras(CTimer& gt);
     void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
+    void UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players);
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
@@ -72,6 +73,7 @@ private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
     const UINT m_MaxTextObject = 8 + MAX_CHARACTER_OBJECT;
+    UINT       m_MaxUILayoutObject = 12 + MAX_CHARACTER_OBJECT;
     std::uint64_t m_EffectInstancingNum = 0;
 
     std::vector<RenderItem*> m_CharacterRitems[(int)CHARACTER_TYPE::COUNT];

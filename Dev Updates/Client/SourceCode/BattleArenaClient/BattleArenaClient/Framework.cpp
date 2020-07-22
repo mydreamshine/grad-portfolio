@@ -1040,6 +1040,7 @@ void Framework::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std
         // 오브젝트가 동일한 Geo를 갖는 렌더아이템들로 구성되어 있을 경우에만 가능.
         // 현재 애플리케이션에선 캐릭터가 이에 해당됨.
         // (나머지 오브젝트는 오브젝트당 1개의 렌더아이템만 가지고 있으므로 아래의 메소드로도 처리 가능)
+        if (obj->m_RenderItems.empty() == true) continue;
         auto& mainRitem = obj->m_RenderItems[0];
 
         m_commandList->IASetVertexBuffers(0, 1, &mainRitem->Geo->VertexBufferView());
