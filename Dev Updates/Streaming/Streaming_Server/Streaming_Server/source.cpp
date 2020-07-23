@@ -17,11 +17,12 @@
 #include "Framework.h"
 #include "encoder/encoder.h"
 #include "..\..\..\Server\Common\OVER_EX.h"
+#include <Windows.h>
 
 using namespace std;
 
 constexpr auto FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
-constexpr auto MAX_USER = 10;
+constexpr auto MAX_USER = 5;
 
 enum EVENT_TYPE{EV_SEND, EV_RECV, EV_LOBBY_NOTIFY, EV_MATCH_NOTIFY, EV_UPDATE, EV_ENCODE};
 
@@ -130,6 +131,28 @@ void ProcessPacket(int client, void* packet)
 	}
 	case TSS_MOUSE_LBUTTON_UP:
 		clients[client].GameFramework.OnKeyUp(0x01); // VK_LBUTTON
+		break;
+
+
+
+	case TSS_KEYDOWN_F1:
+		clients[client].GameFramework.OnKeyDown(VK_F1); // D
+		break;
+	case TSS_KEYDOWN_F2:
+		clients[client].GameFramework.OnKeyDown(VK_F2); // D
+		break;
+	case TSS_KEYDOWN_F3:
+		clients[client].GameFramework.OnKeyDown(VK_F3); // D
+		break;
+
+	case TSS_KEYUP_F1:
+		clients[client].GameFramework.OnKeyUp(VK_F1); // D
+		break;
+	case TSS_KEYUP_F2:
+		clients[client].GameFramework.OnKeyUp(VK_F2); // D
+		break;
+	case TSS_KEYUP_F3:
+		clients[client].GameFramework.OnKeyUp(VK_F3); // D
 		break;
 	}
 };

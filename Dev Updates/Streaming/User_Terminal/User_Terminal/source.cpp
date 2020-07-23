@@ -4,7 +4,7 @@
 #include <WS2tcpip.h>
 #include <string>
 #include <thread>
-#include "packet_struct.h"
+#include "..\..\Streaming_Server\Streaming_Server\packet_struct.h"
 
 #ifndef CLEANUP_H
 #define CLEANUP_H
@@ -230,6 +230,30 @@ void event_loop()
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
 				}
+				case SDLK_F1:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_F1;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_F2:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_F2;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_F3:
+				{
+					tss_packet_keydown packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYDOWN_F3;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
@@ -286,6 +310,30 @@ void event_loop()
 					tss_packet_keyup packet;
 					packet.size = sizeof(packet);
 					packet.type = TSS_KEYUP_D;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_F1:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_F1;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_F2:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_F2;
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+					break;
+				}
+				case SDLK_F3:
+				{
+					tss_packet_keyup packet;
+					packet.size = sizeof(packet);
+					packet.type = TSS_KEYUP_F3;
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 					break;
 				}

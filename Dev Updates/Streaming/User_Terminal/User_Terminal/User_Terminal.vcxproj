@@ -148,8 +148,8 @@
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Streaming_Server\Streaming_Server\packet_struct.h" />
     <ClInclude Include="DECODER.h" />
-    <ClInclude Include="packet_struct.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
