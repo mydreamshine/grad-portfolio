@@ -94,7 +94,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     auto& AllRitems = *m_AllRitemsRef;
     auto& Geometries = *m_GeometriesRef;
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
-    UINT MaxUILayOutObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size();
+    m_MaxUILayoutObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size() + MAX_CHARACTER_OBJECT;
 
     ObjectManager objManager;
 
@@ -104,17 +104,26 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         auto Ritem = Ritem_iter.second.get();
 
         if (Ritem_name.find("Male Knight 01") != std::string::npos)
-            m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].push_back(Ritem);
-        if (Ritem_name.find("Male Warrior 01") != std::string::npos)
-            m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER].push_back(Ritem);
-        if (Ritem_name.find("Male Mage 01") != std::string::npos)
-            m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST].push_back(Ritem);
-        if (Ritem_name.find("Female Warrior 01") != std::string::npos)
-            m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN].push_back(Ritem);
-
-        if (Ritem_name.find("UI") != std::string::npos)
         {
-            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, MaxUILayOutObject);
+            m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].push_back(Ritem);
+        }
+        else if (Ritem_name.find("Male Warrior 01") != std::string::npos)
+        {
+            m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER].push_back(Ritem);
+        }
+        else if (Ritem_name.find("Male Mage 01") != std::string::npos)
+        {
+            m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST].push_back(Ritem);
+        }
+        else if (Ritem_name.find("Female Warrior 01") != std::string::npos)
+        {
+            m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN].push_back(Ritem);
+        }
+        else if (Ritem_name.find("UI") != std::string::npos)
+        {
+            if (Ritem_name.find("HPBar") != std::string::npos) continue;
+
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             // UI 오브젝트 같은 경우에는 메쉬의 원점이 (0,0,0)이 아니라
@@ -125,6 +134,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             objManager.SetObjectComponent(newObj, objName, Ritems);
 
             if (objName == "UI_Layout_SkillList") continue;
+
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
             auto text_info = newLayoutTextObj->m_Textinfo.get();
             newLayoutTextObj->m_Name = "Text" + objName;
@@ -216,16 +226,26 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
         }
 
+        const UINT nDeActivateUILayoutObj = m_MaxUILayoutObject - (UINT)m_UILayOutObjects.size();
+        for (UINT i = 0; i < nDeActivateUILayoutObj; ++i)
+        {
+            auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
+            m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
+        }
+
         const UINT nDeActivateTextObj = m_MaxTextObject - (UINT)m_TextObjects.size();
         for (UINT i = 0; i < nDeActivateTextObj; ++i)
         {
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
         }
 
+
         for (UINT i = m_MaxCharacterObject - nDeAcativateCharacterObj; i < m_MaxCharacterObject; ++i)
             m_CharacterObjects[i]->Activated = false;
         for (UINT i = m_MaxWorldObject - nDeAcativateWorldObj; i < m_MaxWorldObject; ++i)
             m_WorldObjects[i]->Activated = false;
+        for (UINT i = m_MaxUILayoutObject - nDeActivateUILayoutObj; i < m_MaxUILayoutObject; ++i)
+            m_UILayOutObjects[i]->Activated = false;
         for (UINT i = m_MaxTextObject - nDeActivateTextObj; i < m_MaxTextObject; ++i)
             m_TextObjects[i]->Activated = false;
     }
@@ -272,6 +292,28 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
     Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_ChattingLog");
     Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
     Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KDA");
+
+    static float timestack = 0.0f;
+    static bool healChange = false;
+    timestack += gt.GetTimeElapsed();
+    int check_sec = (int)timestack;
+    if (check_sec != 0 && check_sec % 1 == 0)
+    {
+        if (m_MainPlayer != nullptr)
+        {
+            if (healChange == false)
+            {
+                m_MainPlayer->SetHP(30);
+                healChange = true;
+            }
+            else if (healChange == true)
+            {
+                m_MainPlayer->SetHP(100);
+                healChange = false;
+            }
+        }
+        timestack = 0.0f;
+    }
 
     // Update KillLog Text
     {
@@ -446,6 +488,8 @@ void PlayGameScene::AnimateCameras(CTimer& gt)
     m_MainCamera.SetPerspectiveLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 10000.0f);
     m_MainCamera.LookAt(EyePosition, LookAtPosition, UpDirection);
     m_MainCamera.UpdateViewMatrix();
+
+    PlayGameScene::UpdateUITransformAs(gt, &m_MainCamera, m_Players);
 }
 
 void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
@@ -454,6 +498,76 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::uni
     {
         if (obj->ProcessSelfDeActivate(gt) != true)
             obj->m_TransformInfo->Animate(gt);
+    }
+}
+
+void PlayGameScene::UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players)
+{
+    XMMATRIX VIEW = MainCamera->GetView();
+    XMMATRIX PROJ = MainCamera->GetProj();
+    XMMATRIX VIEWPROJ = XMMatrixMultiply(VIEW, PROJ);
+
+    float HP_IncreaseFactor = 6.0f * gt.GetTimeElapsed();
+
+    for (auto& Player_iter : Players)
+    {
+        auto player = Player_iter.second.get();
+
+        auto PlayerTransformInfo = player->m_CharacterObjRef->m_TransformInfo.get();
+        XMFLOAT3 CharacterPos = PlayerTransformInfo->GetWorldPosition();
+        XMVECTOR CHARACTER_POS = XMLoadFloat3(&CharacterPos);
+
+        XMVECTOR SCREEN_POS = XMVector3Transform(CHARACTER_POS, VIEWPROJ);
+        XMFLOAT3 CharacterPosFromScreenCoord; XMStoreFloat3(&CharacterPosFromScreenCoord, SCREEN_POS);
+
+        CHARACTER_TYPE CharacterType = player->m_CharacterObjRef->CharacterType;
+        float CharacterCurrHP = (float)player->m_CharacterObjRef->HP;
+        float CharacterOldHP = (float)player->m_oldHP;
+        float CharacterMaxHP = 0.0f;
+        switch (CharacterType)
+        {
+        case CHARACTER_TYPE::WARRIOR:   CharacterMaxHP = 100.0f; break;
+        case CHARACTER_TYPE::BERSERKER: CharacterMaxHP = 150.0f; break;
+        case CHARACTER_TYPE::ASSASSIN:  CharacterMaxHP = 100.0f; break;
+        case CHARACTER_TYPE::PRIEST:    CharacterMaxHP = 80.0f;  break;
+        }
+        float HP_BarScale = CharacterCurrHP / CharacterMaxHP;
+        bool HP_Increase = (CharacterCurrHP - CharacterOldHP > 0.0f);
+
+        for (auto& HP_bar_e : player->m_HP_BarObjRef)
+        {
+            auto TransformInfo = HP_bar_e->m_TransformInfo.get();
+
+            // Set Pos
+            XMFLOAT3 HP_Bar_Pos = CharacterPosFromScreenCoord;
+            HP_Bar_Pos.x -= 35.0f; // Offset x;
+            HP_Bar_Pos.y += 12.5f + 80.0f; // Offset y;
+            HP_Bar_Pos.z = 0.0f;
+            TransformInfo->SetWorldPosition(HP_Bar_Pos);
+
+            // Set HP Bar Size
+            float CurrScale = TransformInfo->GetWorldScale().x;
+            if (HP_bar_e->m_Name.find("Dest") != std::string::npos)
+            {
+                float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor * 0.3f : HP_IncreaseFactor;
+                CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+                TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+            }
+            else if (HP_bar_e->m_Name.find("Increase") != std::string::npos)
+            {
+                float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor : HP_IncreaseFactor * 0.3f;
+                CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+                TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+            }
+
+            TransformInfo->UpdateWorldTransform();
+        }
+
+        auto TextInfo = player->m_CharacterInfoTextObjRef->m_Textinfo.get();
+        XMFLOAT2 TextPos = { CharacterPosFromScreenCoord.x + m_width / 2.0f, m_height / 2.0f - CharacterPosFromScreenCoord.y };
+        TextPos.x += 3.0f;
+        TextPos.y -= 93.0f; // Offset y
+        TextInfo->m_TextPos = TextPos;
     }
 }
 
@@ -513,9 +627,115 @@ void PlayGameScene::SpawnPlayer(
         newCharacterObj->m_CE_ID = New_CE_ID;
         newCharacterObj->CharacterType = CharacterType;
         newCharacterObj->Propensity = Propensity;
+
+        std::string objName;
+        const std::vector<RenderItem*>* CharacterRitems = nullptr;
+        aiModelData::aiSkeleton* CharacterSkeleton = nullptr;
+
+        std::unordered_map<std::string, float> CharacterAnimNotifys;
+
         switch (CharacterType)
         {
         case CHARACTER_TYPE::WARRIOR:
+        {
+            objName = "Warrior - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
+            CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR]);
+            CharacterSkeleton = ModelSkeletons["Male Knight 01"].get();
+            CharacterAnimNotifys["Sword Slash Gen"] = AnimNotifyTime::Warrior_SwordSlashStart;
+        }
+            break;
+        case CHARACTER_TYPE::BERSERKER:
+        {
+            objName = "Berserker - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
+            CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER]);
+            CharacterSkeleton = ModelSkeletons["Male Warrior 01"].get();
+            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+        }
+            break;
+        case CHARACTER_TYPE::ASSASSIN:
+        {
+            objName = "Assassin - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
+            CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN]);
+            CharacterSkeleton = ModelSkeletons["Female Warrior 01"].get();
+            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+        }
+            break;
+        case CHARACTER_TYPE::PRIEST:
+        {
+            objName = "Priest - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
+            CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST]);
+            CharacterSkeleton = ModelSkeletons["Male Mage 01"].get();
+            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+        }
+            break;
+        }
+
+        // Set Ritem, Skeleton, LocalTransform
+        {
+            XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
+            objManager.SetObjectComponent(newCharacterObj, objName,
+                (*CharacterRitems), CharacterSkeleton,
+                nullptr, &LocalRotationEuler, nullptr);
+            newCharacterObj->m_TransformInfo->UpdateLocalTransform();
+        }
+
+        // Set Animations
+        {
+            auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
+            auto animInfo = skeletonInfo->m_AnimInfo.get();
+            animInfo->Init();
+
+            // Set AnimNotifys
+            for (auto& AnimNotify : CharacterAnimNotifys)
+                animInfo->SetAnimTimeLineNotify(AnimNotify.first, AnimNotify.second);
+
+            // Set Actions
+            std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
+            animInfo->AutoApplyActionFromSkeleton(AnimNameList);
+            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+        }
+    }
+
+    // Create Player
+    {
+        auto newPlayer = std::make_unique<Player>();
+        newPlayer->m_Name = L"    Player" + Name;
+        newPlayer->m_CharacterObjRef = newCharacterObj;
+
+        // Set Character Info Text(Name, HP, etc.)
+        {
+            newPlayer->m_CharacterInfoTextObjRef = objManager.FindDeactiveTextObject(m_AllObjects, m_TextObjects, m_MaxTextObject);
+            newPlayer->m_CharacterInfoTextObjRef->m_Name = "CharacterInfoText Instancing";
+            auto& Textinfo = newPlayer->m_CharacterInfoTextObjRef->m_Textinfo;
+            Textinfo->m_FontName = L"맑은 고딕";
+            Textinfo->m_TextColor = DirectX::Colors::Black;
+        }
+
+        // Set HP Bar
+        {
+            newPlayer->m_HP_BarObjRef[0] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
+            newPlayer->m_HP_BarObjRef[1] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
+            newPlayer->m_HP_BarObjRef[2] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
+            std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_HPBarDest"].get() };
+            objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Dest - Instancing", Ritems);
+            Ritems = { AllRitems["UI_Layout_HPBarIncrease"].get() };
+            objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[1], "HP Bar Increase - Instancing", Ritems);
+            Ritems = { AllRitems["UI_Layout_HPBarBack"].get() };
+            objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[2], "HP Bar Back - Instancing", Ritems);
+
+            int maxHP = 0;
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::WARRIOR:   maxHP = 100; break;
+            case CHARACTER_TYPE::BERSERKER: maxHP = 150; break;
+            case CHARACTER_TYPE::ASSASSIN:  maxHP = 100; break;
+            case CHARACTER_TYPE::PRIEST:    maxHP = 80; break;
+            }
+            newPlayer->SetHP(maxHP);
+        }
+
+        // Set Transform
         {
             // 스케일을 250으로 늘려줘야 거시적으로
             // 주변 사물과의 크기 비례가 어색하지 않게 된다.
@@ -523,55 +743,9 @@ void PlayGameScene::SpawnPlayer(
             XMFLOAT3 WorldScale = { Scale.x * ConvertModelUnit, Scale.y * ConvertModelUnit, Scale.z * ConvertModelUnit };
             XMFLOAT3 WorldRotationEuler = RotationEuler;
             XMFLOAT3 WorldPosition = Position;
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 180.0f, 0.0f };
-            std::string objName = "Warrior - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
-            objManager.SetObjectComponent(newCharacterObj, objName,
-                m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR],
-                ModelSkeletons["Male Knight 01"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
-                &WorldScale, &WorldRotationEuler, &WorldPosition);
-            
-            auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->SetAnimTimeLineNotify("Sword Slash Gen", AnimNotifyTime::Warrior_SwordSlashStart);
-        }
-            break;
-        case CHARACTER_TYPE::BERSERKER:
-            break;
-        case CHARACTER_TYPE::ASSASSIN:
-            break;
-        case CHARACTER_TYPE::PRIEST:
-            break;
+            newPlayer->SetTransform(WorldScale, WorldRotationEuler, WorldPosition);
         }
 
-        newCharacterObj->m_TransformInfo->UpdateLocalTransform();
-        newCharacterObj->m_TransformInfo->UpdateWorldTransform();
-
-        auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
-        auto animInfo = skeletonInfo->m_AnimInfo.get();
-        animInfo->Init();
-        std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
-        animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-        animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-        animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
-    }
-
-    // Create Player
-    {
-        auto newPlayer = std::make_unique<Player>();
-        newPlayer->m_Name = Name;
-        newPlayer->m_CharacterObjRef = newCharacterObj;
-        newPlayer->m_NickNameObjRef = objManager.FindDeactiveTextObject(m_AllObjects, m_TextObjects, m_MaxTextObject);
-        auto& Textinfo = newPlayer->m_NickNameObjRef->m_Textinfo;
-        Textinfo->m_FontName = L"맑은 고딕";
-        Textinfo->m_TextColor = DirectX::Colors::Blue;
-        Textinfo->m_Text = Name;
-        newPlayer->m_HP_BarObjRef[0] = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-        newPlayer->m_HP_BarObjRef[1] = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-        newPlayer->m_HP_BarObjRef[2] = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-        /*objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Border - Instancing", AllRitems["HP Bar Border"].get());
-        objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[1], "HP Bar Increase - Instancing", AllRitems["HP Bar Increase"].get());
-        objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[2], "HP Bar Dest - Instancing", AllRitems["HP Bar Dest"].get());*/
         if (IsMainPlayer == true) m_MainPlayer = newPlayer.get();
         m_Players[newCharacterObj->m_CE_ID] = std::move(newPlayer);
     }

@@ -520,6 +520,7 @@ public:
 
 	void DeActivateObj(Object* obj)
 	{
+		if (obj == nullptr) return;
 		obj->m_Name.clear();
 		obj->m_Parent = nullptr;
 		obj->m_Childs.clear();

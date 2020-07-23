@@ -80,15 +80,22 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         auto Ritem = Ritem_iter.second.get();
 
         if (Ritem_name.find("Male Knight 01") != std::string::npos)
+        {
             m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].push_back(Ritem);
-        if (Ritem_name.find("Male Warrior 01") != std::string::npos)
+        }
+        else if (Ritem_name.find("Male Warrior 01") != std::string::npos)
+        {
             m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER].push_back(Ritem);
-        if (Ritem_name.find("Male Mage 01") != std::string::npos)
+        }
+        else if (Ritem_name.find("Male Mage 01") != std::string::npos)
+        {
             m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST].push_back(Ritem);
-        if (Ritem_name.find("Female Warrior 01") != std::string::npos)
+        }
+        else if (Ritem_name.find("Female Warrior 01") != std::string::npos)
+        {
             m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN].push_back(Ritem);
-
-        if (Ritem_iter.first.find("UI") != std::string::npos)
+        }
+        else if (Ritem_iter.first.find("UI") != std::string::npos)
         {
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);

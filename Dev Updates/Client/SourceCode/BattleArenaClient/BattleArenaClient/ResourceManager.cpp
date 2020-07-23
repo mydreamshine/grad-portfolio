@@ -273,6 +273,10 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         UILayerBacground_Meshes["UI_Layout_Skill2"]        = geoGen.CreateQuad( -80.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Skill3"]        = geoGen.CreateQuad(  30.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Skill4"]        = geoGen.CreateQuad( 140.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"] = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.11f);
+        UILayerBacground_Meshes["UI_Layout_HPBarBack"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.12f);
+
 
         m_Geometries["PlayGameSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "PlayGameSceneUIGeo", UILayerBacground_Meshes));
@@ -412,20 +416,20 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
     std::vector<std::string> anim_paths;
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
 
     model_loader.ImportingAllMeshAsSkinned(true);
 
     mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Male Knight 01.fbx";
     anim_paths = {
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Attack Action - Sword And Shield Slash (total 46Frmes).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Dieing Action - Death Crouching Headshot Front (total 58Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Idle Action - Sword And Shield Idle (total 111Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Impact Action - Sword And Shield Impact (total 22Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action - Sword And Shield Casting (total 45Frames).fbx",
-        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action - Sword And Shield Run (total 27Frames).fbx" };
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Attack Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Dieing Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Idle Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Impact Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile("Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
 
     aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
     ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], KnightModelBoundingBox);
@@ -480,6 +484,9 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/RightButton.png",
         m_additionalAssetPath + "UI/Layout/White_Transparency50.png",
         m_additionalAssetPath + "UI/Layout/LightGreen_Transparency50.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Dest.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Increase.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Back.png",
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/CrossTarget.png",
         m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
@@ -717,6 +724,16 @@ void ResourceManager::BuildRenderItems()
                     SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
                 else
                     SceneRitems[subMeshName]->Mat = m_Materials["LightGreen_Transparency50"].get();
+            }
+            else if (subMeshName.find("HP") != std::string::npos)
+            {
+                if (subMeshName.find("Dest") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Dest"].get();
+                else if (subMeshName.find("Increase") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Increase"].get();
+                else if (subMeshName.find("Back") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Back"].get();
+
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }
