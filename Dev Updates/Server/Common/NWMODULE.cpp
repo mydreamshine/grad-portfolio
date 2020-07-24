@@ -96,8 +96,11 @@ void NWMODULE<T>::packet_drain(PACKET_BUFFER& packet_buffer, char* buffer, size_
 template<class T>
 void NWMODULE<T>::process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer)
 {
-	closesocket(socket);
-	socket = INVALID_SOCKET;
+	if (socket != INVALID_SOCKET) {
+		closesocket(socket);
+		socket = INVALID_SOCKET;
+	}
+
 	buffer.d_packet.clear();
 	buffer.c_lock.lock();
 	buffer.c_packet.clear();
@@ -194,7 +197,8 @@ NWMODULE<T>::~NWMODULE()
 template <class T>
 bool NWMODULE<T>::connect_lobby()
 {
-	bool retval = connect_server(lobby_socket, "127.0.0.1", LOBBYSERVER_PORT);
+	bool retval = false;
+	retval = connect_server(lobby_socket, "127.0.0.1", LOBBYSERVER_PORT);
 	if (false == retval) return retval;
 
 	if (INVALID_HANDLE_VALUE == iocp)
@@ -216,10 +220,7 @@ bool NWMODULE<T>::connect_lobby()
 template<class T>
 void NWMODULE<T>::disconnect_lobby()
 {
-	if (lobby_socket == INVALID_SOCKET) return;
-	SOCKET tmp = lobby_socket;
-	lobby_socket = INVALID_SOCKET;
-	closesocket(tmp);
+	process_disconnect(lobby_socket, lobby_buffer);
 }
 
 template <class T>
@@ -249,10 +250,7 @@ bool NWMODULE<T>::connect_battle()
 template<class T>
 void NWMODULE<T>::disconnect_battle()
 {
-	if (battle_socket == INVALID_SOCKET) return;
-	SOCKET tmp = battle_socket;
-	battle_socket = INVALID_SOCKET;
-	closesocket(tmp);
+	process_disconnect(battle_socket, battle_buffer);
 }
 
 #ifndef NO_BASIC_FUNCTION
@@ -311,7 +309,7 @@ template<class T>
 void NWMODULE<T>::notify_lobby_recv(size_t length)
 {
 	if (length == 0 || length == SOCKET_ERROR)
-		process_disconnect(lobby_socket, lobby_buffer);
+		disconnect_lobby();
 	else {
 		packet_drain(lobby_buffer, lobby_over.data(), length);
 		
@@ -330,7 +328,7 @@ template<class T>
 void NWMODULE<T>::notify_battle_recv(size_t length)
 {
 	if (length == 0 || length == SOCKET_ERROR)
-		process_disconnect(battle_socket, battle_buffer);
+		disconnect_battle();
 	else {
 		packet_drain(battle_buffer, battle_over.data(), length);
 

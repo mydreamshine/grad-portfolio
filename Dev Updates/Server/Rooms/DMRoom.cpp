@@ -38,6 +38,7 @@ bool DMRoom::regist(SOCKET client, void* buffer)
 	socket_lock.lock();
 	short cur_player = player_num++;
 	sockets[cur_player] = client;
+	sockets_index[client] = cur_player;
 	csss_packet_login_ok login_ok{ cur_player };
 	send_packet(client, &login_ok, login_ok.size);
 
@@ -59,9 +60,9 @@ void DMRoom::disconnect(SOCKET client)
 {
 	socket_lock.lock();
 	--player_num;
-	auto iter = sockets.find(client);
-	if (iter != sockets.end())
-		sockets.erase(iter);
+	short disconnect_player = sockets_index[client];
+	sockets_index.erase(client);
+	sockets.erase(disconnect_player);
 	socket_lock.unlock();
 }
 

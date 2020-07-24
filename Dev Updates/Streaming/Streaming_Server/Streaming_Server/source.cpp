@@ -95,7 +95,7 @@ void SendFramePacket(int client, BYTE* frame)
 }
 void ProcessPacket(int client, void* packet) 
 {
-	unsigned char packet_type = ((char*)packet)[1];
+	PACKET_TYPE packet_type = reinterpret_cast<packet_inheritance*>(packet)->type;
 	switch (packet_type)
 	{
 	case TSS_KEYDOWN_W:
@@ -216,6 +216,14 @@ void do_worker() {
 			delete over_ex;
 			break;
 
+		case EV_LOBBY_NOTIFY:
+			clients[key].FrameworkEventProcessor.nw_module.notify_lobby_recv(num_byte);
+			break;
+
+		case EV_MATCH_NOTIFY:
+			clients[key].FrameworkEventProcessor.nw_module.notify_battle_recv(num_byte);
+			break;
+
 		case EV_UPDATE:
 		{
 			if (clients[key].connect != true) {
@@ -298,6 +306,7 @@ int main()
 	cout << "Concurrent Threads Supported By H/W Cores: " << concurrentThreadsSupported << endl;
 
 	BOOL fSuccess = SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
+	g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
 
 	LoadadditionalAssetPathTXT();
 	InitializeExternalResource(&resourceManager);
@@ -322,8 +331,6 @@ int main()
 		error_display("bind()", WSAGetLastError());
 	if(listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
 		error_display("listen()", WSAGetLastError());
-
-	g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
 
 	SOCKADDR_IN clientAddr;
 	memset(&clientAddr, 0, sizeof(SOCKADDR_IN));

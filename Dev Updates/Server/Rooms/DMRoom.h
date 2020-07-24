@@ -44,6 +44,7 @@ private:
 	float delta_time;
 	std::mutex socket_lock;
 	std::map<short, SOCKET> sockets;
+	std::map<SOCKET, short> sockets_index;
 	std::map<short, HERO*> m_heros;
 	
 	int skill_uid;

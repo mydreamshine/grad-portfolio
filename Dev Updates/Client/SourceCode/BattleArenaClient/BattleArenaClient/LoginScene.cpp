@@ -134,7 +134,7 @@ void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
     }
 
     if (OnceSendLogin == false) {
-        if (true == key_state[VK_RETURN])
+        if (true == key_state['D'])
         {
             std::wstring id{ L"test001" };
             std::wstring pw{ L"0000" };

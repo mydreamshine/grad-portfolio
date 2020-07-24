@@ -11,6 +11,7 @@ public:
 	int           totalscore_damage;
 	int           totalscore_heal;
 
+	SCOREBOARD();
 	SCOREBOARD(wchar_t* user_name);
 };
 

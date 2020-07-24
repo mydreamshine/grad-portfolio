@@ -140,7 +140,7 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAsWinRT>false</CompileAsWinRT>
       <DisableSpecificWarnings>4819;</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>Common\Util\ffmpeg\include;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\a-sae\Desktop\grad-portfolio\Dev Updates\Server\Common;Common\Util\ffmpeg\include;..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -129,7 +129,7 @@ void HERO::update(float elapsedTime)
 void HERO::do_attack()
 {
 	int object_id = world->skill_uid++;
-	SKILL* normal_attack = new NORMAL_ATTACK{};
+	SKILL* normal_attack = new NORMAL_ATTACK{world, (short)object_id};
 	normal_attack->pos = pos;
 	normal_attack->rot = rot;
 	normal_attack->dir = dir;
@@ -219,7 +219,7 @@ void WARRIOR::do_skill()
 
 	for (int i = 0; i < 3; ++i) {
 		skill_id = world->skill_uid++;
-		normal_attack = new NORMAL_ATTACK{};
+		normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
 		normal_attack->pos = pos;
 		normal_attack->rot = rot; normal_attack->rot.y += Deg[i];
 		normal_attack->dir = dir.rotY(Deg[i]);
@@ -250,7 +250,7 @@ PRIEST::~PRIEST()
 void PRIEST::do_skill()
 {
 	int skill_id = world->skill_uid++;
-	HOLY_AREA* holy_area = new HOLY_AREA{};
+	HOLY_AREA* holy_area = new HOLY_AREA{ world, (short)object_id };
 
 
 	holy_area->pos = pos;
@@ -294,7 +294,7 @@ void BERSERKER::do_skill()
 	}
 
 	int skill_id = world->skill_uid++;
-	roar_skill = new FURY_ROAR{};
+	roar_skill = new FURY_ROAR{ world, (short)object_id };
 
 	roar_skill->pos = pos;
 	roar_skill->propensity = propensity;
@@ -369,7 +369,7 @@ void ASSASSIN::do_skill()
 	}
 
 	int skill_id = world->skill_uid++;
-	stelth_skill = new STELTH{};
+	stelth_skill = new STELTH{ world, (short)object_id };
 	
 	stelth_skill->pos = pos;
 	stelth_skill->propensity = propensity;
