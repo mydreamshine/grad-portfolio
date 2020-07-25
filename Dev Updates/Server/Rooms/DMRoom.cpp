@@ -97,7 +97,9 @@ void DMRoom::process_packet(CLIENT* client, int ReceivedBytes)
 
 bool DMRoom::update(float elapsedTime)
 {
-	delta_time = elapsedTime;
+	current_update_time = std::chrono::high_resolution_clock::now();
+	delta_time = std::chrono::duration<float>(current_update_time - last_update_time).count();
+	last_update_time = current_update_time;
     process_packet_vector();
     bool retval = game_logic();
     send_game_state();
@@ -281,7 +283,8 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 void DMRoom::process_try_move_character(void* packet)
 {
 	sscs_packet_try_move_character* data = reinterpret_cast<sscs_packet_try_move_character*>(packet);
-	if (m_heros[data->client_id]->motion_type == (char)MOTION_TYPE::IDLE) {
+	if (m_heros[data->client_id]->motion_type == (char)MOTION_TYPE::IDLE
+		|| m_heros[data->client_id]->motion_type == (char)MOTION_TYPE::WALK) {
 		m_heros[data->client_id]->change_motion((char)MOTION_TYPE::WALK);
 		m_heros[data->client_id]->rotate(data->MoveDirection_Yaw_angle);
 		m_heros[data->client_id]->move(delta_time);

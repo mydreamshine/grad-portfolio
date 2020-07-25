@@ -423,7 +423,7 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
     }
 
     //TestFunc. - Access battle directly.
-    if (key_state['S'] == true && OnceAccessBattleDirectly == false) {
+    if (key_state['Q'] == true && OnceAccessBattleDirectly == false) {
         EventManager eventManager;
         eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
         OnceAccessBattleDirectly = true;

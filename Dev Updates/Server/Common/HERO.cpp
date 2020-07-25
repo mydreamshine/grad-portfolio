@@ -29,8 +29,8 @@ HERO::~HERO()
 
 void HERO::rotate(float yaw)
 {
-	rot.y += yaw;
-	dir = dir.rotY(yaw);
+	rot.y = yaw;
+	dir = Vector3d(0, 0, 1.0f).rotY(yaw);
 	changed_transform = true;
 }
 

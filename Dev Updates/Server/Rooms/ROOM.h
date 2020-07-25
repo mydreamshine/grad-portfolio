@@ -19,6 +19,7 @@ public:
 	virtual void process_packet(CLIENT* client, int ReceivedBytes) = 0; ///when recv data from client buffer, server will call this with client and its length
 
 	std::chrono::high_resolution_clock::time_point last_update_time; ///< last update time stamp.
+	std::chrono::high_resolution_clock::time_point current_update_time; ///< last update time stamp.
 
 protected:
 	void send_packet(SOCKET socket, void* buff, size_t buff_len);

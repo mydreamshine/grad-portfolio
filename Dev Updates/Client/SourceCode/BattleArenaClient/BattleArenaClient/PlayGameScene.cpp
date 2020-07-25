@@ -940,7 +940,8 @@ void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 Rotat
     ObjectManager ObjManager;
     Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
     if(ControledObj != nullptr)
-        ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+        //ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+        ControledObj->m_TransformInfo->SetWorldTransform(XMFLOAT3(250, 250, 250), RotationEuler, Position);
 }
 
 void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)
