@@ -50,3 +50,12 @@ inline bool compareFloat(float A, float B, float epsilon = 0.000001f)
 {
     return (fabs(A - B) < epsilon);
 }
+
+inline bool PointInRect(float x, float y, RECT Rect)
+{
+    if (x < Rect.left) return false;
+    if (y > Rect.top) return false;
+    if (x > Rect.right) return false;
+    if (y < Rect.bottom) return false;
+    return true;
+}

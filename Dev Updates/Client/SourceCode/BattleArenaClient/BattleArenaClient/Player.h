@@ -41,4 +41,6 @@ public:
 	void ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 	void UpdateCamera(CTimer& gt, float aspect);
+
+	void UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
 };

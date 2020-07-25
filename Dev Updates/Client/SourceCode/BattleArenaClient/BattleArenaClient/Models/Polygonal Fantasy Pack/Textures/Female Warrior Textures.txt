@@ -4,16 +4,16 @@
 04 Feet 06 - DS White Gold
 05 Hand 03 - DS Brown Gold
 06 Belt 03 - DS Red Gold
-Poleyn 07 Red Gold - LS Red Gold
-Poleyn 07 Red Gold_1 - LS Red Gold
-Necklace 06 Purple Gold - LS Purple Gold
-Bracer 06 Brown Gold - LS Brown Gold
-Bracer 06 Brown Gold_1 - LS Brown Gold
-Mace 03 Red Gold - LS Red Gold
-Mace 03 Red Gold_1 - LS Red Gold
-Brow 05 Grey - Hair Grey
-Eyes 01 Black - Hair Black
-Hair Female 12 Grey - Hair Grey
-Headband 06 Red Gold - LS Red Gold
-Mouth 02 Dark Skin - DS Brown Silver
-Pauldron 07 White Gold - LS White Gold
+Poleyn 07 - LS Red Gold
+Poleyn 07_1 - LS Red Gold
+Necklace 06 - LS Purple Gold
+Bracer 06 - LS Brown Gold
+Bracer 06_1 - LS Brown Gold
+Dagger 03 - LS Red Gold
+Dagger 03_1 - LS Red Gold
+Brow 05 - Hair Grey
+Eyes 01 - Hair Black
+Hair Female 12 - Hair Grey
+Headband 06 - LS Red Gold
+Mouth 02 - DS Brown Silver
+Pauldron 07 - LS White Gold

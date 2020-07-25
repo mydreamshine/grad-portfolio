@@ -14,49 +14,97 @@ void LobyScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* commandL
 
 void LobyScene::OnInitProperties(CTimer& gt)
 {
-    for (auto& obj : m_CharacterObjects)
-    {
-        if (obj->Activated != true) continue;
+    float deg2rad = MathHelper::Pi / 180.0f;
 
-        if (obj->m_Name.find("Warrior") != std::string::npos)
+    float Yaw = 0.0f;
+    float texAlpha = 1.0f;
+    XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+    bool IdleActionSet = true;
+    for (auto& CharacterObj : m_CharacterObjects)
+    {
+        if (CharacterObj->m_Name.find("Warrior") != std::string::npos)
         {
-            auto transformInfo = obj->m_TransformInfo.get();
-            float ConvertModelUnit = 125.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
-            transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
-            transformInfo->SetLocalRotationEuler(LocalRotationEuler);
+            Yaw = 270.0f;
+            texAlpha = 1.0f;
+            IdleActionSet = true;
+        }
+        else if (CharacterObj->m_Name.find("Berserker") != std::string::npos)
+        {
+            Yaw = 180.0f;
+            texAlpha = 0.2f;
+            IdleActionSet = true;
+        }
+        else if (CharacterObj->m_Name.find("Assassin") != std::string::npos)
+        {
+            Yaw = 0.0f;
+            texAlpha = 0.2f;
+            IdleActionSet = true;
+        }
+        else if (CharacterObj->m_Name.find("Priest") != std::string::npos)
+        {
+            Yaw = 90.0f;
+            texAlpha = 0.2f;
+            IdleActionSet = true;
         }
 
-        auto skeletonInfo = obj->m_SkeletonInfo.get();
-        auto animInfo = skeletonInfo->m_AnimInfo.get();
-        animInfo->Init();
-        std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
-        animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-        animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-        animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+        XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, Yaw * deg2rad, 90.0f * deg2rad);
+        XMStoreFloat3(&WorldPosition, CartesianPos);
+
+        CharacterObj->m_TransformInfo->SetWorldPosition(WorldPosition);
+        CharacterObj->m_TransformInfo->UpdateWorldTransform();
+        CharacterObj->m_TransformInfo->m_TexAlpha = texAlpha;
+
+        auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+        if (IdleActionSet == true)
+        {
+            AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+        }
+        else
+        {
+            AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
+        }
     }
 
-    m_LightRotationAngle = 0.0f;
+    m_SceneBounds.Radius = (float)SIZE_ShadowMap;
 
-    camAngle = -90.0f * (MathHelper::Pi / 180.0f);
+
+    camAngle = -90.0f * deg2rad;
 
     ChattingList.clear();
     inputChat.clear();
     UserInfo_UserName.clear();
     UserInfo_UserRank = 0;
 
-    SelectedCharacterType = CHARACTER_TYPE::NON;
+    SelectedCharacterType = CHARACTER_TYPE::WARRIOR;
+    CharacterTurnTableYaw = 0.0f;
+    AmountTurnTableYaw = 0.0f;
+    savedTurnTableYaw = 0.0f;
+    OnceSavedTurnTableYaw = false;
+
+    CharacterSelectionDone = true;
+    CharacterSelectLeft = false;
+    CharacterSelectRight = false;
+    LeftButtonPress = false;
+    RightButtonPress = false;
+    LeftButtonUp = true;
+    RightButtonUp = true;
+    PlayButtonPress = false;
+    PlayButtonUp = true;
 
     ChattingMode = false;
+    ChattingModeTimeStack = 0.0f;
+    ActivateChattingModeCoolTime = false;
+
     StartMatching = false;
-    MouseLeftButtonClick = false;
 
     OnceGetUserInfo = true;
     OnceTryGameMatching = false;
     OnceSendChatLog = false;
+
+    OnceAccessMatch = false;
+    OnceAccessBattleDirectly = false;
 }
 
 void LobyScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -65,6 +113,7 @@ void LobyScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     CTimer& gt,
     std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+    LobyScene::AnimateWorldObjectsTransform(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
@@ -102,6 +151,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
         }
         else if (Ritem_name.find("UI") != std::string::npos)
         {
+            if (Ritem_name.find("Press") != std::string::npos) continue;
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
@@ -111,6 +161,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
 
             if (objName.find("CharacterSelection") != std::string::npos) continue;
             if (objName.find("Background") != std::string::npos) continue;
+            if (objName.find("GameStartButton") != std::string::npos) continue;
 
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
             auto text_info = newLayoutTextObj->m_Textinfo.get();
@@ -118,48 +169,124 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             text_info->m_FontName = L"¸¼Àº °íµñ";
             text_info->m_TextColor = DirectX::Colors::Blue;
             auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
+            auto UI_LayoutExtents = Ritem->Geo->DrawArgs[objName].Bounds.Extents;
             text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
             text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
 
-            if (objName == "UI_Layout_LobyChattingLog") text_info->m_Text = L"Chatting Log";
-            else if (objName == "UI_Layout_MatchWaiting")      text_info->m_Text = L"Match Waiting\n      Info";
-            else if (objName == "UI_Layout_GameStartButton")  text_info->m_Text = L"Game Start\n   Button";
-            else if (objName == "UI_Layout_LobyCharacterName")  text_info->m_Text = L"Character Name";
-            else if (objName == "UI_Layout_LobyUserInfo")  text_info->m_Text = L"NickName:\nRank:";
-            else if (objName == "UI_Layout_LobyCharacterDescrition")  text_info->m_Text = L"Chracter Info\n(Name, HP, etc.)";
+            if (objName == "UI_Layout_LobyChattingLog")
+            {
+                text_info->m_Text = L"Chatting Log";
+                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
+                text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                text_info->m_TextColor = DirectX::Colors::GhostWhite;
+            }
+            else if (objName == "UI_Layout_LobyChattingInputBox")
+            {
+                text_info->m_Text = L"[UserName]: bla bla bla";
+                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
+                text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                text_info->m_TextColor = DirectX::Colors::GhostWhite;
+            }
+            else if (objName == "UI_Layout_LobyCharacterName")
+            {
+                text_info->m_Text = L"Character Name";
+                text_info->m_TextColor = DirectX::Colors::GhostWhite;
+            }
+            else if (objName == "UI_Layout_LobyUserInfo")
+            {
+                text_info->m_Text = L"NickName:\nRank:";
+                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
+                text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                text_info->m_TextColor = DirectX::Colors::Blue;
+            }
+            else if (objName == "UI_Layout_LobyCharacterDescrition")
+            {
+                text_info->m_Text = L"Chracter Info\n(Name, HP, etc.)";
+                text_info->m_TextColor = DirectX::Colors::Yellow;
+            }
         }
     }
 
     // Create Character Object
     {
-        if (!m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].empty())
+        const float ConvertModelUnit = 125.0f;
+        const XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+        const XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+        float texAlpha = 1.0f;
+        std::string objName;
+        aiModelData::aiSkeleton* CharacterSkeleton = nullptr;
+        float deg2rad = MathHelper::Pi / 180.0f;
+
+        for (int i = 0; i < (int)CHARACTER_TYPE::COUNT; ++i)
         {
-            auto newObj = objManager.CreateCharacterObject(
+            if (m_CharacterRitems[i].empty() == true) continue;
+
+            auto newCharacterObj = objManager.CreateCharacterObject(
                 objCB_index++, skinnedCB_index++,
                 m_AllObjects,
                 m_CharacterObjects, m_MaxCharacterObject,
                 m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newCharacterObj);
 
-            std::string objName = "Warrior Instancing";
+            if (i == (int)CHARACTER_TYPE::WARRIOR)
+            {
+                XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, 270.0f * deg2rad, 90.0f * deg2rad);
+                XMStoreFloat3(&WorldPosition, CartesianPos);
+                texAlpha = 1.0f;
+                objName = "Warrior Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Knight 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::BERSERKER)
+            {
+                XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, 180.0f * deg2rad, 90.0f * deg2rad);
+                XMStoreFloat3(&WorldPosition, CartesianPos);
+                texAlpha = 0.2f;
+                objName = "Berserker Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Warrior 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::ASSASSIN)
+            {
+                XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, 0.0f, 90.0f * deg2rad);
+                XMStoreFloat3(&WorldPosition, CartesianPos);
+                texAlpha = 0.2f;
+                objName = "Assassin Instancing";
+                CharacterSkeleton = ModelSkeletons["Female Warrior 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::PRIEST)
+            {
+                XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, 90.0f * deg2rad, 90.0f * deg2rad);
+                XMStoreFloat3(&WorldPosition, CartesianPos);
+                texAlpha = 0.2f;
+                objName = "Priest Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Mage 01"].get();
+            }
 
-            float ConvertModelUnit = 125.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
-            objManager.SetObjectComponent(newObj, objName, m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR],
-                ModelSkeletons["Male Knight 01"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
+            objManager.SetObjectComponent(newCharacterObj, objName,
+                m_CharacterRitems[i], CharacterSkeleton,
+                nullptr, nullptr, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
 
-            auto skeletonInfo = newObj->m_SkeletonInfo.get();
+            newCharacterObj->m_TransformInfo->m_TexAlpha = texAlpha;
+
+            auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
             auto animInfo = skeletonInfo->m_AnimInfo.get();
             animInfo->Init();
             std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
             animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            if (i == (int)CHARACTER_TYPE::WARRIOR)
+            {
+                animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            }
+            else
+            {
+                animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                animInfo->AnimStop(aiModelData::AnimActionType::Idle);
+            }
         }
     }
 
@@ -189,6 +316,8 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
         for (UINT i = m_MaxWorldObject - nDeAcativateWorldObj; i < m_MaxWorldObject; ++i)
             m_WorldObjects[i]->Activated = false;
     }
+
+    m_SceneBounds.Radius = (float)SIZE_ShadowMap;
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
@@ -232,7 +361,6 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
     Object* UserInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyUserInfo");
     Object* CharacterInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterDescrition");
     Object* SelectedCharacterNameObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterName");
-    Object* MatchWaitingInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_MatchWaiting");
 
     // Update Chatting Text
     {
@@ -267,7 +395,7 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Movement Speed: 1.0\n";
         CharacterInfo += L"Attack Speed: 1.0\n";
         CharacterInfo += L"Skill Name: Sword Wave\n";
-        CharacterInfo += L"Skill Desc: Shoot 3 SwordWaves ahead.\n";
+        CharacterInfo += L"Skill Desc: Shoot 3 Sword\nWaves ahead.\n";
         CharacterInfo += L"Skill CoolTime: 4 seconds.";
         break;
     case CHARACTER_TYPE::BERSERKER:
@@ -277,8 +405,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Damage: 40\n";
         CharacterInfo += L"Movement Speed: 1.0\n";
         CharacterInfo += L"Attack Speed: 0.6\n";
-        CharacterInfo += L"Skill Name: Fury Roar";
-        CharacterInfo += L"Skill Desc: Movement & Attack speed\n  are multiplied(x2) for 8 seconds.";
+        CharacterInfo += L"Skill Name: Fury Roar\n";
+        CharacterInfo += L"Skill Desc: Movement \n& Attack speed are \nmultiplied(x2) for\n8 seconds.\n";
         CharacterInfo += L"Skill CoolTime: 10 seconds.";
         break;
     case CHARACTER_TYPE::ASSASSIN:
@@ -288,8 +416,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Damage: 30\n";
         CharacterInfo += L"Movement Speed: 1.4\n";
         CharacterInfo += L"Attack Speed: 1.2\n";
-        CharacterInfo += L"Skill Name: Stealth";
-        CharacterInfo += L"Skill Desc: Stealth for 7 seconds.";
+        CharacterInfo += L"Skill Name: Stealth\n";
+        CharacterInfo += L"Skill Desc: Stealth for 7\nseconds.\n";
         CharacterInfo += L"Skill CoolTime: 12 seconds.";
         break;
     case CHARACTER_TYPE::PRIEST:
@@ -299,8 +427,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo += L"Damage: 15\n";
         CharacterInfo += L"Movement Speed: 0.8\n";
         CharacterInfo += L"Attack Speed: 0.8\n";
-        CharacterInfo += L"Skill Name: Holy Area";
-        CharacterInfo += L"Skill Desc: Creates a holy area\n  that restores 15 health every 1 sec\n  for 10 sec.\n";
+        CharacterInfo += L"Skill Name: Holy Area\n";
+        CharacterInfo += L"Skill Desc: Creates a\nholy area that restores\n15 health every 1 sec\nfor 10 sec.\n";
         CharacterInfo += L"Skill CoolTime: 12 seconds.";
         break;
     case CHARACTER_TYPE::NON:
@@ -316,19 +444,12 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         break;
     }
 
-    auto MatchWaitingInfo = MatchWaitingInfoObject->m_Textinfo->m_Text;
-    if (StartMatching == true) MatchWaitingInfo = L"Game Matching...";
-    else
-    {
-        if (MatchWaitingInfo.empty() != true) MatchWaitingInfo.clear();
-    }
-
 }
 
 void LobyScene::AnimateLights(CTimer& gt)
 {
     float deg2rad = MathHelper::Pi / 180.0f;
-    m_LightRotationAngle += (10.0f * deg2rad) * gt.GetTimeElapsed();
+    m_LightRotationAngle += (40.0f * deg2rad) * gt.GetTimeElapsed();
 
     XMMATRIX R = XMMatrixRotationY(m_LightRotationAngle);
     for (int i = 0; i < 3; ++i)
@@ -346,26 +467,19 @@ void LobyScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>&
         auto SkeletonInfo = obj->m_SkeletonInfo.get();
         auto AnimInfo = SkeletonInfo->m_AnimInfo.get();
         std::string& AnimName = AnimInfo->CurrPlayingAnimName;
-        bool isSetted = false;
-        if (AnimInfo->AnimIsPlaying(AnimName, isSetted) == true)
-        {
-            if (isSetted == false) continue;
-            SkeletonInfo->m_Skeleton->UpdateAnimationTransforms(*(AnimInfo), gt.GetTimeElapsed());
-        }
+        SkeletonInfo->m_Skeleton->UpdateAnimationTransforms(*(AnimInfo), gt.GetTimeElapsed());
     }
 }
 
 void LobyScene::AnimateCameras(CTimer& gt)
 {
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
-    static XMFLOAT3 LookAtPosition = { 0.0f, 30.0f, 0.0f };
+    static XMFLOAT3 LookAtPosition = { 0.0f, 40.0f, 0.0f };
     XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
 
     float deg2rad = MathHelper::Pi / 180.0f;
-    camAngle += (10.0f * deg2rad) * gt.GetTimeElapsed();
-    if ((int)camAngle / 360 == 1) camAngle -= 360.0f;
-    float phi = 70.0f * deg2rad;
-    float rad = 500.0f;
+    float phi = 75.0f * deg2rad;
+    float rad = 750.0f;
     XMVECTOR Eye_Pos = MathHelper::SphericalToCartesian(rad, camAngle, phi);
     Eye_Pos = XMVectorAdd(Eye_Pos, XMLoadFloat3(&LookAtPosition));
     XMStoreFloat3(&EyePosition, Eye_Pos);
@@ -374,6 +488,120 @@ void LobyScene::AnimateCameras(CTimer& gt)
     m_MainCamera.SetPerspectiveLens(XM_PIDIV4, (float)m_width / m_height, 1.0f, 1000.0f);
     m_MainCamera.LookAt(EyePosition, LookAtPosition, UpDirection);
     m_MainCamera.UpdateViewMatrix();
+}
+
+void LobyScene::AnimateWorldObjectsTransform(CTimer& gt)
+{
+    if (CharacterSelectionDone == false)
+    {
+        if (OnceSavedTurnTableYaw == false)
+        {
+            savedTurnTableYaw = ((int)CharacterTurnTableYaw / 10) * 10.0f;
+            OnceSavedTurnTableYaw = true;
+
+            for (auto& CharacterObj : m_CharacterObjects)
+            {
+                auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+                AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
+            }
+        }
+
+        if (CharacterSelectLeft == true)
+        {
+            CharacterTurnTableYaw -= 90.0f * gt.GetTimeElapsed();
+
+            if (savedTurnTableYaw - CharacterTurnTableYaw >= 90.0f)
+            {
+                CharacterTurnTableYaw = savedTurnTableYaw - 90.0f;
+                if (CharacterTurnTableYaw <= -360.0f) CharacterTurnTableYaw = 0.0f;
+                CharacterSelectionDone = true;
+                OnceSavedTurnTableYaw = false;
+                CharacterSelectLeft = false;
+            }
+        }
+        else if (CharacterSelectRight == true)
+        {
+            CharacterTurnTableYaw += 90.0f * gt.GetTimeElapsed();
+
+            if (CharacterTurnTableYaw - savedTurnTableYaw >= 90.0f)
+            {
+                CharacterTurnTableYaw = savedTurnTableYaw + 90.0f;
+                if (CharacterTurnTableYaw >= 360.0f) CharacterTurnTableYaw = 0.0f;
+                CharacterSelectionDone = true;
+                OnceSavedTurnTableYaw = false;
+                CharacterSelectRight = false;
+            }
+        }
+
+        float deg2rad = MathHelper::Pi / 180.0f;
+        XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+        float Yaw = 0.0f;
+        float texAlpha = 1.0f;
+
+        for (auto& CharacterObj : m_CharacterObjects)
+        {
+            if (CharacterObj->m_Name.find("Warrior") != std::string::npos)
+            {
+                Yaw = CharacterTurnTableYaw + 270.0f;
+                if (compareFloat(Yaw, 270.0f) || compareFloat(Yaw, -90.0f))
+                {
+                    SelectedCharacterType = CHARACTER_TYPE::WARRIOR;
+                    texAlpha = 1.0f;
+                    auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+                    AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                    AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+                }
+                else texAlpha = 0.2f;
+            }
+            else if (CharacterObj->m_Name.find("Berserker") != std::string::npos)
+            {
+                Yaw = CharacterTurnTableYaw + 180.0f;
+                if (compareFloat(Yaw, 270.0f) || compareFloat(Yaw, -90.0f))
+                {
+                    SelectedCharacterType = CHARACTER_TYPE::BERSERKER;
+                    texAlpha = 1.0f;
+                    auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+                    AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                    AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+                }
+                else texAlpha = 0.2f;
+            }
+            else if (CharacterObj->m_Name.find("Assassin") != std::string::npos)
+            {
+                Yaw = CharacterTurnTableYaw + 0.0f;
+                if (compareFloat(Yaw, 270.0f) || compareFloat(Yaw, -90.0f))
+                {
+                    SelectedCharacterType = CHARACTER_TYPE::ASSASSIN;
+                    texAlpha = 1.0f;
+                    auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+                    AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                    AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+                }
+                else texAlpha = 0.2f;
+            }
+            else if (CharacterObj->m_Name.find("Priest") != std::string::npos)
+            {
+                Yaw = CharacterTurnTableYaw + 90.0f;
+                if (compareFloat(Yaw, 270.0f) || compareFloat(Yaw, -90.0f))
+                {
+                    SelectedCharacterType = CHARACTER_TYPE::PRIEST;
+                    texAlpha = 1.0f;
+                    auto AnimInfo = CharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+                    AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                    AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+                }
+                else texAlpha = 0.2f;
+            }
+
+            XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, Yaw * deg2rad, 90.0f * deg2rad);
+            XMStoreFloat3(&WorldPosition, CartesianPos);
+
+            CharacterObj->m_TransformInfo->SetWorldPosition(WorldPosition);
+            CharacterObj->m_TransformInfo->UpdateWorldTransform();
+            CharacterObj->m_TransformInfo->m_TexAlpha = texAlpha;
+        }
+    }
 }
 
 void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
@@ -385,14 +613,170 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         OnceGetUserInfo = false;
     }
 
-    // Process SelectedCharacter
+    if (key_state[VK_LBUTTON] == true)
     {
+        ObjectManager ObjManager;
+        Object* SelectionLeftButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_LeftButton");
+        Object* SelectionRightButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_RightButton");
+        Object* PlayButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameStartButton");
 
+        auto& LeftButtonBound = SelectionLeftButton->m_TransformInfo->m_Bound;
+        auto& RightButtonBound = SelectionRightButton->m_TransformInfo->m_Bound;
+        auto& PlayButtonBound = PlayButton->m_TransformInfo->m_Bound;
+
+        RECT LeftButtonAreainScreen =
+        {
+            (LONG)(LeftButtonBound.Center.x - LeftButtonBound.Extents.x), // left
+            (LONG)(LeftButtonBound.Center.y + LeftButtonBound.Extents.y), // top
+            (LONG)(LeftButtonBound.Center.x + LeftButtonBound.Extents.x), // right
+            (LONG)(LeftButtonBound.Center.y - LeftButtonBound.Extents.y), // bottom
+        };
+
+        RECT RightButtonAreainScreen =
+        {
+            (LONG)(RightButtonBound.Center.x - RightButtonBound.Extents.x), // left
+            (LONG)(RightButtonBound.Center.y + RightButtonBound.Extents.y), // top
+            (LONG)(RightButtonBound.Center.x + RightButtonBound.Extents.x), // right
+            (LONG)(RightButtonBound.Center.y - RightButtonBound.Extents.y), // bottom
+        };
+
+        RECT PlayButtonAreainScreen =
+        {
+            (LONG)(PlayButtonBound.Center.x - PlayButtonBound.Extents.x), // left
+            (LONG)(PlayButtonBound.Center.y + PlayButtonBound.Extents.y), // top
+            (LONG)(PlayButtonBound.Center.x + PlayButtonBound.Extents.x), // right
+            (LONG)(PlayButtonBound.Center.y - PlayButtonBound.Extents.y), // bottom
+        };
+
+        float CursorPos_x = oldCursorPos.x - m_width * 0.5f;
+        float CursorPos_y = -(oldCursorPos.y - m_height * 0.5f);
+
+        // Process SelectedCharacter
+        if (PointInRect(CursorPos_x, CursorPos_y, LeftButtonAreainScreen) == true)
+        {
+            if (CharacterSelectionDone == true)
+            {
+                CharacterSelectLeft = true;
+                CharacterSelectionDone = false;
+            }
+
+            if (LeftButtonPress == false && LeftButtonUp == true)
+            {
+                auto& AllRitems = *m_AllRitemsRef;
+                auto Ritem_leftButtonPress = AllRitems.find("UI_Layout_CharacterSelection_LeftButton_Press")->second.get();
+                SelectionLeftButton->m_RenderItems = { Ritem_leftButtonPress };
+                LeftButtonPress = true;
+                LeftButtonUp = false;
+            }
+        }
+        else if (PointInRect(CursorPos_x, CursorPos_y, RightButtonAreainScreen) == true)
+        {
+            if (CharacterSelectionDone == true)
+            {
+                CharacterSelectRight = true;
+                CharacterSelectionDone = false;
+            }
+
+            if (RightButtonPress == false && RightButtonUp == true)
+            {
+                auto& AllRitems = *m_AllRitemsRef;
+                auto Ritem_rightButtonPress = AllRitems.find("UI_Layout_CharacterSelection_RightButton_Press")->second.get();
+                SelectionRightButton->m_RenderItems = { Ritem_rightButtonPress };
+                RightButtonPress = true;
+                RightButtonUp = false;
+            }
+        }
+        // Process Play
+        else if (PointInRect(CursorPos_x, CursorPos_y, PlayButtonAreainScreen) == true)
+        {
+            //TestFunc. - Access battle directly.
+            if (OnceAccessBattleDirectly == false)
+            {
+                EventManager eventManager;
+                eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
+                OnceAccessBattleDirectly = true;
+            }
+
+            if (PlayButtonPress == false && PlayButtonUp == true)
+            {
+                auto& AllRitems = *m_AllRitemsRef;
+                auto Ritem_playButtonPress = AllRitems.find("UI_Layout_GameStartButton_Press")->second.get();
+                PlayButton->m_RenderItems = { Ritem_playButtonPress };
+                PlayButtonPress = true;
+                PlayButtonUp = false;
+            }
+        }
+    }
+    else
+    {
+        ObjectManager ObjManager;
+        Object* SelectionLeftButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_LeftButton");
+        Object* SelectionRightButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_RightButton");
+        Object* PlayButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameStartButton");
+
+        if (LeftButtonPress == true && LeftButtonUp == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_leftButton = AllRitems.find("UI_Layout_CharacterSelection_LeftButton")->second.get();
+            SelectionLeftButton->m_RenderItems = { Ritem_leftButton };
+            LeftButtonPress = false;
+            LeftButtonUp = true;
+        }
+        else if (RightButtonPress == true && RightButtonUp == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_rightButton = AllRitems.find("UI_Layout_CharacterSelection_RightButton")->second.get();
+            SelectionRightButton->m_RenderItems = { Ritem_rightButton };
+            RightButtonPress = false;
+            RightButtonUp = true;
+        }
+        else if (PlayButtonPress == true && PlayButtonUp == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_playButtonPress = AllRitems.find("UI_Layout_GameStartButton")->second.get();
+            PlayButton->m_RenderItems = { Ritem_playButtonPress };
+            PlayButtonPress = false;
+            PlayButtonUp = true;
+        }
     }
 
     // Process Chat
     {
-
+        if (key_state[VK_RETURN] == true)
+        {
+            if (ActivateChattingModeCoolTime == false)
+                ChattingModeTimeStack = ChattingModeCoolTime;
+            else
+                ChattingModeTimeStack += gt.GetTimeElapsed();
+            if (ChattingModeTimeStack >= ChattingModeCoolTime)
+            {
+                ChattingMode = !ChattingMode;
+                if (ChattingMode == true)
+                {
+                    ObjectManager ObjManager;
+                    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
+                    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
+                    ChatInputBox->m_TransformInfo->m_TexAlpha = 1.0f;
+                    ChatInputText->m_Textinfo->m_Text = L"[UserName]: bla bla bla";
+                    ChattingMode = true;
+                }
+                else if (ChattingMode == false)
+                {
+                    ObjectManager ObjManager;
+                    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
+                    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
+                    ChatInputBox->m_TransformInfo->m_TexAlpha = 0.0f;
+                    ChatInputText->m_Textinfo->m_Text.clear();
+                    ChattingMode = false;
+                }
+                ActivateChattingModeCoolTime = true;
+                ChattingModeTimeStack = 0.0f;
+            }
+        }
+        else
+        {
+            ActivateChattingModeCoolTime = false;
+        }
     }
 
     if (OnceSendChatLog == true)
