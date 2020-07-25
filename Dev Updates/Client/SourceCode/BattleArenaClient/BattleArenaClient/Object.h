@@ -20,6 +20,7 @@ struct TextInfo
 {
 	std::wstring m_FontName;
 	DirectX::XMFLOAT2 m_TextPos = { 0.0f, 0.0f };
+	DXTK_FONT::TEXT_PIVOT m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
 	DirectX::XMVECTOR m_TextColor = DirectX::Colors::Black;
 	std::wstring m_Text;
 	// 렌더링할 텍스트마다 SpriteBatch를 지정해줘야 하기에

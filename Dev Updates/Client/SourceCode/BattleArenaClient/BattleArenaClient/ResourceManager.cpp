@@ -248,14 +248,17 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
         Meshes["UI_Layout_LobySceneBackground"]            = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor,  228.0f * wnd_y_factor,  200.0f * wnd_x_factor, 300.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_MatchWaiting"]                   = geoGen.CreateQuad(-600.0f * wnd_x_factor, -105.0f * wnd_y_factor,  200.0f * wnd_x_factor,  60.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor, -197.9f * wnd_y_factor,  200.0f * wnd_x_factor, 100.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor,  198.0f * wnd_y_factor,  340.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.01f);
+        Meshes["UI_Layout_LobyChattingInputBox"]           = geoGen.CreateQuad(-588.0f * wnd_x_factor, -118.0f * wnd_y_factor,  324.0f * wnd_x_factor,  50.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameStartButton_Press"]          = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_LobyCharacterName"]              = geoGen.CreateQuad(-100.0f * wnd_x_factor, -212.9f * wnd_y_factor,  200.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_CharacterSelection_LeftButton"]  = geoGen.CreateQuad(-192.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_CharacterSelection_RightButton"] = geoGen.CreateQuad( 122.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_LobyUserInfo"]                   = geoGen.CreateQuad( 400.0f * wnd_x_factor,  320.0f * wnd_y_factor,  200.0f * wnd_x_factor,  60.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_LobyCharacterDescrition"]        = geoGen.CreateQuad( 400.0f * wnd_x_factor,  137.5f * wnd_y_factor,  200.0f * wnd_x_factor, 275.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_CharacterSelection_LeftButton_Press"] = geoGen.CreateQuad(-192.0f * wnd_x_factor, -212.9f * wnd_y_factor, 70.0f * wnd_x_factor, 70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_CharacterSelection_RightButton_Press"] = geoGen.CreateQuad(122.0f * wnd_x_factor, -212.9f * wnd_y_factor, 70.0f * wnd_x_factor, 70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyUserInfo"]                   = geoGen.CreateQuad(-175.0f * wnd_x_factor,  320.0f * wnd_y_factor,  350.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyCharacterDescrition"]        = geoGen.CreateQuad( 250.0f * wnd_x_factor,  177.5f * wnd_y_factor,  360.0f * wnd_x_factor, 350.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["LobySceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "LobySceneUIGeo", Meshes));
@@ -416,8 +419,9 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
     std::vector<std::string> anim_paths;
     std::vector<std::string> execptProcessing_file_nodes = { "Environment_root", "RootNode" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths, &execptProcessing_file_nodes);
-    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
+    //model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Environment_BoundingBoxes.txt", mesh_path);
 
+    aiModelData::aiBoundingBox CharacterModelBoundingBoxes[4];
     model_loader.ImportingAllMeshAsSkinned(true);
 
     mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Male Knight 01.fbx";
@@ -429,10 +433,50 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/SkillPose Action.fbx",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Knight/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    //model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Knight 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[0]);
 
-    aiModelData::aiBoundingBox KnightModelBoundingBox; model_loader.loadMergedBoundingBox(mesh_path, KnightModelBoundingBox);
-    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], KnightModelBoundingBox);
+    mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Male Warrior 01.fbx";
+    anim_paths = {
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Attack Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Dieing Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Idle Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Impact Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/SkillPose Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Walk Action.fbx" };
+    ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[1]);
+
+    mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Female Warrior 01.fbx";
+    anim_paths = {
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Attack Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Dieing Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Idle Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Impact Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/SkillPose Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Walk Action.fbx" };
+    ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Female Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[2]);
+
+    mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Male Mage 01.fbx";
+    anim_paths = {
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Attack Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Dieing Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Idle Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Impact Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/SkillPose Action.fbx",
+        m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Walk Action.fbx" };
+    ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
+    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Mage 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[3]);
+
+
+    /*ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], CharacterModelBoundingBoxes[0]);
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Warrior 01"], CharacterModelBoundingBoxes[1]);
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Female Warrior 01"], CharacterModelBoundingBoxes[2]);
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Mage 01"], CharacterModelBoundingBoxes[3]);*/
 }
 
 std::vector<UINT8> ResourceManager::GenerateTexture_chechboardPattern()
@@ -482,6 +526,15 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/password_input_box_layout_test.tga",
         m_additionalAssetPath + "UI/Layout/LeftButton.png",
         m_additionalAssetPath + "UI/Layout/RightButton.png",
+        m_additionalAssetPath + "UI/Layout/LeftButton_Press.png",
+        m_additionalAssetPath + "UI/Layout/RightButton_Press.png",
+        m_additionalAssetPath + "UI/Layout/Label_DarkBlue.png",
+        m_additionalAssetPath + "UI/Layout/Character_Information_Label.png",
+        m_additionalAssetPath + "UI/Layout/PlayButton.png",
+        m_additionalAssetPath + "UI/Layout/PlayButton_Press.png",
+        m_additionalAssetPath + "UI/Layout/ChattingLogLayer.png",
+        m_additionalAssetPath + "UI/Layout/ChattingInputBoxLayer.png",
+        m_additionalAssetPath + "UI/Layout/UserInfoLayer.png",
         m_additionalAssetPath + "UI/Layout/White_Transparency50.png",
         m_additionalAssetPath + "UI/Layout/LightGreen_Transparency50.png",
         m_additionalAssetPath + "UI/Layout/HPBar_Dest.png",
@@ -692,11 +745,49 @@ void ResourceManager::BuildRenderItems()
         {
             std::string subMeshName = subMesh_iter.first;
             if (subMeshName == "UI_Layout_LobySceneBackground")
+            {
                 SceneRitems[subMeshName]->Mat = m_Materials["Background_SkullPattern"].get();
+            }
             else if (subMeshName.find("LeftButton") != std::string::npos)
-                SceneRitems[subMeshName]->Mat = m_Materials["LeftButton"].get();
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["LeftButton_Press"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["LeftButton"].get();
+            }
             else if (subMeshName.find("RightButton") != std::string::npos)
-                SceneRitems[subMeshName]->Mat = m_Materials["RightButton"].get();
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["RightButton_Press"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["RightButton"].get();
+            }
+            else if (subMeshName == "UI_Layout_LobyUserInfo")
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["UserInfoLayer"].get();
+            }
+            else if (subMeshName == "UI_Layout_LobyCharacterName")
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["Label_DarkBlue"].get();
+            }
+            else if (subMeshName == "UI_Layout_LobyCharacterDescrition")
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["Character_Information_Label"].get();
+            }
+            else if (subMeshName.find("GameStartButton") != std::string::npos)
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["PlayButton_Press"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["PlayButton"].get();
+            }
+            else if (subMeshName.find("LobyChatting") != std::string::npos)
+            {
+                if (subMeshName.find("InputBox") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["ChattingInputBoxLayer"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["ChattingLogLayer"].get();
+            }
             else
                 SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }
@@ -772,53 +863,204 @@ void ResourceManager::BuildRenderItems()
         auto& PlayGameSceneRitems = m_AllRitems[(int)RenderTargetScene::PlayGameScene];
         auto& GameOverSceneRitems = m_AllRitems[(int)RenderTargetScene::GameOverScene];
 
-        ResourceManager::BuildRenderItem(LobySceneRitems,     m_Geometries["Male Knight 01"].get());
-        ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Male Knight 01"].get());
-        ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Male Knight 01"].get());
-        for (auto& subMesh : m_Geometries["Male Knight 01"]->DrawArgs)
+        // Create Warrior's Ritems
         {
-            string subMeshName = subMesh.first;
-            Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
-            if (subMeshName.find("01 Head") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
-            else if (subMeshName.find("02 Torso") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("03 Bottom") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS White Gold"].get();
-            else if (subMeshName.find("04 Feet") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("05 Hand") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
-            else if (subMeshName.find("06 Belt") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("Poleyn 01") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("Necklace 08") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName == "Male Knight 01-Pauldron 01")
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
-            else if (subMeshName == "Male Knight 01-Pauldron 01_1")
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("Shield_02") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else if (subMeshName.find("Brow 01") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
-            else if (subMeshName.find("Eyes 02") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
-            else if (subMeshName.find("Hair Male 09") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
-            else if (subMeshName.find("Mouth 03") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Silver"].get();
-            else if (subMeshName.find("Bracer 05") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
-            else if (subMeshName.find("Sword_02") != std::string::npos)
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
-            else
-                subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
+            ResourceManager::BuildRenderItem(LobySceneRitems, m_Geometries["Male Knight 01"].get());
+            ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Male Knight 01"].get());
+            ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Male Knight 01"].get());
+            for (auto& subMesh : m_Geometries["Male Knight 01"]->DrawArgs)
+            {
+                string subMeshName = subMesh.first;
+                Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
+                if (subMeshName.find("01 Head") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("02 Torso") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("03 Bottom") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS White Gold"].get();
+                else if (subMeshName.find("04 Feet") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("05 Hand") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("06 Belt") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Poleyn 01") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Necklace 08") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName == "Male Knight 01-Pauldron 01")
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName == "Male Knight 01-Pauldron 01_1")
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Shield_02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Brow 01") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
+                else if (subMeshName.find("Eyes 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+                else if (subMeshName.find("Hair Male 09") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Red"].get();
+                else if (subMeshName.find("Mouth 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Silver"].get();
+                else if (subMeshName.find("Bracer 05") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("Sword_02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
 
-            LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
-            PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
-            GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
+                LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
+                PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
+                GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
+            }
+        }
+
+        // Create Berserker's Ritems
+        {
+            ResourceManager::BuildRenderItem(LobySceneRitems, m_Geometries["Male Warrior 01"].get());
+            ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Male Warrior 01"].get());
+            ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Male Warrior 01"].get());
+            for (auto& subMesh : m_Geometries["Male Warrior 01"]->DrawArgs)
+            {
+                string subMeshName = subMesh.first;
+                Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
+                if (subMeshName.find("01 Head") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Gold"].get();
+                else if (subMeshName.find("02 Torso") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Blue Silver"].get();
+                else if (subMeshName.find("03 Bottom") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Blue Silver"].get();
+                else if (subMeshName.find("04 Feet") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Silver"].get();
+                else if (subMeshName.find("05 Hand") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Gold"].get();
+                else if (subMeshName.find("06 Belt") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Blue Silver"].get();
+                else if (subMeshName.find("Poleyn 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Blue Silver"].get();
+                else if (subMeshName.find("Bracer 04") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Grey Silver"].get();
+                else if (subMeshName.find("Pauldron 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Blue Silver"].get();
+                else if (subMeshName.find("Axe_03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Blue Silver"].get();
+                else if (subMeshName.find("Beard 08") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+                else if (subMeshName.find("Brow 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+                else if (subMeshName.find("Eyes 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+                else if (subMeshName.find("Helmet 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS White Silver"].get();
+                else if (subMeshName.find("Mouth 06") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Silver"].get();
+                else
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
+
+                LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
+                PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
+                GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
+            }
+        }
+
+        // Create Assassin's Ritems
+        {
+            ResourceManager::BuildRenderItem(LobySceneRitems, m_Geometries["Female Warrior 01"].get());
+            ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Female Warrior 01"].get());
+            ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Female Warrior 01"].get());
+            for (auto& subMesh : m_Geometries["Female Warrior 01"]->DrawArgs)
+            {
+                string subMeshName = subMesh.first;
+                Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
+                if (subMeshName.find("01 Head") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Gold"].get();
+                else if (subMeshName.find("02 Torso") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS White Gold"].get();
+                else if (subMeshName.find("03 Bottom") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Red Gold"].get();
+                else if (subMeshName.find("04 Feet") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS White Gold"].get();
+                else if (subMeshName.find("05 Hand") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Gold"].get();
+                else if (subMeshName.find("06 Belt") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Red Gold"].get();
+                else if (subMeshName.find("Poleyn 07") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Necklace 06") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Purple Gold"].get();
+                else if (subMeshName.find("Bracer 06") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("Dagger 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Brow 05") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Eyes 01") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Black"].get();
+                else if (subMeshName.find("Hair Female 12") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Headband 06") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Mouth 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["DS Brown Silver"].get();
+                else if (subMeshName.find("Pauldron 07") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS White Gold"].get();
+                else
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
+
+                LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
+                PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
+                GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
+            }
+        }
+
+        // Create Priest's Ritems
+        {
+            ResourceManager::BuildRenderItem(LobySceneRitems, m_Geometries["Male Mage 01"].get());
+            ResourceManager::BuildRenderItem(PlayGameSceneRitems, m_Geometries["Male Mage 01"].get());
+            ResourceManager::BuildRenderItem(GameOverSceneRitems, m_Geometries["Male Mage 01"].get());
+            for (auto& subMesh : m_Geometries["Male Mage 01"]->DrawArgs)
+            {
+                string subMeshName = subMesh.first;
+                Material* subMeshMat[3] = { nullptr, nullptr, nullptr };
+                if (subMeshName.find("01 Head") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("02 Torso") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["MS Purple Gold"].get();
+                else if (subMeshName.find("03 Bottom") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["MS Purple Gold"].get();
+                else if (subMeshName.find("04 Feet") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("05 Hand") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Gold"].get();
+                else if (subMeshName.find("06 Belt") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["MS Red Gold"].get();
+                else if (subMeshName.find("Necklace 11") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Pauldron 12") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Orb (1)") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Staff_04") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Beard 02") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Brow 07") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Eyes 05") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Hair Male 04") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["Hair Grey"].get();
+                else if (subMeshName.find("Headband 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Mouth 03") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Brown Silver"].get();
+                else
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["checkerboard"].get();
+
+                LobySceneRitems[subMeshName]->Mat = subMeshMat[0];
+                PlayGameSceneRitems[subMeshName]->Mat = subMeshMat[1];
+                GameOverSceneRitems[subMeshName]->Mat = subMeshMat[2];
+            }
         }
     }
 }

@@ -24,6 +24,8 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     m_ClientRect = ClientRect;
+    m_width = m_ClientRect.right - m_ClientRect.left;
+    m_height = m_ClientRect.bottom - m_ClientRect.top;
 
     AnimateLights(gt);
     AnimateSkeletons(gt, GeneratedEvents);
@@ -111,21 +113,15 @@ void Scene::UpdateSkinnedCBs(UploadBuffer<SkinnedConstants>* skinnedCB, CTimer& 
         auto SkeletonInfo = obj->m_SkeletonInfo.get();
 
         std::string& AnimName = SkeletonInfo->m_AnimInfo->CurrPlayingAnimName;
-        bool isSetted = false;
 
-        if (SkeletonInfo->m_AnimInfo->AnimIsPlaying(AnimName, isSetted))
-        {
-            if (isSetted == false) continue;
+        SkinnedConstants skinConstants;
+        auto& animTransforms = SkeletonInfo->m_AnimInfo->CurrAnimJointTransforms;
+        auto& offsetTransforms = SkeletonInfo->m_AnimInfo->OffsetJointTransforms;
 
-            SkinnedConstants skinConstants;
-            auto& animTransforms = SkeletonInfo->m_AnimInfo->CurrAnimJointTransforms;
-            auto& offsetTransforms = SkeletonInfo->m_AnimInfo->OffsetJointTransforms;
+        for (size_t i = 0; i < animTransforms.size(); ++i)
+            aiM2dxM(skinConstants.BoneTransform[i], animTransforms[i] * offsetTransforms[i]);
 
-            for (size_t i = 0; i < animTransforms.size(); ++i)
-                aiM2dxM(skinConstants.BoneTransform[i], animTransforms[i]* offsetTransforms[i]);
-
-            skinnedCB->CopyData(SkeletonInfo->SkinCBIndex, skinConstants);
-        }
+        skinnedCB->CopyData(SkeletonInfo->SkinCBIndex, skinConstants);
     }
 }
 

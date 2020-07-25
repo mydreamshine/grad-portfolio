@@ -250,3 +250,67 @@ void Player::UpdateCamera(CTimer& gt, float aspect)
 	m_Camera.LookAt(EyePosition, LookAtPosition, UpDirection);
 	m_Camera.UpdateViewMatrix();
 }
+
+void Player::UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt)
+{
+	XMMATRIX VIEW = MainCamera->GetView();
+	XMMATRIX PROJ = MainCamera->GetProj();
+	XMMATRIX VIEWPROJ = XMMatrixMultiply(VIEW, PROJ);
+
+	auto PlayerTransformInfo = m_CharacterObjRef->m_TransformInfo.get();
+	XMFLOAT3 CharacterPos = PlayerTransformInfo->GetWorldPosition();
+	XMVECTOR CHARACTER_POS = XMLoadFloat3(&CharacterPos);
+
+	XMVECTOR SCREEN_POS = XMVector3Transform(CHARACTER_POS, VIEWPROJ);
+	XMFLOAT3 CharacterPosFromScreenCoord; XMStoreFloat3(&CharacterPosFromScreenCoord, SCREEN_POS);
+
+	CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
+	float CharacterCurrHP = (float)m_CharacterObjRef->HP;
+	float CharacterOldHP = (float)m_oldHP;
+	float CharacterMaxHP = 0.0f;
+	switch (CharacterType)
+	{
+	case CHARACTER_TYPE::WARRIOR:   CharacterMaxHP = 100.0f; break;
+	case CHARACTER_TYPE::BERSERKER: CharacterMaxHP = 150.0f; break;
+	case CHARACTER_TYPE::ASSASSIN:  CharacterMaxHP = 100.0f; break;
+	case CHARACTER_TYPE::PRIEST:    CharacterMaxHP = 80.0f;  break;
+	}
+	float HP_BarScale = CharacterCurrHP / CharacterMaxHP;
+	bool HP_Increase = (CharacterCurrHP - CharacterOldHP > 0.0f);
+	float HP_IncreaseFactor = 6.0f * gt.GetTimeElapsed();
+
+	for (auto& HP_bar_e : m_HP_BarObjRef)
+	{
+		auto TransformInfo = HP_bar_e->m_TransformInfo.get();
+
+		// Set Pos
+		XMFLOAT3 HP_Bar_Pos = CharacterPosFromScreenCoord;
+		HP_Bar_Pos.x -= 35.0f; // Offset x;
+		HP_Bar_Pos.y += 12.5f + 80.0f; // Offset y;
+		HP_Bar_Pos.z = 0.0f;
+		TransformInfo->SetWorldPosition(HP_Bar_Pos);
+
+		// Set HP Bar Size
+		float CurrScale = TransformInfo->GetWorldScale().x;
+		if (HP_bar_e->m_Name.find("Dest") != std::string::npos)
+		{
+			float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor * 0.3f : HP_IncreaseFactor;
+			CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+			TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+		}
+		else if (HP_bar_e->m_Name.find("Increase") != std::string::npos)
+		{
+			float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor : HP_IncreaseFactor * 0.3f;
+			CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+			TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+		}
+
+		TransformInfo->UpdateWorldTransform();
+	}
+
+	auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();
+	XMFLOAT2 TextPos = { CharacterPosFromScreenCoord.x + ViewPort.Width / 2.0f, ViewPort.Height / 2.0f - CharacterPosFromScreenCoord.y };
+	TextPos.x += 3.0f;  // Offset x
+	TextPos.y -= 93.0f; // Offset y
+	TextInfo->m_TextPos = TextPos;
+}

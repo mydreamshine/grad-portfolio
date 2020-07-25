@@ -65,6 +65,7 @@ void TransformInfo::SetWorldTransform(const DirectX::XMFLOAT3& newScale, const D
 	m_WorldPosition = newPosition;
 
 	TransformInfo::UpdateBound();
+	TransformInfo::SetWorldRotationEuler(newRotationEuler);
 	TransformInfo::UpdateWorldTransform();
 }
 
@@ -92,6 +93,7 @@ void TransformInfo::SetLocalTransform(const DirectX::XMFLOAT3& newScale, const D
 	m_LocalPosition = newPosition;
 
 	TransformInfo::UpdateBound();
+	TransformInfo::SetLocalRotationEuler(newRotationEuler);
 	TransformInfo::UpdateLocalTransform();
 }
 

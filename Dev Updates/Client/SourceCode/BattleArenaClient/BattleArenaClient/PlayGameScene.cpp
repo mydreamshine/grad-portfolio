@@ -293,7 +293,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
     Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
     Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KDA");
 
-    static float timestack = 0.0f;
+    /*static float timestack = 0.0f;
     static bool healChange = false;
     timestack += gt.GetTimeElapsed();
     int check_sec = (int)timestack;
@@ -313,7 +313,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             }
         }
         timestack = 0.0f;
-    }
+    }*/
 
     // Update KillLog Text
     {
@@ -503,71 +503,12 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::uni
 
 void PlayGameScene::UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players)
 {
-    XMMATRIX VIEW = MainCamera->GetView();
-    XMMATRIX PROJ = MainCamera->GetProj();
-    XMMATRIX VIEWPROJ = XMMatrixMultiply(VIEW, PROJ);
-
-    float HP_IncreaseFactor = 6.0f * gt.GetTimeElapsed();
+    CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
 
     for (auto& Player_iter : Players)
     {
         auto player = Player_iter.second.get();
-
-        auto PlayerTransformInfo = player->m_CharacterObjRef->m_TransformInfo.get();
-        XMFLOAT3 CharacterPos = PlayerTransformInfo->GetWorldPosition();
-        XMVECTOR CHARACTER_POS = XMLoadFloat3(&CharacterPos);
-
-        XMVECTOR SCREEN_POS = XMVector3Transform(CHARACTER_POS, VIEWPROJ);
-        XMFLOAT3 CharacterPosFromScreenCoord; XMStoreFloat3(&CharacterPosFromScreenCoord, SCREEN_POS);
-
-        CHARACTER_TYPE CharacterType = player->m_CharacterObjRef->CharacterType;
-        float CharacterCurrHP = (float)player->m_CharacterObjRef->HP;
-        float CharacterOldHP = (float)player->m_oldHP;
-        float CharacterMaxHP = 0.0f;
-        switch (CharacterType)
-        {
-        case CHARACTER_TYPE::WARRIOR:   CharacterMaxHP = 100.0f; break;
-        case CHARACTER_TYPE::BERSERKER: CharacterMaxHP = 150.0f; break;
-        case CHARACTER_TYPE::ASSASSIN:  CharacterMaxHP = 100.0f; break;
-        case CHARACTER_TYPE::PRIEST:    CharacterMaxHP = 80.0f;  break;
-        }
-        float HP_BarScale = CharacterCurrHP / CharacterMaxHP;
-        bool HP_Increase = (CharacterCurrHP - CharacterOldHP > 0.0f);
-
-        for (auto& HP_bar_e : player->m_HP_BarObjRef)
-        {
-            auto TransformInfo = HP_bar_e->m_TransformInfo.get();
-
-            // Set Pos
-            XMFLOAT3 HP_Bar_Pos = CharacterPosFromScreenCoord;
-            HP_Bar_Pos.x -= 35.0f; // Offset x;
-            HP_Bar_Pos.y += 12.5f + 80.0f; // Offset y;
-            HP_Bar_Pos.z = 0.0f;
-            TransformInfo->SetWorldPosition(HP_Bar_Pos);
-
-            // Set HP Bar Size
-            float CurrScale = TransformInfo->GetWorldScale().x;
-            if (HP_bar_e->m_Name.find("Dest") != std::string::npos)
-            {
-                float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor * 0.3f : HP_IncreaseFactor;
-                CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
-                TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
-            }
-            else if (HP_bar_e->m_Name.find("Increase") != std::string::npos)
-            {
-                float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor : HP_IncreaseFactor * 0.3f;
-                CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
-                TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
-            }
-
-            TransformInfo->UpdateWorldTransform();
-        }
-
-        auto TextInfo = player->m_CharacterInfoTextObjRef->m_Textinfo.get();
-        XMFLOAT2 TextPos = { CharacterPosFromScreenCoord.x + m_width / 2.0f, m_height / 2.0f - CharacterPosFromScreenCoord.y };
-        TextPos.x += 3.0f;
-        TextPos.y -= 93.0f; // Offset y
-        TextInfo->m_TextPos = TextPos;
+        player->UpdateUITransform(&m_MainCamera, ViewPort, gt);
     }
 }
 
@@ -938,10 +879,21 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
 void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
 {
     ObjectManager ObjManager;
-    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
-    if(ControledObj != nullptr)
-        //ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
-        ControledObj->m_TransformInfo->SetWorldTransform(XMFLOAT3(250, 250, 250), RotationEuler, Position);
+    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);;
+
+    auto Player_iter = m_Players.find(CE_ID);
+    if (m_Players.find(CE_ID) != m_Players.end())
+    {
+        float ConvertModelUnit = 250.0f;
+        Scale = { Scale.x * ConvertModelUnit, Scale.y * ConvertModelUnit, Scale.z * ConvertModelUnit };
+    }        
+
+    if (ControledObj != nullptr)
+    {
+        auto TransformInfo = ControledObj->m_TransformInfo.get();
+        TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+        TransformInfo->UpdateWorldTransform();
+    }
 }
 
 void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)

@@ -30,6 +30,7 @@ public:
     virtual void AnimateLights(CTimer& gt);
     virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateCameras(CTimer& gt);
+    void AnimateWorldObjectsTransform(CTimer& gt);
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
@@ -62,11 +63,28 @@ private:
     std::wstring UserInfo_UserName;
     int UserInfo_UserRank = 0;
 
-    CHARACTER_TYPE SelectedCharacterType = CHARACTER_TYPE::NON;
+    CHARACTER_TYPE SelectedCharacterType = CHARACTER_TYPE::WARRIOR;
+    float CharacterTurnTableYaw = 0.0f;
+    float AmountTurnTableYaw = 0.0f;
+    float savedTurnTableYaw = 0.0f;
+    bool OnceSavedTurnTableYaw = false;
 
     bool ChattingMode = false;
+    const float ChattingModeCoolTime = 0.3f;
+    float ChattingModeTimeStack = 0.0f;
+    bool ActivateChattingModeCoolTime = false;
+
     bool StartMatching = false;
-    bool MouseLeftButtonClick = false;
+    
+    bool CharacterSelectionDone = true;
+    bool CharacterSelectLeft = false;
+    bool CharacterSelectRight = false;
+    bool LeftButtonPress = false;
+    bool RightButtonPress = false;
+    bool LeftButtonUp = true;
+    bool RightButtonUp = true;
+    bool PlayButtonPress = false;
+    bool PlayButtonUp = true;
 
     bool OnceGetUserInfo = true;
     bool OnceTryGameMatching = false;

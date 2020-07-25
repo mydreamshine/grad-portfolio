@@ -24,7 +24,7 @@ cbuffer cbObject : register(b0)
     float3   cbPerObjectPad3;
 };
 
-#define MAX_BONE 100
+#define MAX_BONE 128
 cbuffer cbSkinned : register(b1)
 {
     float4x4 gBoneTransform[MAX_BONE];

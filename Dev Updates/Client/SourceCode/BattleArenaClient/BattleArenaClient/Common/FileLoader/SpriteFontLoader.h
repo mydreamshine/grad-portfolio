@@ -21,6 +21,17 @@ class DXTK_FONT
 	std::unique_ptr<DirectX::GraphicsMemory> m_graphicMemory;
 
 public:
+	// Text를 렌더링할 때 TextPos를 기준으로
+	// Text_Width만큼 Offset시킬 양을 지정해준다.
+	// ex) Center: TextPos.x += Text_Width / 2
+	//     Right:  TextPos.x += Text_Width
+	//     Left:   TextPos.x += 0
+	enum class TEXT_PIVOT
+	{
+		LEFT, CENTER, RIGHT
+	};
+
+public:
 	// .spritefont파일을 통해 fontsprite 텍스쳐 및 Descriptors를 생성
 	DXTK_FONT(ID3D12Device* device, ID3D12CommandQueue* commandQueue, const std::wstring& font_filepath)
 	{
@@ -57,11 +68,16 @@ public:
 
 	void DrawString(ID3D12GraphicsCommandList* commandList,
 		DirectX::SpriteBatch* TextBatch,
-		const DirectX::XMFLOAT2& text_Pos, DirectX::XMVECTOR color,
+		const DirectX::XMFLOAT2& text_Pos, const TEXT_PIVOT& text_Pivot, DirectX::XMVECTOR color,
 		const std::wstring& text)
 	{
 		DirectX::SimpleMath::Vector2 origin = m_Font->MeasureString(text.c_str());
-		origin.x /= 2.0f;
+		switch (text_Pivot)
+		{
+		case TEXT_PIVOT::LEFT:   origin.x = 0.0f;     break;
+		case TEXT_PIVOT::CENTER: origin.x /= 2.0f;    break;
+		case TEXT_PIVOT::RIGHT:  origin.x = origin.x; break;
+		}
 		origin.y /= 2.0f;
 
 		ID3D12DescriptorHeap* heaps[] = { m_FontDescriptors->Heap() };

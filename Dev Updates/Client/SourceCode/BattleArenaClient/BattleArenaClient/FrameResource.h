@@ -13,7 +13,7 @@ struct ObjectConstants
     DirectX::XMFLOAT3 cbPerObjectPad3 = { 0.0f, 0.0f, 0.0f };
 };
 
-#define MAX_BONE 100
+#define MAX_BONE 128
 struct SkinnedConstants
 {
     DirectX::XMFLOAT4X4 BoneTransform[MAX_BONE];

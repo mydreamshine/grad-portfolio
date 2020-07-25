@@ -1195,7 +1195,9 @@ void Framework::DrawSceneToUI()
         {
             auto font_render = font_iter->second.get();
             auto TextBatch = m_FontSpriteBatchs[TextInfo->TextBatchIndex].get();
-            font_render->DrawString(m_commandList.Get(), TextBatch, TextInfo->m_TextPos, TextInfo->m_TextColor, TextInfo->m_Text);
+            font_render->DrawString(m_commandList.Get(), TextBatch,
+                TextInfo->m_TextPos, TextInfo->m_TextPivot, TextInfo->m_TextColor,
+                TextInfo->m_Text);
         }
     }
 }
