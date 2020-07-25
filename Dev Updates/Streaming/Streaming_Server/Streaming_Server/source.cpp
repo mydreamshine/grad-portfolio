@@ -218,7 +218,7 @@ void do_worker() {
 			std::queue<std::unique_ptr<EVENT>> GeneratedEvents;
 			clients[key].GameFramework.OnUpdate(GeneratedEvents);
 			clients[key].GameFramework.OnRender();
-			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents, clients[key].sscs_packetList);
+			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents);
 			delete over_ex;
 			PostEvent((int)key, EV_ENCODE);
 		}

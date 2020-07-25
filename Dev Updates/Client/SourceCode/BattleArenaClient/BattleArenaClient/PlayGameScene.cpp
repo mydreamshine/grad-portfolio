@@ -888,8 +888,12 @@ void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 Rotat
         Scale = { Scale.x * ConvertModelUnit, Scale.y * ConvertModelUnit, Scale.z * ConvertModelUnit };
     }        
 
-    if(ControledObj != nullptr)
-        ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+    if (ControledObj != nullptr)
+    {
+        auto TransformInfo = ControledObj->m_TransformInfo.get();
+        TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+        TransformInfo->UpdateWorldTransform();
+    }
 }
 
 void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)

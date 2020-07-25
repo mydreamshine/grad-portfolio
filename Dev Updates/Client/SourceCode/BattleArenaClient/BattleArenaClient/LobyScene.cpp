@@ -67,6 +67,24 @@ void LobyScene::OnInitProperties(CTimer& gt)
         }
     }
 
+    ObjectManager ObjManager;
+    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
+    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
+    ChatInputBox->m_TransformInfo->m_TexAlpha = 1.0f;
+    ChatInputText->m_Textinfo->m_Text = L"[UserName]: bla bla bla";
+
+    Object* SelectionLeftButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_LeftButton");
+    Object* SelectionRightButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_RightButton");
+    Object* PlayButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameStartButton");
+
+    auto& AllRitems = *m_AllRitemsRef;
+    auto Ritem_playButton = AllRitems.find("UI_Layout_GameStartButton")->second.get();
+    auto Ritem_leftButton = AllRitems.find("UI_Layout_CharacterSelection_LeftButton")->second.get();
+    auto Ritem_rightButton = AllRitems.find("UI_Layout_CharacterSelection_RightButton")->second.get();
+    PlayButton->m_RenderItems = { Ritem_playButton };
+    SelectionLeftButton->m_RenderItems = { Ritem_leftButton };
+    SelectionRightButton->m_RenderItems = { Ritem_rightButton };
+
     m_SceneBounds.Radius = (float)SIZE_ShadowMap;
 
 
@@ -733,8 +751,8 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         else if (PlayButtonPress == true && PlayButtonUp == false)
         {
             auto& AllRitems = *m_AllRitemsRef;
-            auto Ritem_playButtonPress = AllRitems.find("UI_Layout_GameStartButton")->second.get();
-            PlayButton->m_RenderItems = { Ritem_playButtonPress };
+            auto Ritem_playButton = AllRitems.find("UI_Layout_GameStartButton")->second.get();
+            PlayButton->m_RenderItems = { Ritem_playButton };
             PlayButtonPress = false;
             PlayButtonUp = true;
         }
@@ -758,7 +776,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                     Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
                     ChatInputBox->m_TransformInfo->m_TexAlpha = 1.0f;
                     ChatInputText->m_Textinfo->m_Text = L"[UserName]: bla bla bla";
-                    ChattingMode = true;
                 }
                 else if (ChattingMode == false)
                 {
@@ -767,7 +784,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                     Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
                     ChatInputBox->m_TransformInfo->m_TexAlpha = 0.0f;
                     ChatInputText->m_Textinfo->m_Text.clear();
-                    ChattingMode = false;
                 }
                 ActivateChattingModeCoolTime = true;
                 ChattingModeTimeStack = 0.0f;
