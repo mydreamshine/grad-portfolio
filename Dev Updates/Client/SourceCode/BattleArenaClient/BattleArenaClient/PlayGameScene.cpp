@@ -879,7 +879,15 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
 void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position)
 {
     ObjectManager ObjManager;
-    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
+    Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);;
+
+    auto Player_iter = m_Players.find(CE_ID);
+    if (m_Players.find(CE_ID) != m_Players.end())
+    {
+        float ConvertModelUnit = 250.0f;
+        Scale = { Scale.x * ConvertModelUnit, Scale.y * ConvertModelUnit, Scale.z * ConvertModelUnit };
+    }        
+
     if(ControledObj != nullptr)
         ControledObj->m_TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
 }
