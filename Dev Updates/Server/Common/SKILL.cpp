@@ -4,7 +4,7 @@
 #include "CharacterConfig.h"
 
 SKILL::SKILL(DMRoom *world, short owner_id) :
-	pos(0, 0, 0),
+	pos(0, 10, 0),
 	rot(0, 0, 0),
 	dir(0, 0, 1.0f),
 	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),

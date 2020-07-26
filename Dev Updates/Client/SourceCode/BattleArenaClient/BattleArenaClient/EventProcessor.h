@@ -253,7 +253,7 @@ public:
         {
             auto packetData = reinterpret_cast<csss_packet_send_kill_message*>(packet);
             EventManager eventManager;
-            eventManager.ReservateEvent_SetKillLog(m_ExternalEvents, packetData->message);
+            //eventManager.ReservateEvent_SetKillLog(m_ExternalEvents, packetData->message);
         }
         break;
         case CSSS_SET_CHAT_LOG:

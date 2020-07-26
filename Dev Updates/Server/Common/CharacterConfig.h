@@ -6,7 +6,7 @@ constexpr float RESPAWN_TIME = 5.0f;
 constexpr float SEMI_INVINCIBLE_TIME = 3.0f;
 
 constexpr int NORMAL_ATTACK_DAMAGE = 10;
-constexpr float NORMAL_ATTACK_VELOCITY = 10.0f;
+constexpr float NORMAL_ATTACK_VELOCITY = 2100.0f;
 constexpr float NORMAL_ATTACK_DURATION = 5.0f;
 
 constexpr int SWORD_WAVE_DAMAGE = 30;

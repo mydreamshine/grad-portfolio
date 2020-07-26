@@ -131,6 +131,7 @@ void HERO::do_attack()
 	int object_id = world->skill_uid++;
 	SKILL* normal_attack = new NORMAL_ATTACK{world, (short)object_id};
 	normal_attack->pos = pos;
+	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;
 	normal_attack->dir = dir;
 	normal_attack->propensity = propensity;
@@ -221,7 +222,8 @@ void WARRIOR::do_skill()
 		skill_id = world->skill_uid++;
 		normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
 		normal_attack->pos = pos;
-		normal_attack->rot = rot; normal_attack->rot.y += Deg[i];
+		normal_attack->pos.y += 50;
+		normal_attack->rot = rot; normal_attack->rot.y -= Deg[i];
 		normal_attack->dir = dir.rotY(Deg[i]);
 		normal_attack->propensity = propensity;
 		normal_attack->damage = SWORD_WAVE_DAMAGE;
