@@ -211,14 +211,22 @@ void Player::ProcessSkeletonAnimNotify(std::queue<std::unique_ptr<EVENT>>& Gener
 	}
 
 	bool AnimNotifyIsSetted = false;
-	if (animInfo->CheckAnimTimeLineNotify("Sword Slash Gen", AnimNotifyIsSetted) == true)
+	if (animInfo->CheckAnimTimeLineNotify("Warrior_NormalAttackObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::WARRIOR_NORMAL_ATTACK_OBJ_GEN);
+	else if (animInfo->CheckAnimTimeLineNotify("Warrior_SkillObjGenTiming", AnimNotifyIsSetted) == true)
 		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::WARRIOR_SKILL_SWORD_WAVE_OBJ_GEN);
-	/*else if (animInfo->CheckAnimTimeLineNotify("Holy Area Gen", AnimNotifyIsSetted) == true)
-		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::PRIEST_SKILL_HOLY_AREA_OBJ_GEN);
-	else if (animInfo->CheckAnimTimeLineNotify("Fury Roar Act", AnimNotifyIsSetted) == true)
+	else if (animInfo->CheckAnimTimeLineNotify("Berserker_NormalAttackObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::BERSERKER_NORMAL_ATTACK_OBJ_GEN);
+	else if (animInfo->CheckAnimTimeLineNotify("Berserker_SkillObjGenTiming", AnimNotifyIsSetted) == true)
 		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::BERSERKER_SKILL_FURY_ROAR_ACT);
-	else if (animInfo->CheckAnimTimeLineNotify("Stealth Act", AnimNotifyIsSetted) == true)
-		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::ASSASSIN_SKILL_STEALTH_ACT);*/
+	else if (animInfo->CheckAnimTimeLineNotify("Assassin_NormalAttackObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::ASSASSIN_NORMAL_ATTACK_OBJ_GEN);
+	else if (animInfo->CheckAnimTimeLineNotify("Assassin_SkillObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::ASSASSIN_SKILL_STEALTH_ACT);
+	else if (animInfo->CheckAnimTimeLineNotify("Priest_NormalAttackObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::PRIEST_NORMAL_ATTACK_OBJ_GEN);
+	else if (animInfo->CheckAnimTimeLineNotify("Priest_SkillObjGenTiming", AnimNotifyIsSetted) == true)
+		eventManager.ReservateEvent_ActivatedAnimNotify(GeneratedEvents, Act_Object, ANIM_NOTIFY_TYPE::PRIEST_SKILL_HOLY_AREA_OBJ_GEN);
 }
 
 void Player::UpdateCamera(CTimer& gt, float aspect)
@@ -245,7 +253,6 @@ void Player::UpdateCamera(CTimer& gt, float aspect)
 	XMStoreFloat3(&EyePosition, Eye_Pos);
 	XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
 
-	m_Camera.SetPosition(EyePosition);
 	m_Camera.SetPerspectiveLens(DirectX::XM_PIDIV4, aspect, 1.0f, 10000.0f);
 	m_Camera.LookAt(EyePosition, LookAtPosition, UpDirection);
 	m_Camera.UpdateViewMatrix();
@@ -256,13 +263,16 @@ void Player::UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewP
 	XMMATRIX VIEW = MainCamera->GetView();
 	XMMATRIX PROJ = MainCamera->GetProj();
 	XMMATRIX VIEWPROJ = XMMatrixMultiply(VIEW, PROJ);
+	XMFLOAT4X4 Proj4x4f = MainCamera->GetProj4x4f();
 
 	auto PlayerTransformInfo = m_CharacterObjRef->m_TransformInfo.get();
 	XMFLOAT3 CharacterPos = PlayerTransformInfo->GetWorldPosition();
 	XMVECTOR CHARACTER_POS = XMLoadFloat3(&CharacterPos);
 
-	XMVECTOR SCREEN_POS = XMVector3Transform(CHARACTER_POS, VIEWPROJ);
+	XMVECTOR SCREEN_POS = XMVector3TransformCoord(CHARACTER_POS, VIEWPROJ);
 	XMFLOAT3 CharacterPosFromScreenCoord; XMStoreFloat3(&CharacterPosFromScreenCoord, SCREEN_POS);
+	CharacterPosFromScreenCoord.x *= ViewPort.Width;
+	CharacterPosFromScreenCoord.y *= ViewPort.Height;
 
 	CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
 	float CharacterCurrHP = (float)m_CharacterObjRef->HP;

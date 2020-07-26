@@ -290,8 +290,17 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "SpawnStageGround", StageGround_Meshes));
 
         std::unordered_map<std::string, GeometryGenerator::MeshData> EffectGeo_Meshs;
-        EffectGeo_Meshs["SkillEffect_SwordSlash_a"]  = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
-        EffectGeo_Meshs["PickingEffect_CrossTarget"] = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_SwordSlash_a"]           = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Sword_Wave_RedLight"]    = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Sting_Wave_BlueLight"]   = geoGen.CreateGrid( 50.0f, 326.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Smoke_BlueLight"]        = geoGen.CreateGrid(100.0f, 100.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Roar_Bear_RedLight"]     = geoGen.CreateGrid(200.0f, 200.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Poison_Skul_GreenRight"] = geoGen.CreateGrid( 70.0f,  70.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Poison_Fog_GreenLight"]  = geoGen.CreateGrid(100.0f, 100.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Heal_Cross_GreenLight"]  = geoGen.CreateGrid( 50.0f,  50.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Heal_Area_GreenLight"]   = geoGen.CreateGrid(500.0f, 500.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Fire_Wave_YellowLight"]  = geoGen.CreateGrid(100.0f, 326.0f, 10, 10);
+        EffectGeo_Meshs["PickingEffect_CrossTarget"]          = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
         m_Geometries["GameEffectGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "GameEffectGeo", EffectGeo_Meshs));
     }
@@ -445,8 +454,8 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/SkillPose Action.fbx",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Warrior/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
-    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[1]);
+    //model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[1]);
 
     mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Female Warrior 01.fbx";
     anim_paths = {
@@ -457,8 +466,8 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/SkillPose Action.fbx",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Female Warrior/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Female Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
-    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[2]);
+    //model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Female Warrior 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[2]);
 
     mesh_path = m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Male Mage 01.fbx";
     anim_paths = {
@@ -469,14 +478,14 @@ void ResourceManager::LoadSkinnedModels(ID3D12Device* device, ID3D12GraphicsComm
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/SkillPose Action.fbx",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Mage/Animations/Walk Action.fbx" };
     ResourceManager::LoadSkinnedModelData(device, commandList, model_loader, mesh_path, anim_paths);
-    model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Mage 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
-    //model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[3]);
+    //model_loader.loadBoundingBoxesToTXTfile(m_additionalAssetPath + "Models/BoundingBoxes/Male Mage 01_BoundingBoxes.txt", mesh_path, 250.0f, true);
+    model_loader.loadMergedBoundingBox(mesh_path, CharacterModelBoundingBoxes[3]);
 
 
-    /*ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], CharacterModelBoundingBoxes[0]);
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Knight 01"], CharacterModelBoundingBoxes[0]);
     ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Warrior 01"], CharacterModelBoundingBoxes[1]);
     ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Female Warrior 01"], CharacterModelBoundingBoxes[2]);
-    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Mage 01"], CharacterModelBoundingBoxes[3]);*/
+    ResourceManager::aiBB2dxBB(m_CharacterModelBoundingBoxes["Male Mage 01"], CharacterModelBoundingBoxes[3]);
 }
 
 std::vector<UINT8> ResourceManager::GenerateTexture_chechboardPattern()
@@ -540,6 +549,16 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/HPBar_Dest.png",
         m_additionalAssetPath + "UI/Layout/HPBar_Increase.png",
         m_additionalAssetPath + "UI/Layout/HPBar_Back.png",
+        m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
+        m_additionalAssetPath + "UI/Effect/Sword_Wave_RedLight.png",
+        m_additionalAssetPath + "UI/Effect/Sting_Wave_BlueLight.png",
+        m_additionalAssetPath + "UI/Effect/Smoke_BlueLight.png",
+        m_additionalAssetPath + "UI/Effect/Roar_Bear_RedLight.png",
+        m_additionalAssetPath + "UI/Effect/Poison_Skul_GreenRight.png",
+        m_additionalAssetPath + "UI/Effect/Poison_Fog_GreenLight.png",
+        m_additionalAssetPath + "UI/Effect/Heal_Cross_GreenLight.png",
+        m_additionalAssetPath + "UI/Effect/Heal_Area_GreenLight.png",
+        m_additionalAssetPath + "UI/Effect/Fire_Wave_YellowLight.png",
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/CrossTarget.png",
         m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
@@ -824,7 +843,6 @@ void ResourceManager::BuildRenderItems()
                     SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Increase"].get();
                 else if (subMeshName.find("Back") != std::string::npos)
                     SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Back"].get();
-
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }
@@ -835,6 +853,24 @@ void ResourceManager::BuildRenderItems()
             std::string subMeshName = subMesh_iter.first;
             if (subMeshName == "SkillEffect_SwordSlash_a")
                 SceneRitems[subMeshName]->Mat = m_Materials["SwordSlash_a"].get();
+            else if (subMeshName == "SkillEffect_Sword_Wave_RedLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Sword_Wave_RedLight"].get();
+            else if (subMeshName == "SkillEffect_Sting_Wave_BlueLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Sting_Wave_BlueLight"].get();
+            else if (subMeshName == "SkillEffect_Smoke_BlueLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Smoke_BlueLight"].get();
+            else if (subMeshName == "SkillEffect_Roar_Bear_RedLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Roar_Bear_RedLight"].get();
+            else if (subMeshName == "SkillEffect_Poison_Skul_GreenRight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Poison_Skul_GreenRight"].get();
+            else if (subMeshName == "SkillEffect_Poison_Fog_GreenLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Poison_Fog_GreenLight"].get();
+            else if (subMeshName == "SkillEffect_Heal_Cross_GreenLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Heal_Cross_GreenLight"].get();
+            else if (subMeshName == "SkillEffect_Heal_Area_GreenLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Heal_Area_GreenLight"].get();
+            else if (subMeshName == "SkillEffect_Fire_Wave_YellowLight")
+                SceneRitems[subMeshName]->Mat = m_Materials["Fire_Wave_YellowLight"].get();
             else if (subMeshName == "PickingEffect_CrossTarget")
                 SceneRitems[subMeshName]->Mat = m_Materials["CrossTarget"].get();
         }

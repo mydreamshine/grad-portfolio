@@ -149,6 +149,7 @@ void Camera::LookAt(FXMVECTOR pos, FXMVECTOR target, FXMVECTOR worldUp)
 	XMStoreFloat3(&mLook, L);
 	XMStoreFloat3(&mRight, R);
 	XMStoreFloat3(&mUp, U);
+	XMStoreFloat3(&mLookAtPosition, target);
 
 	mViewDirty = true;
 }

@@ -1,6 +1,6 @@
 Attack Action - Standing Torch Melee Attack Stab (total 46Frames)
 Dieing Action - Standing React Death Forward (total 83Frames)
-Idle Action - Ninja Idle (total 195Frames)
+Idle Action - Standing Torch Idle 02 (total 228Frames)
 Impact Action - Standing React Small From Headshot (total 22Frames)
 SkillPose Action - Standing 1H Cast Spell 01 (total 35Frames)
 Walk Action - Slow Run (total 21Frames)

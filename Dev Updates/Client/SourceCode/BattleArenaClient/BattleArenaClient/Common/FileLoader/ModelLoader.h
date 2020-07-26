@@ -79,7 +79,7 @@ namespace aiModelData
 
 		float CurrAnimTimePos = 0.0f;
 
-		std::unordered_map<std::string, AnimNotify> AnimTimeLineNotifys;
+		std::unordered_map<std::string, AnimNotify> AnimTimeLineNotifys[(int)AnimActionType::Count];
 
 		bool CurrAnimIsLoop = false;
 		bool CurrAnimIsStop = true;
@@ -100,7 +100,8 @@ namespace aiModelData
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
 			CurrAnimDurationIsOnceDone = false;
-			AnimTimeLineNotifys.clear();
+			for (auto& AnimNotifys : AnimTimeLineNotifys)
+				AnimNotifys.clear();
 			for (auto& ActionNames : Actions)
 				ActionNames.clear();
 			CurrPlayingAction = AnimActionType::Non;
@@ -125,17 +126,13 @@ namespace aiModelData
 			else Actions[(int)ActionType].emplace_back(AnimName);
 		}
 
-		void AnimTimeLineNotifyInit(const std::string& AnimName)
+		void AnimTimeLineNotifyInit(const AnimActionType& ActionType)
 		{
-			for (auto& notify_iter : AnimTimeLineNotifys)
+			for (auto& notify_iter : AnimTimeLineNotifys[(int)ActionType])
 			{
-				auto& notify_name = notify_iter.first;
-				if (notify_name.find(AnimName.c_str()) != std::string::npos)
-				{
-					auto& notify = notify_iter.second;
-					notify.TimeLineOver = false;
-					notify.PickUp = false;
-				}
+				auto& notify = notify_iter.second;
+				notify.TimeLineOver = false;
+				notify.PickUp = false;
 			}
 		}
 
@@ -147,7 +144,7 @@ namespace aiModelData
 			CurrAnimIsStop = false;
 			CurrAnimIsPause = false;
 			CurrAnimDurationIsOnceDone = false;
-			AnimInfo::AnimTimeLineNotifyInit(AnimName);
+			AnimInfo::AnimTimeLineNotifyInit(CurrPlayingAction);
 		}
 		void AnimStop(const std::string& AnimName)
 		{
@@ -157,7 +154,7 @@ namespace aiModelData
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
 			CurrAnimDurationIsOnceDone = false;
-			AnimInfo::AnimTimeLineNotifyInit(AnimName);
+			AnimInfo::AnimTimeLineNotifyInit(CurrPlayingAction);
 		}
 		void AnimResume(const std::string& AnimName)
 		{
@@ -268,9 +265,9 @@ namespace aiModelData
 			}
 		}
 
-		void SetAnimTimeLineNotify(const std::string& notify_name, float notify_timePos)
+		void SetAnimTimeLineNotify(AnimActionType ActionType, const std::string& notify_name, float notify_timePos)
 		{
-			auto& notify = AnimTimeLineNotifys[notify_name];
+			auto& notify = AnimTimeLineNotifys[(int)ActionType][notify_name];
 			notify.TimePos = notify_timePos;
 			notify.TimeLineOver = false;
 			notify.PickUp = false;
@@ -278,17 +275,23 @@ namespace aiModelData
 
 		bool CheckAnimTimeLineNotify(const std::string& notify_name, bool& IsSetted)
 		{
-			if (AnimTimeLineNotifys.find(notify_name) != AnimTimeLineNotifys.end())
+			AnimActionType ActionType = AnimActionType::Non;
+			for (int i = 0; i < (int)AnimActionType::Count; ++i)
 			{
-				IsSetted = true;
+				if (AnimTimeLineNotifys[i].find(notify_name) != AnimTimeLineNotifys[i].end())
+				{
+					ActionType = (AnimActionType)i;
+					IsSetted = true;
+					break;
+				}
 			}
-			else
+			if (ActionType == AnimActionType::Non)
 			{
 				IsSetted = false;
 				return false;
 			}
 
-			auto& notify = AnimTimeLineNotifys[notify_name];
+			auto& notify = AnimTimeLineNotifys[(int)ActionType][notify_name];
 
 			bool retCheck = false;
 			if (notify.PickUp == false && notify.TimeLineOver == true)
@@ -496,6 +499,7 @@ namespace aiModelData
 			auto& AnimTransforms = Anim_info.CurrAnimJointTransforms;
 			auto& OffsetTransforms = Anim_info.OffsetJointTransforms;
 			auto& AnimNotifys = Anim_info.AnimTimeLineNotifys;
+			auto& CurrAction = Anim_info.CurrPlayingAction;
 
 			if (AnimTransforms.size() < mJoints.size()) AnimTransforms.resize(mJoints.size());
 			if (OffsetTransforms.size() < mJoints.size()) OffsetTransforms.resize(mJoints.size());
@@ -515,12 +519,11 @@ namespace aiModelData
 						// Check&Set AnimTimeLineNotifys
 						{
 							if (InitDuration == true)
-								Anim_info.AnimTimeLineNotifyInit(AnimName);
+								Anim_info.AnimTimeLineNotifyInit(CurrAction);
 
-							for (auto& anim_notify_iter : AnimNotifys)
+							if ((int)CurrAction < (int)AnimActionType::Count)
 							{
-								auto& notify_name = anim_notify_iter.first;
-								if (notify_name.find(AnimName.c_str()) != std::string::npos)
+								for (auto& anim_notify_iter : AnimNotifys[(int)CurrAction])
 								{
 									auto& notify = anim_notify_iter.second;
 									if (notify.TimePos <= TimePos)
