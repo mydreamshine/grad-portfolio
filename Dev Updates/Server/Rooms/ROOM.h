@@ -4,6 +4,7 @@
 #include <WS2tcpip.h>
 #include <mutex>
 #include <queue>
+#include <map>
 
 class CLIENT;
 class ROOM
@@ -11,7 +12,7 @@ class ROOM
 public:
 	virtual ~ROOM();
 	virtual void init() = 0; ///< call with constructor, Init Game World
-	virtual bool regist(SOCKET client, void* buffer) = 0; ///< when client is connected, server call this function
+	virtual bool regist(int uid, SOCKET client, void* buffer) = 0; ///< when client is connected, server call this function
 	virtual void disconnect(SOCKET client) = 0; ///< when client is disconnected, server call this function
 	virtual void start() = 0; ///< when all user connected, server call this function
 	virtual void end() = 0; ///< when game end, server will delete this object, call end with destructor
@@ -21,6 +22,8 @@ public:
 	std::chrono::high_resolution_clock::time_point last_update_time; ///< last update time stamp.
 	std::chrono::high_resolution_clock::time_point current_update_time; ///< last update time stamp.
 
+	std::mutex client_lock;
+	std::map<int, CLIENT*> clients;
 protected:
 	void send_packet(SOCKET socket, void* buff, size_t buff_len);
 };

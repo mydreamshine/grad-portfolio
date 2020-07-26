@@ -55,20 +55,20 @@ public:
         {
             EVENT_DATA_MOVE_INFO* EventData = reinterpret_cast<EVENT_DATA_MOVE_INFO*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_move_character>(
-                m_ClientID,
+                m_MatchID,
                 EventData->MoveDirection_Yaw_angle);
         }
             break;
         case FEC_TRY_MOVESTOP_CHARACTER:
         {
-            newPacket = std::make_unique<sscs_packet_try_movestop_character>(m_ClientID);
+            newPacket = std::make_unique<sscs_packet_try_movestop_character>(m_MatchID);
         }
             break;
         case FEC_TRY_NORMAL_ATTACK:
         {
             EVENT_DATA_NORMAL_ATTACK_INFO* EventData = reinterpret_cast<EVENT_DATA_NORMAL_ATTACK_INFO*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_normal_attack>(
-                m_ClientID,
+                m_MatchID,
                 EventData->Character_Yaw_angle);
         }
             break;
@@ -76,7 +76,7 @@ public:
         {
             EVENT_DATA_SKILL_USE_INFO* EventData = reinterpret_cast<EVENT_DATA_SKILL_USE_INFO*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_use_skill>(
-                m_ClientID,
+                m_MatchID,
                 EventData->Character_Yaw_angle);
         }
             break;
@@ -84,7 +84,7 @@ public:
         {
             EVENT_DATA_DONE_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_DONE_CHARACTER_MOTION_INFO*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_done_character_motion>(
-                m_ClientID,
+                m_MatchID,
                 (char)EventData->MotionType);
         }
             break;
@@ -92,19 +92,19 @@ public:
         {
             EVENT_DATA_ACT_ANIM_NOTIFY* EventData = reinterpret_cast<EVENT_DATA_ACT_ANIM_NOTIFY*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_activate_anim_notify>(
-                m_ClientID,
+                m_MatchID,
                 (char)EventData->AnimNotifyType);
         }
             break;
         case FEC_TRY_RETURN_LOBY:
         {
-            newPacket = std::make_unique<sscs_try_return_lobby>(m_ClientID);
+            newPacket = std::make_unique<sscs_try_return_lobby>(m_MatchID);
         }
             break;
 
         case FEC_TRY_MATCH_LOGIN: {
             EVENT_DATA_TRY_MATCH_LOGIN* EventData = reinterpret_cast<EVENT_DATA_TRY_MATCH_LOGIN*>(Event.Data.get());
-            newPacket = std::make_unique<sscs_packet_try_match_login>(room_id, EventData->character_type,
+            newPacket = std::make_unique<sscs_packet_try_match_login>(m_ClientID, room_id, EventData->character_type,
                 (const wchar_t*)EventData->user_name.c_str());
             nw_module.connect_battle();
         }
@@ -127,6 +127,12 @@ public:
             m_ClientID = packetData->client_id;
         }
             break;
+        case CSSS_MATCH_LOGIN_OK:
+        {
+            auto packetData = reinterpret_cast<csss_packet_login_ok*>(packet);
+            m_MatchID = packetData->client_id;
+        }
+        break;
         case CSSS_CHANGE_SCENE:
         {
             auto packetData = reinterpret_cast<csss_packet_change_scene*>(packet);
@@ -137,7 +143,7 @@ public:
         case CSSS_SPAWN_PLAYER:
         {
             auto packetData = reinterpret_cast<csss_packet_spawn_player*>(packet);
-            bool is_main = packetData->object_id == m_ClientID;
+            bool is_main = packetData->object_id == m_MatchID;
             EventManager eventManager;
             eventManager.ReservateEvent_SpawnPlayer(m_ExternalEvents,
                 packetData->object_id, packetData->user_name, (CHARACTER_TYPE)packetData->character_type,
@@ -360,7 +366,8 @@ public:
 
     NWMODULE<EventProcessor> nw_module{ *this, CLIENT_BUFFER_SIZE };
 private:
-    short m_ClientID = 0;
+    int m_ClientID = 0;
+    int m_MatchID = 0;
     int room_id = 0;
     std::queue<std::unique_ptr<EVENT>> m_ExternalEvents;
 };

@@ -63,6 +63,9 @@
     <ClCompile Include="..\..\Common\SCOREBOARD.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\LobbyServer\LobbyServer\DBMANAGER.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleServer.h">
@@ -106,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\SCOREBOARD.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\DBMANAGER.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

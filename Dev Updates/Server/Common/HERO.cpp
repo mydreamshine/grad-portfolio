@@ -9,7 +9,7 @@ HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	rot(0, 0, 0),
 	dir(0, 0, 1.0f),
 	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
-	vel(5.0f),
+	vel(BASIC_VELOCITY),
 
 	hp(100),
 	motion_type((char)MOTION_TYPE::IDLE),
@@ -30,7 +30,7 @@ HERO::~HERO()
 void HERO::rotate(float yaw)
 {
 	rot.y = yaw;
-	dir = Vector3d(0, 0, 1.0f).rotY(yaw);
+	dir = Vector3d(0, 0, 1.0f).rotY(-yaw);
 	changed_transform = true;
 }
 

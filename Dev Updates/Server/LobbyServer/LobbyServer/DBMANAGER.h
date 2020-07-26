@@ -31,6 +31,20 @@ public:
 	int get_uid(const wchar_t* id);
 
 	/**
+	@brief get clients rank.
+	@param uid clients uid.
+	@return clients rank. if there's no uid on DB, return -1.
+	*/
+	int get_rank(int uid);
+
+	/**
+	@brief update clients rank.
+	@param uid clients uid.
+	@param rank clients rank.
+	*/
+	void update_rank(int uid, int rank);
+
+	/**
 	@brief get clients friend list.
 	@param id clients id.
 	@return clients friend list.

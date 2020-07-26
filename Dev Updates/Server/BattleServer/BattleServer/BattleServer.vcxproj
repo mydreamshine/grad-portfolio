@@ -135,6 +135,7 @@
     <ClCompile Include="..\..\Common\SCOREBOARD.cpp" />
     <ClCompile Include="..\..\Common\SKILL.cpp" />
     <ClCompile Include="..\..\Common\Vector3d.cpp" />
+    <ClCompile Include="..\..\LobbyServer\LobbyServer\DBMANAGER.cpp" />
     <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
     <ClCompile Include="..\..\Rooms\ROOM.cpp" />
     <ClCompile Include="BattleServer.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="..\..\Common\SCOREBOARD.h" />
     <ClInclude Include="..\..\Common\SKILL.h" />
     <ClInclude Include="..\..\Common\Vector3d.h" />
+    <ClInclude Include="..\..\LobbyServer\LobbyServer\DBMANAGER.h" />
     <ClInclude Include="..\..\LobbyServer\LobbyServer\lobby_protocol.h" />
     <ClInclude Include="..\..\Rooms\DMRoom.h" />
     <ClInclude Include="..\..\Rooms\ROOM.h" />

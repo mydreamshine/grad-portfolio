@@ -10,6 +10,9 @@
 #include "..\Common\SKILL.h"
 #include "..\Common\SCOREBOARD.h"
 #include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
+#include "../LobbyServer/LobbyServer/DBMANAGER.h"
+
+constexpr int WIN_GOAL = 5;
 
 class DMRoom : public ROOM
 {
@@ -17,7 +20,7 @@ public:
 	DMRoom();
 	virtual ~DMRoom();
 	virtual void init();
-	virtual bool regist(SOCKET client, void* buffer);
+	virtual bool regist(int uid, SOCKET client, void* buffer);
 	virtual void disconnect(SOCKET client);
 	virtual void start();
 	virtual void end();
@@ -25,6 +28,7 @@ public:
 	virtual void process_packet(CLIENT* client, int ReceivedBytes);
 
 	std::map<short, SCOREBOARD> m_score;
+	int kill_count[2];
 	void update_score_packet(short obj_id);
 	void update_score_damage(short obj_id, int damage);
 	void update_score_heal(short obj_id, int heal);
@@ -42,20 +46,28 @@ private:
 	PACKET_VECTOR info_data;  //전송될 위치정보 패킷
 
 	float delta_time;
+	float left_time;
+	bool game_end;
+	char win_team;
 	std::mutex socket_lock;
 	std::map<short, SOCKET> sockets;
+	std::map<short, int> uids;
 	std::map<SOCKET, short> sockets_index;
 	std::map<short, HERO*> m_heros;
-	
+	int total_score;
+
+
 	int skill_uid;
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;
+	DBMANAGER db_manager;
 
 	HERO* spawn_hero(short object_id, char character_type, char propensity);
 
 	void process_packet_vector();
 	bool game_logic();
 	void send_game_state();
+	bool end_check();
 
 	void process_type_packet(void* packet, PACKET_TYPE type);
 	void process_try_move_character(void* packet);

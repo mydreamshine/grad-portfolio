@@ -56,6 +56,7 @@ int DBMANAGER::get_uid(const wchar_t* id)
 	SQLRETURN retcode;
 	SQLWCHAR query[] = { L"{call get_uid(?)}" };
 	SQLLEN idlen = SQL_NTS;
+	
 	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)id, sizeof(wchar_t) * string_len, &idlen);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
@@ -74,6 +75,48 @@ int DBMANAGER::get_uid(const wchar_t* id)
 	return uid;
 }
 
+int DBMANAGER::get_rank(int uid)
+{
+	SQLRETURN retcode;
+	SQLWCHAR query[] = { L"{call get_rank(?)}" };
+	SQLLEN idlen = SQL_NTS;
+
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)uid, 0, NULL);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	SQLINTEGER rank;
+	SQLLEN cuid;
+	SQLBindCol(hstmt, 1, SQL_INTEGER, &rank, sizeof(rank), &cuid);
+	retcode = SQLFetch(hstmt);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+	SQLCloseCursor(hstmt);
+
+	if (retcode == SQL_NO_DATA)
+		return RESULT_NO_ID;
+
+	return rank;
+}
+
+void DBMANAGER::update_rank(int uid, int rank)
+{
+	SQLRETURN retcode;
+	SQLWCHAR query[] = { L"{call update_rank(?, ?)}" };
+	SQLLEN idlen = SQL_NTS;
+	
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)uid, 0, NULL);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)rank, 0, NULL);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+	SQLCloseCursor(hstmt);
+}
+
 
 std::vector<std::string> DBMANAGER::get_friendlist(const wchar_t* id)
 {
@@ -86,8 +129,8 @@ std::vector<std::string> DBMANAGER::get_friendlist(const wchar_t* id)
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
-	SQLCHAR friends[11];
-	SQLBindCol(hstmt, 1, SQL_CHAR, friends, 11, NULL);
+	SQLCHAR friends[string_len];
+	SQLBindCol(hstmt, 1, SQL_CHAR, friends, string_len, NULL);
 	while (SQLFetch(hstmt) != SQL_NO_DATA) {
 		friendlist.emplace_back((const char*)friends);
 	}

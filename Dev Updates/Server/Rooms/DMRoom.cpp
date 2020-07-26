@@ -6,7 +6,12 @@ DMRoom::DMRoom() :
 	max_player(1),
 	player_num(0),
 	delta_time(0),
-	skill_uid(4)
+	left_time(300.0f),
+	skill_uid(4),
+	kill_count(),
+	game_end(false),
+	total_score(0),
+	win_team(0)
 {
 	packet_vector.clear();
 	packets.clear();
@@ -29,17 +34,21 @@ void DMRoom::init()
 	//Insert changed scene packet.
 	csss_packet_change_scene packet{ (char)SCENE_TYPE::PLAYGMAE_SCENE };
 	event_data.emplace_back(&packet, packet.size);
+	csss_packet_set_game_playtime_limit limit_packet{ (unsigned int) left_time };
+	event_data.emplace_back(&limit_packet, limit_packet.size);
 }
 
-bool DMRoom::regist(SOCKET client, void* buffer)
+bool DMRoom::regist(int uid, SOCKET client, void* buffer)
 {
 	sscs_packet_try_match_login* packet = reinterpret_cast<sscs_packet_try_match_login*>(buffer);
 
 	socket_lock.lock();
 	short cur_player = player_num++;
+	uids[cur_player] = uid;
 	sockets[cur_player] = client;
 	sockets_index[client] = cur_player;
 	csss_packet_login_ok login_ok{ cur_player };
+	login_ok.type = CSSS_MATCH_LOGIN_OK;
 	send_packet(client, &login_ok, login_ok.size);
 
 	//Spawn HERO, Scoreboard and reserve it to event.
@@ -73,7 +82,41 @@ void DMRoom::start()
 
 void DMRoom::end()
 {
+	//DB update. Change Scene.
+	db_manager.init();
+
 	socket_lock.lock();
+	for (auto& player : uids) {
+		int rank = db_manager.get_rank(player.second);
+		int bonus = 10 * ((float)(m_score[player.first].totalscore_damage + m_score[player.first].totalscore_heal) / (float)(total_score) );
+		//Draw.
+		if (win_team == 2)
+			rank += bonus;
+		else if (m_heros[player.first]->propensity == win_team)
+			rank += (20 + bonus);
+		else
+			rank += (-20 + bonus);
+		db_manager.update_rank(player.second, rank);
+
+		if (sockets.count(player.first) != 0) {
+			csss_packet_change_scene change_scene_packet{ (char)SCENE_TYPE::GAMEOVER_SCENE };
+			csss_packet_send_match_statistic stat_packet{
+				m_score[player.first].user_name,
+				(int)wcslen(m_score[player.first].user_name),
+				rank,
+				m_score[player.first].count_kill,
+				m_score[player.first].count_death,
+				m_score[player.first].count_assistance,
+				m_score[player.first].totalscore_damage,
+				m_score[player.first].totalscore_heal,
+				m_heros[player.first]->character_type
+			};
+
+			send_packet(sockets[player.first], &change_scene_packet, change_scene_packet.size);
+			send_packet(sockets[player.first], &stat_packet, change_scene_packet.size);
+		}
+	}
+
 	sockets.clear();
 	socket_lock.unlock();
 
@@ -157,6 +200,8 @@ void DMRoom::process_packet_vector()
 
 bool DMRoom::game_logic()
 {
+	left_time -= delta_time;
+
 	for (auto& hero : m_heros)
 		hero.second->update(delta_time);
 	for (auto& skill : m_skills)
@@ -201,43 +246,43 @@ bool DMRoom::game_logic()
 			++skill;
 	}
 
-	//Game End Check.
-
-	return false;
+	game_end = end_check();
+	return game_end;
 }
 
 void DMRoom::send_game_state()
 {
-	for (const auto& hero : m_heros) {
-		if (false == hero.second->changed_transform) continue;
-		//Send hero transform.
-		csss_packet_set_obj_transform transform_packet{
-			hero.first,
-			1.0f, 1.0f, 1.0f,
-			hero.second->rot.x, hero.second->rot.y, hero.second->rot.z,
-			hero.second->pos.x, hero.second->pos.y, hero.second->pos.z
-		};
-		info_data.emplace_back(&transform_packet, transform_packet.size);
-		hero.second->changed_transform = false;
+	if (false == game_end) {
+		for (const auto& hero : m_heros) {
+			if (false == hero.second->changed_transform) continue;
+			//Send hero transform.
+			csss_packet_set_obj_transform transform_packet{
+				hero.first,
+				1.0f, 1.0f, 1.0f,
+				hero.second->rot.x, hero.second->rot.y, hero.second->rot.z,
+				hero.second->pos.x, hero.second->pos.y, hero.second->pos.z
+			};
+			info_data.emplace_back(&transform_packet, transform_packet.size);
+			hero.second->changed_transform = false;
+		}
+
+		for (const auto& skill : m_skills) {
+			if (false == skill.second->changed_transform) continue;
+
+			//Send skill transform.
+			csss_packet_set_obj_transform transform_packet{
+				skill.first,
+				1.0f, 1.0f, 1.0f,
+				skill.second->rot.x, skill.second->rot.y, skill.second->rot.z,
+				skill.second->pos.x, skill.second->pos.y, skill.second->pos.z
+			};
+			info_data.emplace_back(&transform_packet, transform_packet.size);
+			skill.second->changed_transform = false;
+		}
+		event_data.emplace_back(info_data.data, info_data.len);
 	}
 
-	for (const auto& skill : m_skills) {
-		if (false == skill.second->changed_transform) continue;
-
-		//Send skill transform.
-		csss_packet_set_obj_transform transform_packet {
-			skill.first,
-			1.0f, 1.0f, 1.0f,
-			skill.second->rot.x, skill.second->rot.y, skill.second->rot.z,
-			skill.second->pos.x, skill.second->pos.y, skill.second->pos.z
-		};
-		info_data.emplace_back(&transform_packet, transform_packet.size);
-		skill.second->changed_transform = false;
-	}
-
-	
 	//Send data to clients.
-	event_data.emplace_back(info_data.data, info_data.len);
 	socket_lock.lock();
 	for (const auto& socket : sockets) {
 		send_packet(socket.second, event_data.data, event_data.len);
@@ -246,6 +291,42 @@ void DMRoom::send_game_state()
 
 	event_data.clear();
 	info_data.clear();
+}
+
+bool DMRoom::end_check()
+{
+	for (int i = 0; i < 2; ++i)
+		if (kill_count[i] >= WIN_GOAL) {
+			win_team = i;
+
+			total_score = 0;
+			for (auto& score : m_score) {
+				total_score += score.second.totalscore_damage;
+				total_score += score.second.totalscore_heal;
+			}
+
+			return true;
+		}
+
+	if (left_time <= 0) {
+		if (kill_count[0] == kill_count[1])
+			win_team = 2;
+		else if (kill_count[0] > kill_count[1])
+			win_team = 0;
+		else
+			win_team = 1;
+
+		total_score = 0;
+		for (auto& score : m_score) {
+			total_score += score.second.totalscore_damage;
+			total_score += score.second.totalscore_heal;
+		}
+
+		return true;
+	}
+		
+
+	return false;
 }
 
 void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)

@@ -1,6 +1,7 @@
 #pragma once
 #include "OVER_EX.h"
 #include "PACKET_BUFFER.h"
+#include <mutex>
 
 class ROOM;
 /**
@@ -13,6 +14,7 @@ public:
 	OVER_EX recv_over{}; ///< OVERRAPPED Wrapping class for IOCP.
 	SOCKET socket{ INVALID_SOCKET }; ///< socket for client.
 	ROOM* room{ nullptr }; ///< room where the clients connect.
+	std::mutex room_lock;
 
 	int id{ 0 }; ///< id
 	char savedPacket[MAX_BUFFER_SIZE]{}; ///< packet buffer.

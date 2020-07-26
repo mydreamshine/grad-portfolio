@@ -1,6 +1,7 @@
 #pragma once
 
 constexpr int BASIC_HP = 100;
+constexpr float BASIC_VELOCITY = 400.0f;
 constexpr float RESPAWN_TIME = 5.0f;
 constexpr float SEMI_INVINCIBLE_TIME = 3.0f;
 

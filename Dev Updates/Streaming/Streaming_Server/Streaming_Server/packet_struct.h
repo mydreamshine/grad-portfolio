@@ -57,8 +57,9 @@ enum SSCS_PACKET {
 };
 
 enum CSSS_PACKET {
-	CSSS_LOGIN_OK,					//Done. but need to check player's hero pick.
+	CSSS_LOGIN_OK,					//Done.
 	CSSS_LOGIN_FAIL,				//Done.
+	CSSS_MATCH_LOGIN_OK,			//Done.
 	CSSS_MATCH_ENQUEUE,				//Done.
 	CSSS_MATCH_DEQUEUE,				//Done.
 	CSSS_ACCESS_MATCH,				//Done.
@@ -168,10 +169,12 @@ struct sscs_packet_try_login : packet_inheritance
 struct sscs_packet_try_match_login : packet_inheritance
 {
 	int room_id{};
+	int uid{};
 	wchar_t nickname[string_len]{};
 	char selected_character{};
 
-	sscs_packet_try_match_login(int room_id, char selected_character, const wchar_t* nickname) :
+	sscs_packet_try_match_login(int uid, int room_id, char selected_character, const wchar_t* nickname) :
+		uid(uid),
 		room_id(room_id),
 		selected_character(selected_character)
 	{

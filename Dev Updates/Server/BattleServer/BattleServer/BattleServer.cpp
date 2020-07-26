@@ -136,7 +136,10 @@ namespace BattleArena {
 			switch (over_ex->event_type())
 			{
 			case EV_RECV:
-				client->room->process_packet(client, ReceivedBytes);
+				client->room_lock.lock();
+				if(client->room != nullptr)
+					client->room->process_packet(client, ReceivedBytes);
+				client->room_lock.unlock();
 				client->set_recv();
 				break;
 
@@ -152,12 +155,21 @@ namespace BattleArena {
 
 			case EV_UPDATE:
 			{
-				duration<float> fElapsedTime { high_resolution_clock::now() - m_Rooms[key]->last_update_time };
-				//wprintf(L"[ROOM %lld] - Update / %f sec\n", key, fElapsedTime.count());
 				//if game is done.
-				if (true == m_Rooms[key]->update(fElapsedTime.count())) {
+				if (true == m_Rooms[key]->update(0.0f)) {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
 					m_Rooms[key]->end();
+
+					m_Rooms[key]->client_lock.lock();
+					for (auto& cl : m_Rooms[key]->clients)
+					{
+						cl.second->room_lock.lock();
+						cl.second->room = nullptr;
+						cl.second->room_lock.unlock();
+						closesocket(client->socket);
+					}
+					m_Rooms[key]->client_lock.unlock();
+
 					delete m_Rooms[key];
 					m_Rooms[key] = nullptr;
 					set_empty_room(key);
@@ -183,8 +195,14 @@ namespace BattleArena {
 	void BATTLESERVER::disconnect_player(CLIENT* client)
 	{
 		std::wcout << L"[CLIENT - " << reinterpret_cast<int>(client) << L"] Disconnected" << std::endl;
-		if (client->room != nullptr)
+
+		client->room_lock.lock();
+		if (client->room != nullptr) {
 			client->room->disconnect(client->socket);
+			client->room = nullptr;
+		}
+		client->room_lock.unlock();
+
 		if (client->socket != INVALID_SOCKET) {
 			closesocket(client->socket);
 			client->socket = INVALID_SOCKET;
@@ -281,10 +299,17 @@ namespace BattleArena {
 		case SSCS_TRY_MATCH_LOGIN: {
 			sscs_packet_try_match_login* packet = reinterpret_cast<sscs_packet_try_match_login*>(buffer);
 			client->recv_over.set_event(EV_RECV);
+
+			m_Rooms[packet->room_id]->client_lock.lock();
+			m_Rooms[packet->room_id]->clients.emplace(make_pair(packet->uid, client));
+
+			client->room_lock.lock();
 			client->room = m_Rooms[packet->room_id];
+			client->room_lock.unlock();
+			m_Rooms[packet->room_id]->client_lock.unlock();
 
 			//if all users are Connected, Start Game
-			if (true == m_Rooms[packet->room_id]->regist(client->socket, client->recv_over.data())) {
+			if (true == m_Rooms[packet->room_id]->regist(packet->uid, client->socket, client->recv_over.data())) {
 				wprintf(L"[ROOM %d] - GAME START\n", packet->room_id);
 				m_Rooms[packet->room_id]->last_update_time = high_resolution_clock::now();
 				m_Rooms[packet->room_id]->start();

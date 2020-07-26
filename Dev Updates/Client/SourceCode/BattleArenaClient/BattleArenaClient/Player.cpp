@@ -102,7 +102,6 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 			else yaw_angle = 90.0f;
 		}
 
-
 		// Reservate Moving Events
 		{
 			if (key_state[0x57] || key_state[0x41] || key_state[0x53] || key_state[0x44])
