@@ -954,28 +954,15 @@ struct csss_packet_set_kda_score : packet_inheritance
 struct csss_packet_send_kill_message : packet_inheritance
 {
 	// contents ref.
-	wchar_t message[string_len];
+	short kill;
+	short death;
 
-	csss_packet_send_kill_message()
-	{
-		size = (PACKET_SIZE)sizeof(csss_packet_send_kill_message);
-		type = CSSS_SET_KILL_LOG;
-
-		for (unsigned char i = 0; i < string_len; ++i)
-			message[i] = 0x00;
-	}
 	csss_packet_send_kill_message(
-		const wchar_t* message_text, int message_text_size)
+		short kill, short death) :
+		kill(kill), death(death)
 	{
 		size = (PACKET_SIZE)sizeof(csss_packet_send_kill_message);
 		type = CSSS_SET_KILL_LOG;
-
-		unsigned char Message_Text_size = (message_text_size > string_len) ? string_len : (unsigned char)message_text_size;
-		for (unsigned char i = 0; i < string_len; ++i)
-		{
-			if (Message_Text_size > i) message[i] = message_text[i];
-			else message[i] = 0x00;
-		}
 	}
 };
 // message ¿¹½Ã
