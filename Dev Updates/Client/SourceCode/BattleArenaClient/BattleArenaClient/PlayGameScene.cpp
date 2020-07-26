@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PlayGameScene.h"
 
+using namespace aiModelData;
+
 PlayGameScene::~PlayGameScene()
 {
 }
@@ -21,6 +23,13 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     }
     m_Players.clear();
     m_MainPlayer = nullptr;
+
+    // BillboardObject들은 아래 WorldObject이기도 하기에
+    // WorldObject Instancing 비활성화 구문에 의해
+    // Deactivate가 된다.
+    // 고로, BillboardObject 리스트는 Object Deactivate 구문없이
+    // 비워주기만 하면 된다.
+    m_BillboardObjects.clear();
 
     ObjectManager objManager;
 
@@ -293,28 +302,6 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
     Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
     Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KDA");
 
-    /*static float timestack = 0.0f;
-    static bool healChange = false;
-    timestack += gt.GetTimeElapsed();
-    int check_sec = (int)timestack;
-    if (check_sec != 0 && check_sec % 1 == 0)
-    {
-        if (m_MainPlayer != nullptr)
-        {
-            if (healChange == false)
-            {
-                m_MainPlayer->SetHP(30);
-                healChange = true;
-            }
-            else if (healChange == true)
-            {
-                m_MainPlayer->SetHP(100);
-                healChange = false;
-            }
-        }
-        timestack = 0.0f;
-    }*/
-
     // Update KillLog Text
     {
         auto& KillLog = KillLogObject->m_Textinfo->m_Text;
@@ -470,7 +457,6 @@ void PlayGameScene::AnimateCameras(CTimer& gt)
 
         XMStoreFloat3(&EyePosition, newEyePos);
         XMStoreFloat3(&LookAtPosition, newLookAtPos);
-        UpDirection = m_MainPlayer->m_Camera.GetUp3f();
     }
     else
     {
@@ -489,6 +475,7 @@ void PlayGameScene::AnimateCameras(CTimer& gt)
     m_MainCamera.LookAt(EyePosition, LookAtPosition, UpDirection);
     m_MainCamera.UpdateViewMatrix();
 
+    PlayGameScene::RotateBillboardObjects(&m_MainCamera, m_BillboardObjects);
     PlayGameScene::UpdateUITransformAs(gt, &m_MainCamera, m_Players);
 }
 
@@ -508,7 +495,19 @@ void PlayGameScene::UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::uno
     for (auto& Player_iter : Players)
     {
         auto player = Player_iter.second.get();
-        player->UpdateUITransform(&m_MainCamera, ViewPort, gt);
+        player->UpdateUITransform(MainCamera, ViewPort, gt);
+    }
+}
+
+void PlayGameScene::RotateBillboardObjects(Camera* MainCamera, std::vector<Object*>& Objects)
+{
+    for (auto& obj : Objects)
+    {
+        auto TransformInfo = obj->m_TransformInfo.get();
+        XMFLOAT3 WorldPos = TransformInfo->GetWorldPosition();
+        XMFLOAT4X4 View = MainCamera->GetView4x4f();
+        TransformInfo->SetWorldTransform(View);
+        TransformInfo->SetWorldPosition(WorldPos);
     }
 }
 
@@ -571,9 +570,9 @@ void PlayGameScene::SpawnPlayer(
 
         std::string objName;
         const std::vector<RenderItem*>* CharacterRitems = nullptr;
-        aiModelData::aiSkeleton* CharacterSkeleton = nullptr;
+        aiSkeleton* CharacterSkeleton = nullptr;
 
-        std::unordered_map<std::string, float> CharacterAnimNotifys;
+        std::unordered_map<std::string, float> CharacterAnimNotifys[(int)AnimActionType::Count];
 
         switch (CharacterType)
         {
@@ -582,7 +581,9 @@ void PlayGameScene::SpawnPlayer(
             objName = "Warrior - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR]);
             CharacterSkeleton = ModelSkeletons["Male Knight 01"].get();
-            CharacterAnimNotifys["Sword Slash Gen"] = AnimNotifyTime::Warrior_SwordSlashStart;
+            newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Knight 01"], TransformInfo::BoundPivot::Bottom);
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Warrior_NormalAttackObjGenTiming"] = AnimNotifyTime::Warrior_NormalAttackObjGenTiming;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Warrior_SkillObjGenTiming"] = 0.875f;
         }
             break;
         case CHARACTER_TYPE::BERSERKER:
@@ -590,7 +591,9 @@ void PlayGameScene::SpawnPlayer(
             objName = "Berserker - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER]);
             CharacterSkeleton = ModelSkeletons["Male Warrior 01"].get();
-            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+            newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Warrior 01"], TransformInfo::BoundPivot::Bottom);
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Berserker_NormalAttackObjGenTiming"] = 0.913f;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Berserker_SkillObjGenTiming"] = 0.242f;
         }
             break;
         case CHARACTER_TYPE::ASSASSIN:
@@ -598,7 +601,9 @@ void PlayGameScene::SpawnPlayer(
             objName = "Assassin - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN]);
             CharacterSkeleton = ModelSkeletons["Female Warrior 01"].get();
-            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+            newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Female Warrior 01"], TransformInfo::BoundPivot::Bottom);
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Assassin_NormalAttackObjGenTiming"] = 0.501f;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Assassin_SkillObjGenTiming"] = 0.281f;
         }
             break;
         case CHARACTER_TYPE::PRIEST:
@@ -606,7 +611,9 @@ void PlayGameScene::SpawnPlayer(
             objName = "Priest - Instancing(ID:" + std::to_string(New_CE_ID) + ")";
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST]);
             CharacterSkeleton = ModelSkeletons["Male Mage 01"].get();
-            //CharacterAnimNotifys[""] = AnimNotifyTime::;
+            newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Mage 01"], TransformInfo::BoundPivot::Bottom);
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Priest_NormalAttackObjGenTiming"] = 0.572f;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Priest_SkillObjGenTiming"] = 0.994f;
         }
             break;
         }
@@ -627,14 +634,17 @@ void PlayGameScene::SpawnPlayer(
             animInfo->Init();
 
             // Set AnimNotifys
-            for (auto& AnimNotify : CharacterAnimNotifys)
-                animInfo->SetAnimTimeLineNotify(AnimNotify.first, AnimNotify.second);
+            for (int i = 0; i < (int)AnimActionType::Count; ++i)
+            {
+                for(auto& AnimNotify : CharacterAnimNotifys[i])
+                    animInfo->SetAnimTimeLineNotify((AnimActionType)i, AnimNotify.first, AnimNotify.second);
+            }
 
             // Set Actions
             std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
             animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            animInfo->AnimPlay(AnimActionType::Idle);
+            animInfo->AnimLoop(AnimActionType::Idle);
         }
     }
 
@@ -707,7 +717,7 @@ void PlayGameScene::SpawnNormalAttackObject(int New_CE_ID,
 
     if (newNormalAttackObj == nullptr)
     {
-        MessageBox(NULL, L"No skill objects available in the world object list.", L"Object Generate Warning", MB_OK);
+        MessageBox(NULL, L"No attack objects available in the world object list.", L"Object Generate Warning", MB_OK);
         return;
     }
 
@@ -726,26 +736,26 @@ void PlayGameScene::SpawnNormalAttackObject(int New_CE_ID,
         {
         case CHARACTER_TYPE::WARRIOR:
         {
-            objName = objName = "SwordNormalAttack - Instancing" + std::to_string(New_CE_ID);
-            Ritems.push_back(AllRitems["SkillEffect_SwordSlash_a"].get());
+            objName = "SwordNormalAttack - Instancing";
+            Ritems = { AllRitems["SkillEffect_SwordSlash_a"].get() };
         }
             break;
         case CHARACTER_TYPE::BERSERKER:
         {
-            objName = objName = "AxeNormalAttack - Instancing" + std::to_string(New_CE_ID);
-            //Ritem = ;
+            objName = "AxeNormalAttack - Instancing";
+            Ritems = { AllRitems["SkillEffect_Sword_Wave_RedLight"].get() };
         }
             break;
         case CHARACTER_TYPE::ASSASSIN:
         {
-            objName = objName = "DaggerNormalAttack - Instancing" + std::to_string(New_CE_ID);
-            //Ritem = ;
+            objName = "DaggerNormalAttack - Instancing";
+            Ritems = { AllRitems["SkillEffect_Sting_Wave_BlueLight"].get() };
         }
             break;
         case CHARACTER_TYPE::PRIEST:
         {
-            objName = objName = "MagicWandNormalAttack - Instancing" + std::to_string(New_CE_ID);
-            //Ritem = ;
+            objName = "MagicWandNormalAttack - Instancing";
+            Ritems = { AllRitems["SkillEffect_Fire_Wave_YellowLight"].get() };
         }
             break;
         }
@@ -785,6 +795,9 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         XMFLOAT3 WorldScale = Scale;
         XMFLOAT3 WorldRotationEuler = RotationEuler;
         XMFLOAT3 WorldPosition = Position;
+        XMFLOAT3 LocalScale = { 1.0f, 1.0f, 1.0f };
+        XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 LocalPosition = { 0.0f, 0.0f, 0.0f };
 
         std::string objName;
         std::vector<RenderItem*> Ritems;
@@ -793,40 +806,112 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
         case SKILL_TYPE::SWORD_WAVE:
         {
-            std::string objName = "SwordSlash - Instancing" + std::to_string(New_CE_ID);
-            Ritems.push_back(AllRitems["SkillEffect_SwordSlash_a"].get());
+            objName = "SwordSlash - Instancing";
+            Ritems = { AllRitems["SkillEffect_SwordSlash_a"].get() };
         }
         break;
         case SKILL_TYPE::HOLY_AREA:
         {
-            std::string objName = "HolyArea - Instancing" + std::to_string(New_CE_ID);
+            XMFLOAT3 PivotScale = WorldScale;
+            XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            XMFLOAT3 PivotPosition = WorldPosition;
 
+            const float HealAreaRad = 250.0f;
+            // create holy effect object
             for (int i = 0; i < 10; ++i)
             {
-                // create holy effect object
+                Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+                objName = "HolyCross - Instancing";
+                Ritems = { AllRitems["SkillEffect_Heal_Cross_GreenLight"].get() };
+
+                XMFLOAT3 newWorldScale = PivotScale;
+                XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+                XMFLOAT3 newWorldPosition = {
+                    MathHelper::RandF(PivotPosition.x - HealAreaRad, PivotPosition.x + HealAreaRad),
+                    MathHelper::RandF(PivotPosition.z - HealAreaRad, PivotPosition.z + HealAreaRad),
+                    MathHelper::RandF(PivotPosition.y + 50.0f, PivotPosition.y + HealAreaRad * 2.0f)};
+                // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
+                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+
+                objManager.SetObjectComponent(newSkillObj, objName,
+                    Ritems, nullptr,
+                    nullptr, &newLocalRotationEuler, nullptr,
+                    &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
+                newSkillObj->m_TransformInfo->UpdateWorldTransform();
+                newSkillEffectObj->m_TransformInfo->m_nonShadowRender = true;
+
+                newSkillObj->m_Childs.push_back(newSkillEffectObj);
+                newSkillEffectObj->m_Parent = newSkillObj;
+
+                m_BillboardObjects.push_back(newSkillEffectObj);
             }
+
+            objName = "HolyArea - Instancing";
+            Ritems = { AllRitems["SkillEffect_Heal_Area_GreenLight"].get() };
         }
             break;
         case SKILL_TYPE::FURY_ROAR:
         {
-            std::string objName = "FuryRoar - Instancing" + std::to_string(New_CE_ID);
+            objName = "FuryRoar - Instancing";
+            Ritems = { AllRitems["SkillEffect_Roar_Bear_RedLight"].get() };
+            // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
+            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
 
+            m_BillboardObjects.push_back(newSkillObj);
         }
             break;
         case SKILL_TYPE::STEALTH:
         {
-            std::string objName = "StealthFog - Instancing" + std::to_string(New_CE_ID);
-            for (int i = 0; i < 4; ++i)
+            XMFLOAT3 PivotScale = WorldScale;
+            XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            XMFLOAT3 PivotPosition = WorldPosition;
+
+            // create stealth effect object
+            for (int i = 0; i < 2; ++i)
             {
-                // create stealth effect object
+                Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+                objName = "StealthFog - Instancing";
+                Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
+
+                XMFLOAT3 newWorldScale = PivotScale;
+                XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+                XMFLOAT3 newWorldPosition = PivotPosition;
+                XMVECTOR NEW_WORLD_POS = XMLoadFloat3(&newWorldPosition);
+                XMVECTOR STRAFE = m_MainCamera.GetRight();
+                STRAFE *= (i > 0) ? -75.0f : 75.0f;
+                NEW_WORLD_POS += STRAFE;
+                XMStoreFloat3(&newWorldPosition, NEW_WORLD_POS);
+                // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
+                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+
+                objManager.SetObjectComponent(newSkillObj, objName,
+                    Ritems, nullptr,
+                    nullptr, &newLocalRotationEuler, nullptr,
+                    &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
+                newSkillObj->m_TransformInfo->UpdateWorldTransform();
+                newSkillEffectObj->m_TransformInfo->m_nonShadowRender = true;
+
+                newSkillObj->m_Childs.push_back(newSkillEffectObj);
+                newSkillEffectObj->m_Parent = newSkillObj;
+
+                m_BillboardObjects.push_back(newSkillEffectObj);
             }
+
+            objName = "StealthFog - Instancing";
+            Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
+            // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
+            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+
+            m_BillboardObjects.push_back(newSkillObj);
         }
             break;
         }
 
         objManager.SetObjectComponent(newSkillObj, objName,
             Ritems, nullptr,
-            nullptr, nullptr, nullptr,
+            &LocalScale, &LocalRotationEuler, &LocalPosition,
             &WorldScale, &WorldRotationEuler, &WorldPosition);
         newSkillObj->m_TransformInfo->UpdateWorldTransform();
         newSkillObj->m_TransformInfo->m_nonShadowRender = true;
@@ -845,12 +930,13 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
 
     switch (EffectType)
     {
-    case EFFECT_TYPE::HOLY_EFFECT:
+    // SpawnSkillObject()에서 대체한다.
+    /*case EFFECT_TYPE::HOLY_EFFECT:
         break;
     case EFFECT_TYPE::FURY_ROAR_EFFECT:
         break;
     case EFFECT_TYPE::STEALTH_EFFECT:
-        break;
+        break;*/
     case EFFECT_TYPE::PICKING_EFFECT:
     {
         auto newEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
@@ -909,14 +995,14 @@ void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_
         if (ControledObj == nullptr) return;
 
         auto AnimInfo = ControledObj->m_SkeletonInfo->m_AnimInfo.get();
-        aiModelData::AnimActionType CurrPlayingAction = AnimInfo->CurrPlayingAction;
-        aiModelData::AnimActionType newActionType = (aiModelData::AnimActionType)MotionType;
+        AnimActionType CurrPlayingAction = AnimInfo->CurrPlayingAction;
+        AnimActionType newActionType = (AnimActionType)MotionType;
 
-        if (newActionType == aiModelData::AnimActionType::Non) return;
+        if (newActionType == AnimActionType::Non) return;
 
         AnimInfo->AnimStop(CurrPlayingAction);
         AnimInfo->AnimPlay(newActionType);
-        if (newActionType == aiModelData::AnimActionType::Idle || newActionType == aiModelData::AnimActionType::Walk)
+        if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
             AnimInfo->AnimLoop(newActionType);
     }
 }
@@ -947,7 +1033,11 @@ void PlayGameScene::DeActivateObject(int CE_ID)
         ObjectManager ObjManager;
         Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
         if (ControledObj != nullptr)
+        {
+            for(auto& child_obj : ControledObj->m_Childs)
+                ObjManager.DeActivateObj(child_obj);
             ObjManager.DeActivateObj(ControledObj);
+        }
     }
 }
 

@@ -32,6 +32,7 @@ public:
     virtual void AnimateCameras(CTimer& gt);
     void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     void UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players);
+    void RotateBillboardObjects(Camera* MainCamera, std::vector<Object*>& Objects);
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
@@ -81,6 +82,8 @@ private:
     Object* m_GroundObj = nullptr;
     Player* m_MainPlayer = nullptr;
     std::unordered_map<int, std::unique_ptr<Player>> m_Players;
+
+    std::vector<Object*> m_BillboardObjects;
 
     int GameInfo_CountKill = 0;
     int GameInfo_CountDeath = 0;
