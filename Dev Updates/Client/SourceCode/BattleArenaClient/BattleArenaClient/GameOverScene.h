@@ -37,7 +37,7 @@ public:
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
     // UserName, UserRank, Count Score(Kill, Death, Assistance, Total Damage, Total Heal), Played Character Type
-    void SetMatchStatisticInfo(std::wstring UserName, int UserRank,
+    virtual void SetMatchStatisticInfo(std::wstring UserName, int UserRank,
         unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance,
         int TotalScore_Damage, int TotalScore_Heal,
         CHARACTER_TYPE PlayedCharacterType);

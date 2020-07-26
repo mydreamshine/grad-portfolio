@@ -99,8 +99,8 @@ public:
     virtual void SetUserInfo(std::wstring UserName, int UserRank) {}
     // Count Score(Kill, Death, Assistance)
     virtual void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance) {}
-    // Message ([Do_UserName] Killed [Target_UserName])
-    virtual void SetKillLog(std::wstring Message) {}
+    // Killer Object ID, Dead Object ID
+    virtual void SetKillLog(short Kill_Player_id, short Death_Player_id) {}
     // Message ([Do_UserName]: Chat Message)
     virtual void SetChatLog(std::wstring Message) {}
     // Remaining Sec

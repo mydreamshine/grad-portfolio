@@ -43,9 +43,9 @@ enum class FRAMEWORK_EVENT_DATA_TYPE : char
 // 아군이 사용한 힐스킬 오브젝트일 경우에만 힐링이 된다던지.
 enum class OBJECT_PROPENSITY : char
 {
-	NON,
 	ALLIES, // 아군
-	ENEMY   // 적
+	ENEMY,   // 적
+	NON
 };
 
 enum class CHARACTER_TYPE : char
@@ -221,7 +221,8 @@ struct EVENT_DATA_KDA_SCORE : EVENT_DATA
 
 struct EVENT_DATA_KILL_LOG : EVENT_DATA
 {
-	std::wstring Message;
+	short kill_player_id;
+	short death_player_id;
 };
 
 struct EVENT_DATA_CHAT_LOG : EVENT_DATA
@@ -603,12 +604,13 @@ public:
 	}
 
 	void ReservateEvent_SetKillLog(std::queue<std::unique_ptr<EVENT>>& Events,
-		std::wstring Message)
+		short kill_player_id, short death_player_id)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_KILL_LOG);
 		auto newEventData = std::make_unique<EVENT_DATA_KILL_LOG>();
 		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::KILL_LOG;
-		newEventData->Message = Message;
+		newEventData->kill_player_id = kill_player_id;
+		newEventData->death_player_id = death_player_id;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}

@@ -505,7 +505,10 @@ void PlayGameScene::RotateBillboardObjects(Camera* MainCamera, std::vector<Objec
     {
         auto TransformInfo = obj->m_TransformInfo.get();
         XMFLOAT3 WorldPos = TransformInfo->GetWorldPosition();
-        XMFLOAT4X4 View = MainCamera->GetView4x4f();
+        XMMATRIX VIEW = MainCamera->GetView();
+        VIEW.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+        XMMATRIX INV_VIEW = XMMatrixInverse(nullptr, VIEW);
+        XMFLOAT4X4 View; XMStoreFloat4x4(&View, INV_VIEW);
         TransformInfo->SetWorldTransform(View);
         TransformInfo->SetWorldPosition(WorldPos);
     }
@@ -814,9 +817,10 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
             XMFLOAT3 PivotScale = WorldScale;
             XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            WorldPosition.y += 10.0f;
             XMFLOAT3 PivotPosition = WorldPosition;
 
-            const float HealAreaRad = 250.0f;
+            const float HealAreaRad = 1000.0f;
             // create holy effect object
             for (int i = 0; i < 10; ++i)
             {
@@ -828,13 +832,13 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                 XMFLOAT3 newWorldScale = PivotScale;
                 XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
                 XMFLOAT3 newWorldPosition = {
-                    MathHelper::RandF(PivotPosition.x - HealAreaRad, PivotPosition.x + HealAreaRad),
-                    MathHelper::RandF(PivotPosition.z - HealAreaRad, PivotPosition.z + HealAreaRad),
-                    MathHelper::RandF(PivotPosition.y + 50.0f, PivotPosition.y + HealAreaRad * 2.0f)};
+                    MathHelper::RandF(PivotPosition.x - HealAreaRad * 0.6f, PivotPosition.x + HealAreaRad * 0.6f),
+                    MathHelper::RandF(PivotPosition.y + 50.0f, PivotPosition.y + HealAreaRad * 0.7f),
+                MathHelper::RandF(PivotPosition.z - HealAreaRad * 0.6f, PivotPosition.z + HealAreaRad * 0.6f)};
                 // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+                XMFLOAT3 newLocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
-                objManager.SetObjectComponent(newSkillObj, objName,
+                objManager.SetObjectComponent(newSkillEffectObj, objName,
                     Ritems, nullptr,
                     nullptr, &newLocalRotationEuler, nullptr,
                     &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
@@ -855,8 +859,10 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
             objName = "FuryRoar - Instancing";
             Ritems = { AllRitems["SkillEffect_Roar_Bear_RedLight"].get() };
+            WorldPosition.y += 440.0f;
+            WorldPosition.z -= 100.0f;
             // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+            LocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
             m_BillboardObjects.push_back(newSkillObj);
         }
@@ -865,6 +871,8 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
             XMFLOAT3 PivotScale = WorldScale;
             XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            WorldPosition.y += 440.0f;
+            WorldPosition.z -= 100.0f;
             XMFLOAT3 PivotPosition = WorldPosition;
 
             // create stealth effect object
@@ -878,15 +886,16 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                 XMFLOAT3 newWorldScale = PivotScale;
                 XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
                 XMFLOAT3 newWorldPosition = PivotPosition;
+                newWorldPosition.y += (i + 1) * 10.0f;
                 XMVECTOR NEW_WORLD_POS = XMLoadFloat3(&newWorldPosition);
                 XMVECTOR STRAFE = m_MainCamera.GetRight();
-                STRAFE *= (i > 0) ? -75.0f : 75.0f;
+                STRAFE *= (i > 0) ? -150.0f : 150.0f;
                 NEW_WORLD_POS += STRAFE;
                 XMStoreFloat3(&newWorldPosition, NEW_WORLD_POS);
                 // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+                XMFLOAT3 newLocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
-                objManager.SetObjectComponent(newSkillObj, objName,
+                objManager.SetObjectComponent(newSkillEffectObj, objName,
                     Ritems, nullptr,
                     nullptr, &newLocalRotationEuler, nullptr,
                     &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
@@ -902,7 +911,7 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
             objName = "StealthFog - Instancing";
             Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
             // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+            LocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
             m_BillboardObjects.push_back(newSkillObj);
         }
@@ -1048,8 +1057,21 @@ void PlayGameScene::SetKDAScore(unsigned char Count_Kill, unsigned char Count_De
     GameInfo_CountAssistance = Count_Assistance;
 }
 
-void PlayGameScene::SetKillLog(std::wstring Message)
+void PlayGameScene::SetKillLog(short Kill_Player_id, short Death_Player_id)
 {
+    wstring KillerName, DeadName;
+
+    for (auto& Player_iter : m_Players)
+    {
+        auto Player = Player_iter.second.get();
+        int PlayerObjID = Player->m_CharacterObjRef->m_CE_ID;
+        if (PlayerObjID == Kill_Player_id) KillerName = Player->m_Name;
+        else if (PlayerObjID == Death_Player_id) DeadName = Player->m_Name;
+    }
+
+    if (KillerName.empty() || DeadName.empty()) return;
+
+    wstring Message = L"[" + KillerName + L"] Killed [" + DeadName + L"]";
     if (KillLogList.size() == MaxKillLog) KillLogList.pop_back();
     KillLogList.push_back(Message);
 }
