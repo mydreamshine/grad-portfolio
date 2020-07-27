@@ -206,6 +206,7 @@ public:
             eventManager.ReservateEvent_SetCharacterMotion(m_ExternalEvents,
                 packetData->object_id,
                 (MOTION_TYPE)packetData->motion_type,
+                packetData->motion_speed,
                 (SKILL_TYPE)packetData->skill_type);
         }
         break;

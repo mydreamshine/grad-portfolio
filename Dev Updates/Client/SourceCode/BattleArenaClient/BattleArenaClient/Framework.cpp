@@ -126,7 +126,7 @@ void Framework::ProcessEvent(EVENT& Event)
     {
         EVENT_DATA_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_CHARACTER_MOTION_INFO*>(Event.Data.get());
         Event_Act_Place->SetCharacterMotion(Event.Act_Object,
-            EventData->MotionType, EventData->SkillMotionType);
+            EventData->MotionType, EventData->MotionSpeed, EventData->SkillMotionType);
     }
     break;
     case FEC_SET_PLAYER_STATE:

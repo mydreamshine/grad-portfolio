@@ -21,7 +21,7 @@ struct Player
 
 public:
 	void SetTransform(const DirectX::XMFLOAT3& Scale, const DirectX::XMFLOAT3& RotationEuler, const DirectX::XMFLOAT3& Position);
-	void PlayMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);
+	void PlayMotion(MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);
 	void SetState(PLAYER_STATE PlayerState);
 	void SetHP(int HP);
 

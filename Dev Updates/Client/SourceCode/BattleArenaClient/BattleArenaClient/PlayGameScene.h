@@ -31,6 +31,7 @@ public:
     virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateCameras(CTimer& gt);
     void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
+    void AnimateEffectObjectsTransform(CTimer& gt);
     void UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players);
     void RotateBillboardObjects(Camera* MainCamera, std::vector<Object*>& Objects);
 
@@ -49,8 +50,8 @@ public:
     virtual void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position);
     // Control Element ID, Transform(Scale, RotationEuler, Position)
     virtual void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
-    // Control Element ID, MotionType, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
-    virtual void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType = SKILL_TYPE::NON);
+    // Control Element ID, MotionType, MotionSpeed, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
+    virtual void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillType = SKILL_TYPE::NON);
     // Control Element ID, Player State
     virtual void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState);
     // Deactivated Poison Gas Area
@@ -84,6 +85,7 @@ private:
     std::unordered_map<int, std::unique_ptr<Player>> m_Players;
 
     std::vector<Object*> m_BillboardObjects;
+    std::vector<Object*> m_EffectObjects;
 
     int GameInfo_CountKill = 0;
     int GameInfo_CountDeath = 0;

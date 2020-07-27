@@ -86,8 +86,8 @@ public:
     virtual void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position) {}
     // Control Element ID, Transform(Scale, RotationEuler, Position)
     virtual void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position) {}
-    // Control Element ID, MotionType, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
-    virtual void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType = SKILL_TYPE::NON) {}
+    // Control Element ID, MotionType, MotionSpeed, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
+    virtual void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillType = SKILL_TYPE::NON) {}
     // Control Element ID, Player State
     virtual void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState) {}
     // Deactivated Poison Gas Area
