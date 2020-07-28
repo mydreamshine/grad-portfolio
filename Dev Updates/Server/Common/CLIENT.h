@@ -4,6 +4,8 @@
 #include <mutex>
 
 class ROOM;
+
+enum STATEMENT { ST_NOGAME, ST_INGAME, ST_ENDGAME };
 /**
 @brief Client class for battle server.
 @author Gurnwoo Kim
@@ -14,6 +16,7 @@ public:
 	OVER_EX recv_over{}; ///< OVERRAPPED Wrapping class for IOCP.
 	SOCKET socket{ INVALID_SOCKET }; ///< socket for client.
 	ROOM* room{ nullptr }; ///< room where the clients connect.
+	int state{ ST_NOGAME };
 	std::mutex room_lock;
 
 	int id{ 0 }; ///< id

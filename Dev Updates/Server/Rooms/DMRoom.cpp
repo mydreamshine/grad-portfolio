@@ -6,7 +6,7 @@ DMRoom::DMRoom() :
 	max_player(1),
 	player_num(0),
 	delta_time(0),
-	left_time(300.0f),
+	left_time(5.0f),
 	skill_uid(4),
 	kill_count(),
 	game_end(false),
@@ -90,7 +90,10 @@ void DMRoom::end()
 	socket_lock.lock();
 	for (auto& player : uids) {
 		int rank = db_manager.get_rank(player.second);
-		int bonus = 10 * ((float)(m_score[player.first].totalscore_damage + m_score[player.first].totalscore_heal) / (float)(total_score) );
+		int bonus = 0;
+		if(total_score != 0)
+			bonus = 10 * ((float)(m_score[player.first].totalscore_damage + m_score[player.first].totalscore_heal) / (float)(total_score) );
+
 		//Draw.
 		if (win_team == 2)
 			rank += bonus;

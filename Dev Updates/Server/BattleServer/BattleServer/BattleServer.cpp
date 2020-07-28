@@ -170,15 +170,7 @@ namespace BattleArena {
 					wprintf(L"[ROOM %lld] - GAME END\n", key);
 					m_Rooms[key]->end();
 
-					m_Rooms[key]->client_lock.lock();
-					for (auto& cl : m_Rooms[key]->clients)
-					{
-						cl.second->room_lock.lock();
-						cl.second->room = nullptr;
-						cl.second->room_lock.unlock();
-						closesocket(client->socket);
-					}
-					m_Rooms[key]->client_lock.unlock();
+					disconnect_player_from_room(key);
 
 					delete m_Rooms[key];
 					m_Rooms[key] = nullptr;
@@ -205,20 +197,41 @@ namespace BattleArena {
 	void BATTLESERVER::disconnect_player(CLIENT* client)
 	{
 		std::wcout << L"[CLIENT - " << reinterpret_cast<int>(client) << L"] Disconnected" << std::endl;
-
-		client->room_lock.lock();
-		if (client->room != nullptr) {
-			client->room->disconnect(client->socket);
-			client->room = nullptr;
-		}
-		client->room_lock.unlock();
-
 		if (client->socket != INVALID_SOCKET) {
 			closesocket(client->socket);
 			client->socket = INVALID_SOCKET;
 		}
-		if (client != &m_Lobby)
-			delete client;
+
+		client->room_lock.lock();
+		if (client->state == ST_INGAME) {
+			client->room->disconnect(client->socket);
+			client->state = ST_ENDGAME;
+			client->room_lock.unlock();
+		}
+		else {
+			client->room_lock.unlock();
+			if (client != &m_Lobby)
+				delete client;
+		}
+	}
+
+	void BATTLESERVER::disconnect_player_from_room(int key)
+	{
+		m_Rooms[key]->client_lock.lock();
+		for (auto& cl : m_Rooms[key]->clients)
+		{
+			cl.second->room_lock.lock();
+			if (cl.second->state == ST_INGAME) {
+				cl.second->state = ST_ENDGAME;
+				cl.second->room_lock.unlock();
+				closesocket(cl.second->socket);
+			} 
+			else if (cl.second->state == ST_ENDGAME) {
+				cl.second->room_lock.unlock();
+				delete cl.second;
+			}
+		}
+		m_Rooms[key]->client_lock.unlock();
 	}
 
 	void BATTLESERVER::do_timer()
@@ -315,6 +328,7 @@ namespace BattleArena {
 
 			client->room_lock.lock();
 			client->room = m_Rooms[packet->room_id];
+			client->state = ST_INGAME;
 			client->room_lock.unlock();
 			m_Rooms[packet->room_id]->client_lock.unlock();
 

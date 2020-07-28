@@ -81,7 +81,7 @@ int DBMANAGER::get_rank(int uid)
 	SQLWCHAR query[] = { L"{call get_rank(?)}" };
 	SQLLEN idlen = SQL_NTS;
 
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)uid, 0, NULL);
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &uid, 0, NULL);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
@@ -106,10 +106,10 @@ void DBMANAGER::update_rank(int uid, int rank)
 	SQLWCHAR query[] = { L"{call update_rank(?, ?)}" };
 	SQLLEN idlen = SQL_NTS;
 	
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)uid, 0, NULL);
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &uid, 0, NULL);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, (void*)rank, 0, NULL);
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &rank, 0, NULL);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);

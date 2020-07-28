@@ -19,7 +19,6 @@ void BBManager::load_bb()
         "Pilar",
         "Cliff",
         "water",
-        "skull",
         "Bone2"
     };
 

@@ -97,6 +97,11 @@ namespace BattleArena {
 		void disconnect_player(CLIENT* client);
 
 		/**
+		@brief Disconnect player from room.
+		*/
+		void disconnect_player_from_room(int key);
+
+		/**
 		@brief Send packet to client.
 		@param client target client.
 		@param buff data.
