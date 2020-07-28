@@ -2,12 +2,14 @@
 #include "SKILL.h"
 #include "..\Rooms\DMRoom.h"
 #include "CharacterConfig.h"
+#include "..\BattleServer\BattleServer\BBManager.h"
 
 HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	world(world),
 	pos(0, 0, 0),
 	rot(0, 0, 0),
 	dir(0, 0, 1.0f),
+	origin_AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
 	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
 	vel(BASIC_VELOCITY),
 
@@ -149,8 +151,8 @@ void HERO::do_attack()
 
 void HERO::set_aabb()
 {
-	AABB.Center.x = pos.x;
-	AABB.Center.z = pos.z;
+	AABB.Center.x = origin_AABB.Center.x + pos.x;
+	AABB.Center.z = origin_AABB.Center.z + pos.z;
 }
 
 Vector3d HERO::get_offset(DirectX::BoundingBox& other)
@@ -198,6 +200,8 @@ WARRIOR::WARRIOR(DMRoom* world, short object_id, char propensity) :
 	HERO(world, object_id, propensity)
 {
 	character_type = ((char)CHARACTER_TYPE::WARRIOR);
+	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::WARRIOR];
+	set_aabb();
 }
 
 WARRIOR::~WARRIOR()
@@ -243,6 +247,8 @@ PRIEST::PRIEST(DMRoom* world, short object_id, char propensity) :
 	HERO(world, object_id, propensity)
 {
 	character_type = ((char)CHARACTER_TYPE::PRIEST);
+	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::PRIEST];
+	set_aabb();
 }
 
 PRIEST::~PRIEST()
@@ -279,6 +285,8 @@ BERSERKER::BERSERKER(DMRoom* world, short object_id, char propensity) :
 	roar_skill(nullptr)
 {
 	character_type = ((char)CHARACTER_TYPE::BERSERKER);
+	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::BERSERKER];
+	set_aabb();
 }
 
 BERSERKER::~BERSERKER()
@@ -354,6 +362,8 @@ ASSASSIN::ASSASSIN(DMRoom* world, short object_id, char propensity) :
 	stelth_skill(nullptr)
 {
 	character_type = (char)CHARACTER_TYPE::ASSASSIN;
+	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::ASSASSIN];
+	set_aabb();
 }
 
 ASSASSIN::~ASSASSIN()

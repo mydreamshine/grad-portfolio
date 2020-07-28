@@ -11,6 +11,7 @@
 #include "..\Common\SCOREBOARD.h"
 #include "..\..\Streaming\Streaming_Server\Streaming_Server\packet_struct.h"
 #include "../LobbyServer/LobbyServer/DBMANAGER.h"
+#include "..\BattleServer\BattleServer\BBManager.h"
 
 constexpr int WIN_GOAL = 5;
 

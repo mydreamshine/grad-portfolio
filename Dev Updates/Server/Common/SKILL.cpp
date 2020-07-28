@@ -77,6 +77,7 @@ void NORMAL_ATTACK::update(float elapsedTime)
 void NORMAL_ATTACK::effect(HERO* hero)
 {
 	if (hero->propensity == propensity) return;
+	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
 	if (hero->character_state == (char)PLAYER_STATE::ACT_SEMI_INVINCIBILITY) {
 		destroy();
 		return;
@@ -84,10 +85,12 @@ void NORMAL_ATTACK::effect(HERO* hero)
 
 	hero->set_hp(hero->hp - damage);
 	world->update_score_damage(owner_id, damage);
+
 	if (true == hero->is_die()) {
 		hero->death();
 		world->update_score_kill(owner_id);
 		world->update_score_death(hero->object_id);
+		csss_packet_send_kill_message packet{ owner_id, hero->object_id };
 	}
 	else
 		hero->impact();
@@ -124,6 +127,7 @@ void HOLY_AREA::update(float elapsedTime)
 void HOLY_AREA::effect(HERO* hero)
 {
 	if (hero->propensity != propensity) return;
+	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
 
 	if (effect_time >= HOLY_AREA_EFFECT_RATE) {
 		hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);

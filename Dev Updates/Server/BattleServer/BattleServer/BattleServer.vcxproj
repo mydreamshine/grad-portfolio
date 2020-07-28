@@ -139,6 +139,7 @@
     <ClCompile Include="..\..\Rooms\DMRoom.cpp" />
     <ClCompile Include="..\..\Rooms\ROOM.cpp" />
     <ClCompile Include="BattleServer.cpp" />
+    <ClCompile Include="BBManager.cpp" />
     <ClCompile Include="소스.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +158,7 @@
     <ClInclude Include="..\..\Rooms\DMRoom.h" />
     <ClInclude Include="..\..\Rooms\ROOM.h" />
     <ClInclude Include="BattleServer.h" />
+    <ClInclude Include="BBManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

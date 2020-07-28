@@ -1,5 +1,6 @@
 #pragma comment(lib, "ws2_32")
 #include "BATTLESERVER.h"
+#include "BBManager.h"
 #include <iostream>
 
 
@@ -29,6 +30,7 @@ namespace BattleArena {
 		m_listenSocket(INVALID_SOCKET)
 	{
 		wprintf(L"[BATTLE SERVER]\n");
+		LoadAsset();
 		InitRooms();
 		InitWSA();
 		InitThreads();
@@ -96,6 +98,14 @@ namespace BattleArena {
 		roomListLock.unlock();
 		wprintf(L" Done.\n");
 	}
+
+	void BATTLESERVER::LoadAsset()
+	{
+		wprintf(L"Load Assets...");
+		BBManager::instance().load_bb();
+		wprintf(L" Done.\n");
+	}
+
 	void BATTLESERVER::Run()
 	{
 		wprintf(L"[SERVER ON]\n");

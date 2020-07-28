@@ -11,7 +11,8 @@ DMRoom::DMRoom() :
 	kill_count(),
 	game_end(false),
 	total_score(0),
-	win_team(0)
+	win_team(0),
+	m_walls( BBManager::instance().world_bb )
 {
 	packet_vector.clear();
 	packets.clear();
@@ -30,6 +31,7 @@ DMRoom::~DMRoom()
 void DMRoom::init()
 {
 	// Loading config from resource manager - Client will update this.
+	//m_walls{ BBManager::instance().world_bb };
 
 	//Insert changed scene packet.
 	csss_packet_change_scene packet{ (char)SCENE_TYPE::PLAYGMAE_SCENE };

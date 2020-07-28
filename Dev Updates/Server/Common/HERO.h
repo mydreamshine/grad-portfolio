@@ -32,6 +32,7 @@ public:
 	Vector3d rot;
 	Vector3d dir;
 	bool changed_transform;
+	DirectX::BoundingBox origin_AABB;
 	DirectX::BoundingBox AABB;
 	float vel;
 
@@ -45,7 +46,7 @@ public:
 	float anim_time_pos;
 	float remain_state_time;
 
-private:
+protected:
 	void set_aabb();
 	Vector3d get_offset(DirectX::BoundingBox& other);
 };

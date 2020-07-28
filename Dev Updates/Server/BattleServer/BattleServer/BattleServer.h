@@ -64,6 +64,11 @@ namespace BattleArena {
 		void InitRooms();
 
 		/**
+		@brief load room asset.
+		*/
+		void LoadAsset();
+
+		/**
 		@brief Add new event to queue.
 		@param ev event will insert to queue.
 		*/

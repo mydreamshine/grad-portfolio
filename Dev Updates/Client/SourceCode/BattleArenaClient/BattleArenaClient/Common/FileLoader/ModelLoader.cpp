@@ -144,17 +144,19 @@ bool ModelLoader::loadBoundingBoxesToTXTfile(const std::string& filepath_ToWrite
 
 		// write file as format
 		// Name: BoundingBoxName, Center (x, y, z), Extents (x, y, z)\n
-		writeFile << "Name: " + std::string(_Filename);
+		//writeFile << "Name: " + std::string(_Filename);
+		writeFile << std::string(_Filename);
 		writeFile
-			<< ", Center: ("
+			//<< ", Center: ("
 			<< " " << std::to_string(MergedBoundingBox.vCenter.x * CovertUnit)
 			<< " " << std::to_string(MergedBoundingBox.vCenter.y * CovertUnit)
 			<< " " << std::to_string(MergedBoundingBox.vCenter.z * CovertUnit)
-			<< "), Exetents: ("
+			//<< "), Exetents: ("
 			<< " " << std::to_string(MergedBoundingBox.vExtents.x * CovertUnit)
 			<< " " << std::to_string(MergedBoundingBox.vExtents.y * CovertUnit)
 			<< " " << std::to_string(MergedBoundingBox.vExtents.z * CovertUnit)
-			<< ")\n";
+			<< "\n";
+			//<< ")\n";
 
 		writeFile.close();
 	}
@@ -172,17 +174,19 @@ bool ModelLoader::loadBoundingBoxesToTXTfile(const std::string& filepath_ToWrite
 
 			// write file as format
 			// Name: BoundingBoxName, Center (x, y, z), Extents (x, y, z)\n
-			writeFile << "Name: " + BoudingBoxName;
+			//writeFile << "Name: " + BoudingBoxName;
+			writeFile << BoudingBoxName;
 			writeFile
-				<< ", Center: ("
+				//<< ", Center: ("
 				<< " " << std::to_string(BoudingBox.vCenter.x * CovertUnit)
 				<< " " << std::to_string(BoudingBox.vCenter.y * CovertUnit)
 				<< " " << std::to_string(BoudingBox.vCenter.z * CovertUnit)
-				<< "), Exetents: ("
+				//<< "), Exetents: ("
 				<< " " << std::to_string(BoudingBox.vExtents.x * CovertUnit)
 				<< " " << std::to_string(BoudingBox.vExtents.y * CovertUnit)
 				<< " " << std::to_string(BoudingBox.vExtents.z * CovertUnit)
-				<< ")\n";
+				//<< ")\n";
+				<< "\n";
 		}
 
 		writeFile.close();
