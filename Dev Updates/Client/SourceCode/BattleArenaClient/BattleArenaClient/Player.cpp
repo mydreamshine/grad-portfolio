@@ -12,7 +12,7 @@ void Player::SetTransform(const XMFLOAT3& Scale, const XMFLOAT3& RotationEuler, 
 	TransformInfo->UpdateWorldTransform();
 }
 
-void Player::PlayMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType)
+void Player::PlayMotion(MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE SkillMotionType)
 {
 	auto AnimInfo = m_CharacterObjRef->m_SkeletonInfo->m_AnimInfo.get();
 	AnimActionType CurrPlayingAction = AnimInfo->CurrPlayingAction;
@@ -20,6 +20,7 @@ void Player::PlayMotion(MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType)
 
 	if (newActionType == AnimActionType::Non) return;
 
+	AnimInfo->SetPlaySpeed(MotionSpeed);
 	AnimInfo->AnimStop(CurrPlayingAction);
 	AnimInfo->AnimPlay(newActionType);
 	if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)

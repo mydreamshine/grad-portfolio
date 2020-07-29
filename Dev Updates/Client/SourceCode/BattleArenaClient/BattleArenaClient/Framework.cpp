@@ -126,7 +126,7 @@ void Framework::ProcessEvent(EVENT& Event)
     {
         EVENT_DATA_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_CHARACTER_MOTION_INFO*>(Event.Data.get());
         Event_Act_Place->SetCharacterMotion(Event.Act_Object,
-            EventData->MotionType, EventData->SkillMotionType);
+            EventData->MotionType, EventData->MotionSpeed, EventData->SkillMotionType);
     }
     break;
     case FEC_SET_PLAYER_STATE:
@@ -161,7 +161,7 @@ void Framework::ProcessEvent(EVENT& Event)
     case FEC_SET_KILL_LOG:
     {
         EVENT_DATA_KILL_LOG* EventData = reinterpret_cast<EVENT_DATA_KILL_LOG*>(Event.Data.get());
-        Event_Act_Place->SetKillLog(EventData->Message);
+        Event_Act_Place->SetKillLog(EventData->kill_player_id, EventData->death_player_id);
     }
     break;
     case FEC_SET_CHAT_LOG:
@@ -1153,13 +1153,13 @@ void Framework::DrawSceneToBackBuffer()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-    m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
-    auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
-    DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
-
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
     auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
     DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
+    auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
+    DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
 
     m_commandList->SetPipelineState(m_PSOs["transparent"].Get());
     auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);

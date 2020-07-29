@@ -192,6 +192,12 @@ struct TransformInfo
 	DirectX::XMFLOAT3 GetLook();
 
 	void Init();
+
+
+	bool WorldPosIsInterpolation = false;
+	DirectX::XMFLOAT3 m_InterPolationDestPosition = { 0.0f, 0.0f, 0.0f };
+	void SetInterpolatedDestPosition(const DirectX::XMFLOAT3& newPosition, bool WorldPosInterpolated = true);
+	void InterpolateTransformWorldPosition(CTimer& gt);
 };
 
 

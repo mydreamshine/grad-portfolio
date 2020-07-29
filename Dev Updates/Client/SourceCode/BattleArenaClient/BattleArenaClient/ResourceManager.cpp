@@ -252,6 +252,8 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         Meshes["UI_Layout_LobyChattingInputBox"]           = geoGen.CreateQuad(-588.0f * wnd_x_factor, -118.0f * wnd_y_factor,  324.0f * wnd_x_factor,  50.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_GameStartButton_Press"]          = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_MatchCancelButton"]              = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_MatchCancelButton_Press"]        = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_LobyCharacterName"]              = geoGen.CreateQuad(-100.0f * wnd_x_factor, -212.9f * wnd_y_factor,  200.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_CharacterSelection_LeftButton"]  = geoGen.CreateQuad(-192.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_CharacterSelection_RightButton"] = geoGen.CreateQuad( 122.0f * wnd_x_factor, -212.9f * wnd_y_factor,   70.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
@@ -293,12 +295,12 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         EffectGeo_Meshs["SkillEffect_SwordSlash_a"]           = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
         EffectGeo_Meshs["SkillEffect_Sword_Wave_RedLight"]    = geoGen.CreateGrid(326.0f, 200.0f, 10, 10);
         EffectGeo_Meshs["SkillEffect_Sting_Wave_BlueLight"]   = geoGen.CreateGrid( 50.0f, 326.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Smoke_BlueLight"]        = geoGen.CreateGrid(100.0f, 100.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Roar_Bear_RedLight"]     = geoGen.CreateGrid(200.0f, 200.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Poison_Skul_GreenRight"] = geoGen.CreateGrid( 70.0f,  70.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Poison_Fog_GreenLight"]  = geoGen.CreateGrid(100.0f, 100.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Heal_Cross_GreenLight"]  = geoGen.CreateGrid( 50.0f,  50.0f, 10, 10);
-        EffectGeo_Meshs["SkillEffect_Heal_Area_GreenLight"]   = geoGen.CreateGrid(500.0f, 500.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Smoke_BlueLight"]        = geoGen.CreateGrid(300.0f, 300.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Roar_Bear_RedLight"]     = geoGen.CreateGrid(300.0f, 300.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Poison_Skul_GreenRight"] = geoGen.CreateGrid(200.0f, 200.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Poison_Fog_GreenLight"]  = geoGen.CreateGrid(200.0f, 200.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Heal_Cross_GreenLight"]  = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
+        EffectGeo_Meshs["SkillEffect_Heal_Area_GreenLight"]   = geoGen.CreateGrid(2000.0f, 2000.0f, 10, 10);
         EffectGeo_Meshs["SkillEffect_Fire_Wave_YellowLight"]  = geoGen.CreateGrid(100.0f, 326.0f, 10, 10);
         EffectGeo_Meshs["PickingEffect_CrossTarget"]          = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
         m_Geometries["GameEffectGeo"]
@@ -541,6 +543,8 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/Character_Information_Label.png",
         m_additionalAssetPath + "UI/Layout/PlayButton.png",
         m_additionalAssetPath + "UI/Layout/PlayButton_Press.png",
+        m_additionalAssetPath + "UI/Layout/CancelButton.png",
+        m_additionalAssetPath + "UI/Layout/CancelButton_Press.png",
         m_additionalAssetPath + "UI/Layout/ChattingLogLayer.png",
         m_additionalAssetPath + "UI/Layout/ChattingInputBoxLayer.png",
         m_additionalAssetPath + "UI/Layout/UserInfoLayer.png",
@@ -799,6 +803,13 @@ void ResourceManager::BuildRenderItems()
                     SceneRitems[subMeshName]->Mat = m_Materials["PlayButton_Press"].get();
                 else
                     SceneRitems[subMeshName]->Mat = m_Materials["PlayButton"].get();
+            }
+            else if (subMeshName.find("MatchCancel") != std::string::npos)
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["CancelButton_Press"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["CancelButton"].get();
             }
             else if (subMeshName.find("LobyChatting") != std::string::npos)
             {

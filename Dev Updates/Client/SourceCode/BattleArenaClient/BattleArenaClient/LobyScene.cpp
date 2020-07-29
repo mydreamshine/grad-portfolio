@@ -110,6 +110,12 @@ void LobyScene::OnInitProperties(CTimer& gt)
     RightButtonUp = true;
     PlayButtonPress = false;
     PlayButtonUp = true;
+    CancelButtonPress = false;
+    CancelButtonUp = true;
+    MatchingTextInfoTimeStack = 0.0f;
+    MatchingTextInfoChangeStack = 0;
+    CurrButtonIsPlayButton = true;
+    ChangeButton = false;
 
     ChattingMode = false;
     ChattingModeTimeStack = 0.0f;
@@ -170,6 +176,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
         else if (Ritem_name.find("UI") != std::string::npos)
         {
             if (Ritem_name.find("Press") != std::string::npos) continue;
+            if (Ritem_name.find("Cancel") != std::string::npos) continue;
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
@@ -179,7 +186,6 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
 
             if (objName.find("CharacterSelection") != std::string::npos) continue;
             if (objName.find("Background") != std::string::npos) continue;
-            if (objName.find("GameStartButton") != std::string::npos) continue;
 
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
             auto text_info = newLayoutTextObj->m_Textinfo.get();
@@ -204,6 +210,15 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
                 text_info->m_Text = L"[UserName]: bla bla bla";
                 text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
                 text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                text_info->m_TextColor = DirectX::Colors::GhostWhite;
+            }
+            else if (objName == "UI_Layout_GameStartButton")
+            {
+                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 36.0f;
+                text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPos.y = -(UI_LayoutPos.y + UI_LayoutExtents.y + 10.0f);
+                text_info->m_TextPos.y += m_height / 2.0f;
                 text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
                 text_info->m_TextColor = DirectX::Colors::GhostWhite;
             }
@@ -707,21 +722,27 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         // Process Play
         else if (PointInRect(CursorPos_x, CursorPos_y, PlayButtonAreainScreen) == true)
         {
-            //TestFunc. - Access battle directly.
-            if (OnceAccessBattleDirectly == false)
+            if (CurrButtonIsPlayButton == true)
             {
-                EventManager eventManager;
-                eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
-                OnceAccessBattleDirectly = true;
+                if (PlayButtonPress == false && PlayButtonUp == true)
+                {
+                    auto& AllRitems = *m_AllRitemsRef;
+                    auto Ritem_playButtonPress = AllRitems.find("UI_Layout_GameStartButton_Press")->second.get();
+                    PlayButton->m_RenderItems = { Ritem_playButtonPress };
+                    PlayButtonPress = true;
+                    PlayButtonUp = false;
+                }
             }
-
-            if (PlayButtonPress == false && PlayButtonUp == true)
+            else
             {
-                auto& AllRitems = *m_AllRitemsRef;
-                auto Ritem_playButtonPress = AllRitems.find("UI_Layout_GameStartButton_Press")->second.get();
-                PlayButton->m_RenderItems = { Ritem_playButtonPress };
-                PlayButtonPress = true;
-                PlayButtonUp = false;
+                if (CancelButtonPress == false && CancelButtonUp == true)
+                {
+                    auto& AllRitems = *m_AllRitemsRef;
+                    auto Ritem_cancelButtonPress = AllRitems.find("UI_Layout_MatchCancelButton_Press")->second.get();
+                    PlayButton->m_RenderItems = { Ritem_cancelButtonPress };
+                    CancelButtonPress = true;
+                    CancelButtonUp = false;
+                }
             }
         }
     }
@@ -755,6 +776,81 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
             PlayButton->m_RenderItems = { Ritem_playButton };
             PlayButtonPress = false;
             PlayButtonUp = true;
+
+            ChangeButton = true;
+
+            //Try matchmaking. enqueue
+            if (StartMatching == false && OnceTryGameMatching == false)
+            {
+                EventManager eventManager;
+                eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
+                OnceTryGameMatching = true;
+            }
+
+            // Match Status Test
+            StartMatching = true;
+            OnceTryGameMatching = false;
+        }
+        else if (CancelButtonPress == true && CancelButtonUp == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_cancelButton = AllRitems.find("UI_Layout_MatchCancelButton")->second.get();
+            PlayButton->m_RenderItems = { Ritem_cancelButton };
+            CancelButtonPress = false;
+            CancelButtonUp = true;
+
+            ChangeButton = true;
+
+            //Try matchmaking. dequeue
+            if (StartMatching == true && OnceTryGameMatching == false)
+            {
+                EventManager eventManager;
+                eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
+                OnceTryGameMatching = true;
+            }
+
+            // Match Status Test
+            StartMatching = false;
+            OnceTryGameMatching = false;
+        }
+
+        if (ChangeButton == true && StartMatching == true && OnceTryGameMatching == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_cancelButton = AllRitems.find("UI_Layout_MatchCancelButton")->second.get();
+            PlayButton->m_RenderItems = { Ritem_cancelButton };
+            ChangeButton = false;
+            CurrButtonIsPlayButton = false;
+            OnceTryGameMatching = true;
+        }
+        else if (ChangeButton == true && StartMatching == false && OnceTryGameMatching == false)
+        {
+            auto& AllRitems = *m_AllRitemsRef;
+            auto Ritem_playButton = AllRitems.find("UI_Layout_GameStartButton")->second.get();
+            PlayButton->m_RenderItems = { Ritem_playButton };
+
+            Object* MatchingInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameStartButton");
+            MatchingInfoObject->m_Textinfo->m_Text.clear();
+
+            ChangeButton = false;
+            CurrButtonIsPlayButton = true;
+            OnceTryGameMatching = true;
+        }
+
+        if (CurrButtonIsPlayButton != true)
+        {
+            Object* MatchingInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameStartButton");
+            auto TextInfo = MatchingInfoObject->m_Textinfo.get();
+            TextInfo->m_Text = L"Matching";
+            for (int i = 0; i < MatchingTextInfoChangeStack; ++i)
+                TextInfo->m_Text += L" /";
+
+            MatchingTextInfoTimeStack += gt.GetTimeElapsed();
+            if (MatchingTextInfoTimeStack >= MatchingTextInfoInterval)
+            {
+                MatchingTextInfoChangeStack = (MatchingTextInfoChangeStack + 1) % 4;
+                MatchingTextInfoTimeStack = 0.0f;
+            }
         }
     }
 
@@ -793,14 +889,14 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         {
             ActivateChattingModeCoolTime = false;
         }
-    }
 
-    if (OnceSendChatLog == true)
-    {
-        EventManager eventManager;
-        eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);
-        inputChat.clear();
-        OnceSendChatLog = false;
+        if (OnceSendChatLog == true)
+        {
+            EventManager eventManager;
+            eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);
+            inputChat.clear();
+            OnceSendChatLog = false;
+        }
     }
 
     //Try matchmaking. e -> enqueue, d -> dequeue.

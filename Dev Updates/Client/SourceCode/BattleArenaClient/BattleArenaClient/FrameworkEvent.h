@@ -43,9 +43,9 @@ enum class FRAMEWORK_EVENT_DATA_TYPE : char
 // 아군이 사용한 힐스킬 오브젝트일 경우에만 힐링이 된다던지.
 enum class OBJECT_PROPENSITY : char
 {
-	NON,
 	ALLIES, // 아군
-	ENEMY   // 적
+	ENEMY,   // 적
+	NON
 };
 
 enum class CHARACTER_TYPE : char
@@ -184,6 +184,7 @@ struct EVENT_DATA_CHARACTER_MOTION_INFO : EVENT_DATA
 {
 	MOTION_TYPE MotionType;
 	SKILL_TYPE  SkillMotionType;
+	float       MotionSpeed;
 };
 
 struct EVENT_DATA_DONE_CHARACTER_MOTION_INFO : EVENT_DATA
@@ -221,7 +222,8 @@ struct EVENT_DATA_KDA_SCORE : EVENT_DATA
 
 struct EVENT_DATA_KILL_LOG : EVENT_DATA
 {
-	std::wstring Message;
+	short kill_player_id;
+	short death_player_id;
 };
 
 struct EVENT_DATA_CHAT_LOG : EVENT_DATA
@@ -538,13 +540,14 @@ public:
 	}
 
 	void ReservateEvent_SetCharacterMotion(std::queue<std::unique_ptr<EVENT>>& Events, int Act_Object,
-		MOTION_TYPE MotionType, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON)
+		MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, Act_Object, -1, FEP_PLAYGMAE_SCENE, FEC_SET_CHARACTER_MOTION);
 		auto newEventData = std::make_unique<EVENT_DATA_CHARACTER_MOTION_INFO>();
 		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::CHARACTER_MOTION_INFO;
 		newEventData->MotionType = MotionType;
 		newEventData->SkillMotionType = SkillMotionType;
+		newEventData->MotionSpeed = MotionSpeed;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}
@@ -603,12 +606,13 @@ public:
 	}
 
 	void ReservateEvent_SetKillLog(std::queue<std::unique_ptr<EVENT>>& Events,
-		std::wstring Message)
+		short kill_player_id, short death_player_id)
 	{
 		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_KILL_LOG);
 		auto newEventData = std::make_unique<EVENT_DATA_KILL_LOG>();
 		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::KILL_LOG;
-		newEventData->Message = Message;
+		newEventData->kill_player_id = kill_player_id;
+		newEventData->death_player_id = death_player_id;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}

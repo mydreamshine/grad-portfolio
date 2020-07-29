@@ -38,13 +38,13 @@ public:
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
     // UserName, UserRank
-    void SetUserInfo(std::wstring UserName, int UserRank);
+    virtual void SetUserInfo(std::wstring UserName, int UserRank);
     // UserName, Message
-    void SetChatLog(std::wstring UserName, std::wstring Message);
+    virtual void SetChatLog(std::wstring UserName, std::wstring Message);
     // Set match status.
-    void SetMatchStatus(bool status);
+    virtual void SetMatchStatus(bool status);
     // Set match status.
-    void SetAccessMatch(bool status);
+    virtual void SetAccessMatch(bool status);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private:
@@ -85,6 +85,13 @@ private:
     bool RightButtonUp = true;
     bool PlayButtonPress = false;
     bool PlayButtonUp = true;
+    bool CancelButtonPress = false;
+    bool CancelButtonUp = true;
+    const float MatchingTextInfoInterval = 0.5f;
+    float MatchingTextInfoTimeStack = 0.0f;
+    int   MatchingTextInfoChangeStack = 0;
+    bool CurrButtonIsPlayButton = true;
+    bool ChangeButton = false;
 
     bool OnceGetUserInfo = true;
     bool OnceTryGameMatching = false;

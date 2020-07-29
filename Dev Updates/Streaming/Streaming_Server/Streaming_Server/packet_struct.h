@@ -753,16 +753,20 @@ struct csss_packet_set_character_motion : packet_inheritance
 	int   object_id;
 	char  motion_type;
 	char  skill_type; // skill motion일 경우 필요.
+	float motion_speed;
 
 	csss_packet_set_character_motion()
 	{
 		size = (PACKET_SIZE)sizeof(csss_packet_set_character_motion);
 		type = CSSS_SET_CHARACTER_MOTION;
+
+		motion_speed = 1.0f;
 	}
 	csss_packet_set_character_motion(
 		int obj_ID,
 		char MotionType,
-		char SkillType)
+		char SkillType,
+		float MotionSpeed = 1.0f)
 	{
 		size = (PACKET_SIZE)sizeof(csss_packet_set_character_motion);
 		type = CSSS_SET_CHARACTER_MOTION;
@@ -770,6 +774,7 @@ struct csss_packet_set_character_motion : packet_inheritance
 		object_id = obj_ID;
 		motion_type = MotionType;
 		skill_type = SkillType;
+		motion_speed = MotionSpeed;
 	}
 };
 // 캐릭터 상태에 따라 렌더링 효과가 부여되거나 키입력 처리가 달라진다.

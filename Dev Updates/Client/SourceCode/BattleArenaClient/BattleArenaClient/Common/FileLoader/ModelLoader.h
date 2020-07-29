@@ -78,6 +78,7 @@ namespace aiModelData
 		std::vector<aiMatrix4x4> OffsetJointTransforms;
 
 		float CurrAnimTimePos = 0.0f;
+		float AnimPlaySpped = 1.0f;
 
 		std::unordered_map<std::string, AnimNotify> AnimTimeLineNotifys[(int)AnimActionType::Count];
 
@@ -96,6 +97,7 @@ namespace aiModelData
 			CurrAnimJointTransforms.clear();
 			OffsetJointTransforms.clear();
 			CurrAnimTimePos = 0.0f;
+			AnimPlaySpped = 1.0f;
 			CurrAnimIsLoop = false;
 			CurrAnimIsStop = true;
 			CurrAnimIsPause = false;
@@ -135,6 +137,8 @@ namespace aiModelData
 				notify.PickUp = false;
 			}
 		}
+
+		void SetPlaySpeed(float newPlaySpeed) { AnimPlaySpped = newPlaySpeed; }
 
 		void AnimPlay(const std::string& AnimName)
 		{
@@ -314,16 +318,18 @@ namespace aiModelData
 		float mDuration = 0.0f;
 		float mTickPerSecond = 0.0f;
 
-		float CalculateAnimationTime(float& TimePos, float deltaTime, bool IsStop, bool IsPause, bool IsLoop, bool& DurationOnceDone, bool& initDuration)
+		float CalculateAnimationTime(float& TimePos, float AnimPlaySpeed, float deltaTime,
+			bool IsStop, bool IsPause, bool IsLoop, bool& DurationOnceDone, bool& initDuration)
 		{
 			if (IsStop || IsPause) return TimePos;
 
 			float ClipEndTime = mDuration / mTickPerSecond;
+			float newDeltaTime = deltaTime * AnimPlaySpeed;
 
-			if (TimePos + deltaTime >= ClipEndTime)
+			if (TimePos + newDeltaTime >= ClipEndTime)
 			{
 				if (IsLoop)
-					TimePos = (TimePos + deltaTime) - ClipEndTime;
+					TimePos = (TimePos + newDeltaTime) - ClipEndTime;
 				else
 					TimePos = ClipEndTime;
 
@@ -333,7 +339,7 @@ namespace aiModelData
 			}
 			else
 			{
-				TimePos += deltaTime;
+				TimePos += newDeltaTime;
 				initDuration = false;
 			}
 
@@ -495,6 +501,7 @@ namespace aiModelData
 			bool IsLoop = Anim_info.CurrAnimIsLoop;
 			bool& DurationOnceDone = Anim_info.CurrAnimDurationIsOnceDone;
 			bool InitDuration = false;
+			float AnimPlaySpeed = Anim_info.AnimPlaySpped;
 			float& TimePos = Anim_info.CurrAnimTimePos;
 			auto& AnimTransforms = Anim_info.CurrAnimJointTransforms;
 			auto& OffsetTransforms = Anim_info.OffsetJointTransforms;
@@ -514,7 +521,7 @@ namespace aiModelData
 					if (anim_iter != mJoints[i].mAnimations.end())
 					{
 						auto& anim = anim_iter->second;
-						animationTime = anim.CalculateAnimationTime(TimePos, deltaTime, IsStop, IsPause, IsLoop, DurationOnceDone, InitDuration);
+						animationTime = anim.CalculateAnimationTime(TimePos, AnimPlaySpeed, deltaTime, IsStop, IsPause, IsLoop, DurationOnceDone, InitDuration);
 
 						// Check&Set AnimTimeLineNotifys
 						{

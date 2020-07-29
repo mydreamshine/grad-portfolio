@@ -24,12 +24,13 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     m_Players.clear();
     m_MainPlayer = nullptr;
 
-    // BillboardObject들은 아래 WorldObject이기도 하기에
+    // BillboardObject나 EffectObject들은 아래 WorldObject이기도 하기에
     // WorldObject Instancing 비활성화 구문에 의해
     // Deactivate가 된다.
-    // 고로, BillboardObject 리스트는 Object Deactivate 구문없이
+    // 고로, BillboardObject, EffectObject 리스트는 Object Deactivate 구문없이
     // 비워주기만 하면 된다.
     m_BillboardObjects.clear();
+    m_EffectObjects.clear();
 
     ObjectManager objManager;
 
@@ -94,6 +95,7 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     PlayGameScene::AnimateWorldObjectsTransform(gt, GeneratedEvents);
+    PlayGameScene::AnimateEffectObjectsTransform(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
@@ -485,6 +487,82 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::uni
     {
         if (obj->ProcessSelfDeActivate(gt) != true)
             obj->m_TransformInfo->Animate(gt);
+
+        if (obj->m_TransformInfo->WorldPosIsInterpolation == true)
+            obj->m_TransformInfo->InterpolateTransformWorldPosition(gt);
+    }
+}
+
+void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
+{
+    for (auto& obj : m_EffectObjects)
+    {
+        if (obj->m_Name.find("HolyCross") != std::string::npos)
+        {
+            XMFLOAT3 PivotPosition = obj->m_Parent->m_TransformInfo->GetWorldPosition();
+            auto Transforminfo = obj->m_TransformInfo.get();
+            XMFLOAT3 WorldPosition = Transforminfo->GetWorldPosition();
+
+            const float HealAreaRad = 1000.0f;
+            float MaxSpawnHeight = HealAreaRad * 0.7f - 50.0f;
+            float CurrSpawnHeight = WorldPosition.y - (PivotPosition.y + 50.0f);
+
+            float texAlpha = 1.0f - CurrSpawnHeight / MaxSpawnHeight;
+            float newScaleScala = MathHelper::Clamp(CurrSpawnHeight + MaxSpawnHeight * 0.5f, 0.0f, MaxSpawnHeight) / MaxSpawnHeight;
+
+            const float Move_speed = MaxSpawnHeight * gt.GetTimeElapsed() / 3.0f;
+            XMFLOAT3 newWorldPosition = WorldPosition;
+            newWorldPosition.y += Move_speed;
+
+            if (newWorldPosition.y >= PivotPosition.y + HealAreaRad * 0.7f)
+            {
+                newWorldPosition = {
+                    MathHelper::RandF(PivotPosition.x - HealAreaRad * 0.6f, PivotPosition.x + HealAreaRad * 0.6f),
+                    PivotPosition.y + 50.0f,
+                MathHelper::RandF(PivotPosition.z - HealAreaRad * 0.6f, PivotPosition.z + HealAreaRad * 0.6f) };
+            }
+
+            Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
+            Transforminfo->SetWorldPosition(newWorldPosition);
+            Transforminfo->m_TexAlpha = texAlpha;
+            Transforminfo->UpdateWorldTransform();
+        }
+        else if (obj->m_Name.find("FuryRoar") != std::string::npos)
+        {
+            auto Transforminfo = obj->m_TransformInfo.get();
+            const float MaxScaleScala = 4.0f;
+            const float MaxScaleTiming = 0.5f;
+            const float ScaleExtSpeed = MaxScaleScala * gt.GetTimeElapsed() / MaxScaleTiming;
+            const float CompleteDisappearTiming = 1.8f;
+            const float AlphaZeroSpeed = gt.GetTimeElapsed() / CompleteDisappearTiming;
+
+            float CurrScaleScala = Transforminfo->GetWorldScale().x;
+            float newScaleScala = MathHelper::Clamp(CurrScaleScala + ScaleExtSpeed, 0.0f, MaxScaleScala);
+
+            float CurrTexAlpha = Transforminfo->m_TexAlpha;
+            float texAlpha = MathHelper::Clamp(CurrTexAlpha - AlphaZeroSpeed, 0.0f, 1.0f);
+
+            Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
+            Transforminfo->m_TexAlpha = texAlpha;
+        }
+        else if (obj->m_Name.find("StealthFog") != std::string::npos)
+        {
+            auto Transforminfo = obj->m_TransformInfo.get();
+
+            const float MaxScaleScala = 2.5f;
+            const float MaxScaleTiming = 2.1f;
+            const float ScaleExtSpeed = MaxScaleScala * gt.GetTimeElapsed() / MaxScaleTiming;
+
+            float CurrScaleScala = Transforminfo->GetWorldScale().x;
+            float newScaleScala = MathHelper::Clamp(CurrScaleScala + ScaleExtSpeed, 0.0f, MaxScaleScala);
+
+            float texAlpha = 1.0f;
+            if (CurrScaleScala >= MaxScaleScala * 0.5f)
+                texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f ) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
+
+            Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
+            Transforminfo->m_TexAlpha = texAlpha;
+        }
     }
 }
 
@@ -505,9 +583,14 @@ void PlayGameScene::RotateBillboardObjects(Camera* MainCamera, std::vector<Objec
     {
         auto TransformInfo = obj->m_TransformInfo.get();
         XMFLOAT3 WorldPos = TransformInfo->GetWorldPosition();
-        XMFLOAT4X4 View = MainCamera->GetView4x4f();
+        XMFLOAT3 WorldScale = TransformInfo->GetWorldScale();
+        XMMATRIX VIEW = MainCamera->GetView();
+        VIEW.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+        XMMATRIX INV_VIEW = XMMatrixInverse(nullptr, VIEW);
+        XMFLOAT4X4 View; XMStoreFloat4x4(&View, INV_VIEW);
         TransformInfo->SetWorldTransform(View);
         TransformInfo->SetWorldPosition(WorldPos);
+        TransformInfo->SetWorldScale(WorldScale);
     }
 }
 
@@ -814,13 +897,15 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
             XMFLOAT3 PivotScale = WorldScale;
             XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            WorldPosition.y += 10.0f;
             XMFLOAT3 PivotPosition = WorldPosition;
 
-            const float HealAreaRad = 250.0f;
+            const float HealAreaRad = 1000.0f;
             // create holy effect object
-            for (int i = 0; i < 10; ++i)
+            for (int i = 0; i < 20; ++i)
             {
                 Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+                newSkillEffectObj->m_CE_ID = New_CE_ID;
 
                 objName = "HolyCross - Instancing";
                 Ritems = { AllRitems["SkillEffect_Heal_Cross_GreenLight"].get() };
@@ -828,13 +913,13 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                 XMFLOAT3 newWorldScale = PivotScale;
                 XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
                 XMFLOAT3 newWorldPosition = {
-                    MathHelper::RandF(PivotPosition.x - HealAreaRad, PivotPosition.x + HealAreaRad),
-                    MathHelper::RandF(PivotPosition.z - HealAreaRad, PivotPosition.z + HealAreaRad),
-                    MathHelper::RandF(PivotPosition.y + 50.0f, PivotPosition.y + HealAreaRad * 2.0f)};
+                    MathHelper::RandF(PivotPosition.x - HealAreaRad * 0.6f, PivotPosition.x + HealAreaRad * 0.6f),
+                    MathHelper::RandF(PivotPosition.y + 50.0f, PivotPosition.y + HealAreaRad * 0.7f),
+                MathHelper::RandF(PivotPosition.z - HealAreaRad * 0.6f, PivotPosition.z + HealAreaRad * 0.6f)};
                 // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+                XMFLOAT3 newLocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
-                objManager.SetObjectComponent(newSkillObj, objName,
+                objManager.SetObjectComponent(newSkillEffectObj, objName,
                     Ritems, nullptr,
                     nullptr, &newLocalRotationEuler, nullptr,
                     &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
@@ -845,6 +930,7 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                 newSkillEffectObj->m_Parent = newSkillObj;
 
                 m_BillboardObjects.push_back(newSkillEffectObj);
+                m_EffectObjects.push_back(newSkillEffectObj);
             }
 
             objName = "HolyArea - Instancing";
@@ -855,38 +941,48 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
         {
             objName = "FuryRoar - Instancing";
             Ritems = { AllRitems["SkillEffect_Roar_Bear_RedLight"].get() };
+            WorldPosition.y += 440.0f;
+            WorldPosition.z -= 100.0f;
             // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+            LocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
             m_BillboardObjects.push_back(newSkillObj);
+            m_EffectObjects.push_back(newSkillObj);
         }
             break;
         case SKILL_TYPE::STEALTH:
         {
+            const float RandScale = MathHelper::RandF();
+            WorldScale = { RandScale, RandScale, RandScale };
             XMFLOAT3 PivotScale = WorldScale;
             XMFLOAT3 PivotRotationEuler = WorldRotationEuler;
+            WorldPosition.y += 440.0f;
+            WorldPosition.z -= 100.0f;
             XMFLOAT3 PivotPosition = WorldPosition;
 
             // create stealth effect object
             for (int i = 0; i < 2; ++i)
             {
                 Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+                newSkillEffectObj->m_CE_ID = New_CE_ID;
 
                 objName = "StealthFog - Instancing";
                 Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
 
-                XMFLOAT3 newWorldScale = PivotScale;
+                const float randScale = MathHelper::RandF();
+                XMFLOAT3 newWorldScale = { randScale, randScale, randScale };
                 XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
                 XMFLOAT3 newWorldPosition = PivotPosition;
+                newWorldPosition.y += (i + 1) * 10.0f;
                 XMVECTOR NEW_WORLD_POS = XMLoadFloat3(&newWorldPosition);
                 XMVECTOR STRAFE = m_MainCamera.GetRight();
-                STRAFE *= (i > 0) ? -75.0f : 75.0f;
+                STRAFE *= (i > 0) ? -150.0f : 150.0f;
                 NEW_WORLD_POS += STRAFE;
                 XMStoreFloat3(&newWorldPosition, NEW_WORLD_POS);
                 // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-                XMFLOAT3 newLocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+                XMFLOAT3 newLocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
-                objManager.SetObjectComponent(newSkillObj, objName,
+                objManager.SetObjectComponent(newSkillEffectObj, objName,
                     Ritems, nullptr,
                     nullptr, &newLocalRotationEuler, nullptr,
                     &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
@@ -897,14 +993,16 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                 newSkillEffectObj->m_Parent = newSkillObj;
 
                 m_BillboardObjects.push_back(newSkillEffectObj);
+                m_EffectObjects.push_back(newSkillEffectObj);
             }
 
             objName = "StealthFog - Instancing";
             Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
             // Billboard를 감안하여 x-z좌표계평면에 수직이 되도록 한다.
-            LocalRotationEuler = { 90.0f, 0.0f, 0.0f };
+            LocalRotationEuler = { -90.0f, 0.0f, 0.0f };
 
             m_BillboardObjects.push_back(newSkillObj);
+            m_EffectObjects.push_back(newSkillObj);
         }
             break;
         }
@@ -978,15 +1076,19 @@ void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 Rotat
     {
         auto TransformInfo = ControledObj->m_TransformInfo.get();
         TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
+        TransformInfo->SetWorldScale(Scale);
+        TransformInfo->SetWorldRotationEuler(RotationEuler);
+        TransformInfo->SetInterpolatedDestPosition(Position);
         TransformInfo->UpdateWorldTransform();
     }
 }
 
-void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType)
+void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE SkillType)
 {
+    MotionSpeed = 1.0f; // Motion Speed 임시
     if (m_Players.find(CE_ID) != m_Players.end())
     {
-        m_Players[CE_ID]->PlayMotion(MotionType, SkillType);
+        m_Players[CE_ID]->PlayMotion(MotionType, MotionSpeed, SkillType);
     }
     else
     {
@@ -1000,6 +1102,7 @@ void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_
 
         if (newActionType == AnimActionType::Non) return;
 
+        AnimInfo->SetPlaySpeed(MotionSpeed);
         AnimInfo->AnimStop(CurrPlayingAction);
         AnimInfo->AnimPlay(newActionType);
         if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
@@ -1030,6 +1133,26 @@ void PlayGameScene::DeActivateObject(int CE_ID)
     }
     else
     {
+        while (m_BillboardObjects.size() > 0)
+        {
+            auto exceptObj = std::find_if(m_BillboardObjects.begin(), m_BillboardObjects.end(), [&](Object* obj)
+                {
+                    return (obj->m_CE_ID == CE_ID);
+                });
+            if (exceptObj != m_BillboardObjects.end()) m_BillboardObjects.erase(exceptObj);
+            else break;
+        }
+
+        while (m_EffectObjects.size() > 0)
+        {
+            auto exceptObj = std::find_if(m_EffectObjects.begin(), m_EffectObjects.end(), [&](Object* obj)
+                {
+                    return (obj->m_CE_ID == CE_ID);
+                });
+            if (exceptObj != m_EffectObjects.end()) m_EffectObjects.erase(exceptObj);
+            else break;
+        }
+
         ObjectManager ObjManager;
         Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
         if (ControledObj != nullptr)
@@ -1048,8 +1171,21 @@ void PlayGameScene::SetKDAScore(unsigned char Count_Kill, unsigned char Count_De
     GameInfo_CountAssistance = Count_Assistance;
 }
 
-void PlayGameScene::SetKillLog(std::wstring Message)
+void PlayGameScene::SetKillLog(short Kill_Player_id, short Death_Player_id)
 {
+    wstring KillerName, DeadName;
+
+    for (auto& Player_iter : m_Players)
+    {
+        auto Player = Player_iter.second.get();
+        int PlayerObjID = Player->m_CharacterObjRef->m_CE_ID;
+        if (PlayerObjID == Kill_Player_id) KillerName = Player->m_Name;
+        else if (PlayerObjID == Death_Player_id) DeadName = Player->m_Name;
+    }
+
+    if (KillerName.empty() || DeadName.empty()) return;
+
+    wstring Message = L"[" + KillerName + L"] Killed [" + DeadName + L"]";
     if (KillLogList.size() == MaxKillLog) KillLogList.pop_back();
     KillLogList.push_back(Message);
 }

@@ -206,6 +206,7 @@ public:
             eventManager.ReservateEvent_SetCharacterMotion(m_ExternalEvents,
                 packetData->object_id,
                 (MOTION_TYPE)packetData->motion_type,
+                packetData->motion_speed,
                 (SKILL_TYPE)packetData->skill_type);
         }
         break;
@@ -253,7 +254,7 @@ public:
         {
             auto packetData = reinterpret_cast<csss_packet_send_kill_message*>(packet);
             EventManager eventManager;
-            //eventManager.ReservateEvent_SetKillLog(m_ExternalEvents, packetData->message);
+            eventManager.ReservateEvent_SetKillLog(m_ExternalEvents, packetData->kill, packetData->death);
         }
         break;
         case CSSS_SET_CHAT_LOG:

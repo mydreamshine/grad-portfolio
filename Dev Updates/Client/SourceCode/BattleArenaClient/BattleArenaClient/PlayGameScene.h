@@ -31,6 +31,7 @@ public:
     virtual void AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     virtual void AnimateCameras(CTimer& gt);
     void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
+    void AnimateEffectObjectsTransform(CTimer& gt);
     void UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players);
     void RotateBillboardObjects(Camera* MainCamera, std::vector<Object*>& Objects);
 
@@ -42,32 +43,32 @@ public:
     // Control Element ID, Player NickName, Character Type, Propensity, Transform(Scale, RotationEuler, Position)
     virtual void SpawnPlayer(int New_CE_ID, std::wstring Name, CHARACTER_TYPE CharacterType, bool IsMainPlayer, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
     // Control Element ID, Attack Order(Chracter Type), Propensity, Transform(Scale, RotationEuler, Position)
-    void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    virtual void SpawnNormalAttackObject(int New_CE_ID, CHARACTER_TYPE AttackOrder, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
     // Control Element ID, Skill Type, Propensity, Transform(Scale, RotationEuler, Position)
-    void SpawnSkillObject(int New_CE_ID, SKILL_TYPE SkillType, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    virtual void SpawnSkillObject(int New_CE_ID, SKILL_TYPE SkillType, OBJECT_PROPENSITY Propensity, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
     // Effect Type, Transform(Position)
-    void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position);
+    virtual void SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position);
     // Control Element ID, Transform(Scale, RotationEuler, Position)
-    void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
-    // Control Element ID, MotionType, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
-    void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, SKILL_TYPE SkillType = SKILL_TYPE::NON);
+    virtual void SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 RotationEuler, XMFLOAT3 Position);
+    // Control Element ID, MotionType, MotionSpeed, SkillType(스킬 모션일 경우에만 지정, 그 외의 경우에는 NON)
+    virtual void SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillType = SKILL_TYPE::NON);
     // Control Element ID, Player State
-    void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState);
+    virtual void SetPlayerState(int CE_ID, PLAYER_STATE PlayerState);
     // Deactivated Poison Gas Area
-    void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea);
+    virtual void UpdateDeActPoisonGasArea(RECT DeActPoisonGasArea);
     // Control Element ID
-    void DeActivateObject(int CE_ID);
+    virtual void DeActivateObject(int CE_ID);
 
     // Count Score(Kill, Death, Assistance)
-    void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance);
-    // Message ([Do_UserName] Killed [Target_UserName])
-    void SetKillLog(std::wstring Message);
+    virtual void SetKDAScore(unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance);
+    // Killer Object ID, Dead Object ID
+    virtual void SetKillLog(short Kill_Player_id, short Death_Player_id);
     // Message ([Do_UserName]: Chat Message)
-    void SetChatLog(std::wstring Message);
+    virtual void SetChatLog(std::wstring Message);
     // Remaining Sec
-    void SetGamePlayTimeLimit(unsigned int Sec);
+    virtual void SetGamePlayTimeLimit(unsigned int Sec);
     // Remaining HP
-    void SetPlayerHP(int CE_ID, int HP);
+    virtual void SetPlayerHP(int CE_ID, int HP);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private:
@@ -84,6 +85,7 @@ private:
     std::unordered_map<int, std::unique_ptr<Player>> m_Players;
 
     std::vector<Object*> m_BillboardObjects;
+    std::vector<Object*> m_EffectObjects;
 
     int GameInfo_CountKill = 0;
     int GameInfo_CountDeath = 0;

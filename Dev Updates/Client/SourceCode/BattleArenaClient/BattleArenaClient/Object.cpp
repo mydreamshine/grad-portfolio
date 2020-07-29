@@ -273,6 +273,27 @@ void TransformInfo::Init()
 	m_Velocity = { 0.0f, 0.0f, 0.0f };
 
 	m_AttachingTargetBoneID = -1;
+
+	WorldPosIsInterpolation = false;
+	m_InterPolationDestPosition = { 0.0f, 0.0f, 0.0f };
+}
+
+void TransformInfo::SetInterpolatedDestPosition(const DirectX::XMFLOAT3& newPosition, bool WorldPosInterpolated)
+{
+	m_InterPolationDestPosition = newPosition;
+	WorldPosIsInterpolation = WorldPosInterpolated;
+}
+
+void TransformInfo::InterpolateTransformWorldPosition(CTimer& gt)
+{
+	const float invDeltaTime_factor = 1.0f / 30.0f; // ¼­¹öÀÇ DeltaTime
+	XMVECTOR CURR_WORLD_POS = XMLoadFloat3(&m_WorldPosition);
+	XMVECTOR DEST_WORLD_POS = XMLoadFloat3(&m_InterPolationDestPosition);
+	CURR_WORLD_POS += (DEST_WORLD_POS - CURR_WORLD_POS) * (gt.GetTimeElapsed() / invDeltaTime_factor);
+
+	XMFLOAT3 newWorldPos; XMStoreFloat3(&newWorldPos, CURR_WORLD_POS);
+	TransformInfo::SetWorldPosition(newWorldPos);
+	TransformInfo::UpdateWorldTransform();
 }
 
 bool Object::ProcessSelfDeActivate(CTimer& gt)
