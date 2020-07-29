@@ -240,7 +240,7 @@ void WARRIOR::do_attack()
 	normal_attack->dir = dir;
 	normal_attack->propensity = propensity;
 	normal_attack->damage = WARRIOR_ATTACK_DAMAGE;
-	normal_attack->set_aabb(163.0f, 0, 100.0f);
+	normal_attack->set_aabb(163.0f, 10.0f, 100.0f);
 	world->m_skills[object_id] = normal_attack;
 
 	csss_packet_spawn_normal_attack_obj packet{
@@ -273,7 +273,7 @@ void WARRIOR::do_skill()
 		normal_attack->pos = pos;
 		normal_attack->pos.y += 50;
 		normal_attack->rot = rot; normal_attack->rot.y -= Deg[i];
-		normal_attack->set_aabb(163.0f, 0.0f, 100.0f);
+		normal_attack->set_aabb(163.0f, 10.0f, 100.0f);
 		normal_attack->dir = dir.rotY(Deg[i]);
 		normal_attack->propensity = propensity;
 		normal_attack->damage = SWORD_WAVE_DAMAGE;
@@ -313,7 +313,7 @@ void PRIEST::do_attack()
 	normal_attack->dir = dir;
 	normal_attack->damage = PRIEST_ATTACK_DAMAGE;
 	normal_attack->propensity = propensity;
-	normal_attack->set_aabb(50.0f, 0, 163.0f);
+	normal_attack->set_aabb(50.0f, 10.0f, 163.0f);
 	world->m_skills[object_id] = normal_attack;
 
 	csss_packet_spawn_normal_attack_obj packet{
@@ -373,7 +373,7 @@ void BERSERKER::do_attack()
 	normal_attack->rot = rot;
 	normal_attack->dir = dir;
 	normal_attack->propensity = propensity;
-	normal_attack->set_aabb(163.0f, 0, 100.0f);
+	normal_attack->set_aabb(163.0f, 10.0f, 100.0f);
 	normal_attack->damage = BERSERKER_ATTACK_DAMAGE;
 	world->m_skills[object_id] = normal_attack;
 
@@ -520,7 +520,7 @@ void ASSASSIN::do_attack()
 	normal_attack->rot = rot;
 	normal_attack->dir = dir;
 	normal_attack->propensity = propensity;
-	normal_attack->set_aabb(25.0f, 0, 163.0f);
+	normal_attack->set_aabb(25.0f, 10.0f, 163.0f);
 	normal_attack->damage = ASSASSIN_ATTACK_DAMAGE;
 	world->m_skills[object_id] = normal_attack;
 

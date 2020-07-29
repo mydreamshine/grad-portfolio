@@ -51,6 +51,7 @@ void SKILL::collision_wall()
 void SKILL::set_aabb()
 {
 	AABB.Center.x = pos.x;
+	AABB.Center.y = pos.y;
 	AABB.Center.z = pos.z;
 }
 
