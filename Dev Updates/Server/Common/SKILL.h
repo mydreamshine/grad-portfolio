@@ -17,6 +17,8 @@ public:
 	virtual void update(float elapsedTime);
 	virtual void effect(HERO* hero);
 	virtual void collision_wall();
+	void set_aabb();
+	void set_aabb(float ex, float ey, float ez);
 
 	DMRoom* world;
 	short owner_id;
@@ -24,15 +26,13 @@ public:
 	Vector3d rot;
 	Vector3d dir;
 	bool changed_transform;
-	DirectX::BoundingBox AABB;
+	DirectX::BoundingOrientedBox AABB;
 	float vel;
 	float duration;
 
 	char propensity;
 	char skill_type;
 	float anim_time_pos;
-private:
-	void set_aabb();
 };
 
 class NORMAL_ATTACK : public SKILL 

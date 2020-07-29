@@ -60,6 +60,7 @@ class WARRIOR : public HERO
 public:
 	WARRIOR(DMRoom* world, short object_id, char propensity);
 	virtual ~WARRIOR();
+	virtual void do_attack();
 	virtual void do_skill();
 };
 
@@ -68,6 +69,7 @@ class PRIEST : public HERO
 public:
 	PRIEST(DMRoom* world, short object_id, char propensity);
 	virtual ~PRIEST();
+	virtual void do_attack();
 	virtual void do_skill();
 };
 
@@ -76,6 +78,7 @@ class BERSERKER : public HERO
 public:
 	BERSERKER(DMRoom* world, short object_id, char propensity);
 	virtual ~BERSERKER();
+	virtual void do_attack();
 	virtual void do_skill();
 
 	virtual void move(float elapsedTime);

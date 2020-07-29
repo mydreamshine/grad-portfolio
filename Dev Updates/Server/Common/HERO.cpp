@@ -222,10 +222,35 @@ WARRIOR::WARRIOR(DMRoom* world, short object_id, char propensity) :
 	character_type = ((char)CHARACTER_TYPE::WARRIOR);
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::WARRIOR];
 	set_aabb();
+	max_hp = hp = WARRIOR_MAX_HP;
+	vel = WARRIOR_MOVEMENT;
 }
 
 WARRIOR::~WARRIOR()
 {
+}
+
+void WARRIOR::do_attack()
+{
+	int object_id = world->skill_uid++;
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	normal_attack->pos = pos;
+	normal_attack->pos.y += 50;
+	normal_attack->rot = rot;
+	normal_attack->dir = dir;
+	normal_attack->propensity = propensity;
+	normal_attack->damage = WARRIOR_ATTACK_DAMAGE;
+	normal_attack->set_aabb(163.0f, 0, 100.0f);
+	world->m_skills[object_id] = normal_attack;
+
+	csss_packet_spawn_normal_attack_obj packet{
+		object_id, character_type,
+		1.0f, 1.0f, 1.0f,
+		rot.x, rot.y, rot.z,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
+	world->event_data.emplace_back(&packet, packet.size);
 }
 
 void WARRIOR::do_skill()
@@ -248,6 +273,7 @@ void WARRIOR::do_skill()
 		normal_attack->pos = pos;
 		normal_attack->pos.y += 50;
 		normal_attack->rot = rot; normal_attack->rot.y -= Deg[i];
+		normal_attack->set_aabb(163.0f, 0.0f, 100.0f);
 		normal_attack->dir = dir.rotY(Deg[i]);
 		normal_attack->propensity = propensity;
 		normal_attack->damage = SWORD_WAVE_DAMAGE;
@@ -269,17 +295,41 @@ PRIEST::PRIEST(DMRoom* world, short object_id, char propensity) :
 	character_type = ((char)CHARACTER_TYPE::PRIEST);
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::PRIEST];
 	set_aabb();
+	max_hp = hp = PRIEST_MAX_HP;
+	vel = PRIEST_MOVEMENT;
 }
 
 PRIEST::~PRIEST()
 {
 }
 
+void PRIEST::do_attack()
+{
+	int object_id = world->skill_uid++;
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	normal_attack->pos = pos;
+	normal_attack->pos.y += 50;
+	normal_attack->rot = rot;
+	normal_attack->dir = dir;
+	normal_attack->damage = PRIEST_ATTACK_DAMAGE;
+	normal_attack->propensity = propensity;
+	normal_attack->set_aabb(50.0f, 0, 163.0f);
+	world->m_skills[object_id] = normal_attack;
+
+	csss_packet_spawn_normal_attack_obj packet{
+		object_id, character_type,
+		1.0f, 1.0f, 1.0f,
+		rot.x, rot.y, rot.z,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
+	world->event_data.emplace_back(&packet, packet.size);
+}
+
 void PRIEST::do_skill()
 {
 	int skill_id = world->skill_uid++;
 	HOLY_AREA* holy_area = new HOLY_AREA{ world, (short)object_id };
-
 
 	holy_area->pos = pos;
 	holy_area->propensity = propensity;
@@ -306,10 +356,35 @@ BERSERKER::BERSERKER(DMRoom* world, short object_id, char propensity) :
 	character_type = ((char)CHARACTER_TYPE::BERSERKER);
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::BERSERKER];
 	set_aabb();
+	max_hp = hp = BERSERKER_MAX_HP;
+	vel = BERSERKER_MOVEMENT;
 }
 
 BERSERKER::~BERSERKER()
 {
+}
+
+void BERSERKER::do_attack()
+{
+	int object_id = world->skill_uid++;
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	normal_attack->pos = pos;
+	normal_attack->pos.y += 50;
+	normal_attack->rot = rot;
+	normal_attack->dir = dir;
+	normal_attack->propensity = propensity;
+	normal_attack->set_aabb(163.0f, 0, 100.0f);
+	normal_attack->damage = BERSERKER_ATTACK_DAMAGE;
+	world->m_skills[object_id] = normal_attack;
+
+	csss_packet_spawn_normal_attack_obj packet{
+		object_id, character_type,
+		1.0f, 1.0f, 1.0f,
+		rot.x, rot.y, rot.z,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
+	world->event_data.emplace_back(&packet, packet.size);
 }
 
 void BERSERKER::do_skill()
@@ -376,6 +451,8 @@ ASSASSIN::ASSASSIN(DMRoom* world, short object_id, char propensity) :
 	character_type = (char)CHARACTER_TYPE::ASSASSIN;
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::ASSASSIN];
 	set_aabb();
+	max_hp = hp = ASSASSIN_MAX_HP;
+	vel = ASSASSIN_MOVEMENT;
 }
 
 ASSASSIN::~ASSASSIN()
@@ -435,7 +512,26 @@ void ASSASSIN::do_attack()
 {
 	if (true == stelth_mode)
 		stelth_mode = false;
-	HERO::do_attack();
+
+	int object_id = world->skill_uid++;
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	normal_attack->pos = pos;
+	normal_attack->pos.y += 50;
+	normal_attack->rot = rot;
+	normal_attack->dir = dir;
+	normal_attack->propensity = propensity;
+	normal_attack->set_aabb(25.0f, 0, 163.0f);
+	normal_attack->damage = ASSASSIN_ATTACK_DAMAGE;
+	world->m_skills[object_id] = normal_attack;
+
+	csss_packet_spawn_normal_attack_obj packet{
+		object_id, character_type,
+		1.0f, 1.0f, 1.0f,
+		rot.x, rot.y, rot.z,
+		pos.x, pos.y, pos.z,
+		propensity
+	};
+	world->event_data.emplace_back(&packet, packet.size);
 }
 
 void ASSASSIN::unhide()

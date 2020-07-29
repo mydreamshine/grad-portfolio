@@ -5,20 +5,33 @@ constexpr float BASIC_VELOCITY = 400.0f;
 constexpr float RESPAWN_TIME = 5.0f;
 constexpr float SEMI_INVINCIBLE_TIME = 3.0f;
 
+
 constexpr int NORMAL_ATTACK_DAMAGE = 10;
 constexpr float NORMAL_ATTACK_VELOCITY = 2100.0f;
 constexpr float NORMAL_ATTACK_DURATION = 5.0f;
 
+constexpr int WARRIOR_MAX_HP = 100;
+constexpr float WARRIOR_MOVEMENT = 360.0f;
+constexpr int WARRIOR_ATTACK_DAMAGE = 30;
 constexpr int SWORD_WAVE_DAMAGE = 30;
 constexpr float SWORD_WAVE_DURATION = 10.0f;
 
+constexpr int PRIEST_MAX_HP = 80;
+constexpr float PRIEST_MOVEMENT = 360.0f;
+constexpr int PRIEST_ATTACK_DAMAGE = 15;
 constexpr int HOLY_AREA_HEAL_AMOUNT = 10;
 constexpr float HOLY_AREA_DURATION = 10.0f;
 constexpr float HOLY_AREA_EFFECT_RATE = 1.0f;
 
+constexpr int BERSERKER_MAX_HP = 150;
+constexpr float BERSERKER_MOVEMENT = 300.0;
+constexpr int BERSERKER_ATTACK_DAMAGE = 40;
 constexpr float FURY_ROAR_DURATION = 8.0f;
 constexpr float FURY_ROAR_ACCELERATE = 2.0f;
 
+constexpr int ASSASSIN_MAX_HP = 100;
+constexpr float ASSASSIN_MOVEMENT = 380.0f;
+constexpr int ASSASSIN_ATTACK_DAMAGE = 30;
 constexpr float STELTH_DURATION = 7.0f;
 
 enum class SCENE_TYPE : char

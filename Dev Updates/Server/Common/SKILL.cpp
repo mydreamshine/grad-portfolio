@@ -7,7 +7,7 @@ SKILL::SKILL(DMRoom *world, short owner_id) :
 	pos(0, 10, 0),
 	rot(0, 0, 0),
 	dir(0, 0, 1.0f),
-	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
+	AABB(),
 	vel(5.0f),
 	duration(1.0f),
 	skill_type(0),
@@ -52,6 +52,15 @@ void SKILL::set_aabb()
 {
 	AABB.Center.x = pos.x;
 	AABB.Center.z = pos.z;
+}
+
+void SKILL::set_aabb(float ex, float ey, float ez)
+{
+	set_aabb();
+	AABB.Extents.x = ex;
+	AABB.Extents.y = ey;
+	AABB.Extents.z = ez;
+	XMStoreFloat4(&AABB.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(rot.x * TORAD, rot.y * TORAD, rot.z * TORAD));
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -109,6 +118,10 @@ HOLY_AREA::HOLY_AREA(DMRoom* world, short owner_id) : SKILL(world, owner_id)
 {
 	duration = HOLY_AREA_DURATION;
 	effect_time = HOLY_AREA_EFFECT_RATE;
+	AABB.Extents.x = 1000.0f;
+	AABB.Extents.z = 1000.0f;
+	AABB.Extents.y = 50.0f;
+	set_aabb();
 }
 
 HOLY_AREA::~HOLY_AREA()
