@@ -53,15 +53,15 @@ void HERO::correct_position(DirectX::BoundingBox& other)
 	changed_transform = true;
 }
 
-void HERO::change_motion(char motion)
+void HERO::change_motion(char motion, bool reset)
 {
-	if (motion == this->motion_type)
+	if (motion == this->motion_type && false == reset)
 		return;
 
 	this->motion_type = motion;
 	anim_time_pos = 0.0f;
 
-	csss_packet_set_character_motion packet{ object_id, motion_type, 0 };
+	csss_packet_set_character_motion packet{ object_id, motion_type, motion_speed };
 	world->event_data.emplace_back(&packet, packet.size);
 }
 
@@ -301,8 +301,7 @@ void PRIEST::do_skill()
 BERSERKER::BERSERKER(DMRoom* world, short object_id, char propensity) :
 	HERO(world, object_id, propensity),
 	roar_mode(false),
-	roar_time(0.0f),
-	roar_skill(nullptr)
+	roar_time(0.0f)
 {
 	character_type = ((char)CHARACTER_TYPE::BERSERKER);
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::BERSERKER];
@@ -317,14 +316,10 @@ void BERSERKER::do_skill()
 {
 	roar_mode = true;
 	roar_time = FURY_ROAR_DURATION;
-
-	if (roar_skill != nullptr) {
-		roar_skill->destroy();
-		roar_skill = nullptr;
-	}
+	motion_speed = FURY_ROAR_ACCELERATE;
 
 	int skill_id = world->skill_uid++;
-	roar_skill = new FURY_ROAR{ world, (short)object_id };
+	auto roar_skill = new FURY_ROAR{ world, (short)object_id };
 
 	roar_skill->pos = pos;
 	roar_skill->propensity = propensity;
@@ -351,9 +346,9 @@ void BERSERKER::move(float elapsedTime)
 
 void BERSERKER::death()
 {
-	if (roar_skill != nullptr) {
-		roar_skill->destroy();
-		roar_skill = nullptr;
+	if (true == roar_mode) {
+		motion_speed = 1.0f;
+		roar_mode = false;
 	}
 	HERO::death();
 }
@@ -363,14 +358,12 @@ void BERSERKER::update(float elapsedTime)
 	if (true == roar_mode) {
 		roar_time -= elapsedTime;
 		if (roar_time <= 0.0f) {
-			roar_skill->destroy();
-			roar_skill = nullptr;
 			roar_mode = false;
+			motion_speed = 1.0f;
+			change_motion(motion_type, true);
 		}
-		HERO::update(FURY_ROAR_ACCELERATE * elapsedTime);
 	}
-	else
-		HERO::update(elapsedTime);
+	HERO::update(elapsedTime);
 }
 
 ////////////////////////////////////////////////////////////

@@ -15,7 +15,7 @@ public:
 	void rotate(float yaw);
 	virtual void move(float elapsedTime);
 	void correct_position(DirectX::BoundingBox& other);
-	void change_motion(char motion);
+	void change_motion(char motion, bool reset = false);
 	void change_state(char state);
 	bool is_die();
 	int set_hp(int hp);
@@ -85,7 +85,6 @@ public:
 private:
 	bool roar_mode;
 	float roar_time;
-	SKILL* roar_skill;
 };
 
 class ASSASSIN : public HERO
