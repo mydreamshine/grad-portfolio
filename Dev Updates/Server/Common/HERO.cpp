@@ -14,7 +14,7 @@ HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	vel(BASIC_VELOCITY),
 
 	max_hp(BASIC_HP),
-	hp(max_hp),
+	hp(BASIC_HP),
 	motion_type((char)MOTION_TYPE::IDLE),
 	character_type((char)CHARACTER_TYPE::NON),
 	character_state((char)PLAYER_STATE::NON),
@@ -61,7 +61,7 @@ void HERO::change_motion(char motion, bool reset)
 	this->motion_type = motion;
 	anim_time_pos = 0.0f;
 
-	csss_packet_set_character_motion packet{ object_id, motion_type, motion_speed };
+	csss_packet_set_character_motion packet{ object_id, motion_type, 0, motion_speed };
 	world->event_data.emplace_back(&packet, packet.size);
 }
 

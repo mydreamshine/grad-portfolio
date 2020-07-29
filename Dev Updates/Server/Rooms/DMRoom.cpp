@@ -236,6 +236,7 @@ bool DMRoom::game_logic()
 	}
 
 	//Hero and Grass.
+	//Check hiding.
 	bool is_bush{ false };
 	for (auto& hero : m_heros) {
 		is_bush = false;
