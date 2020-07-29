@@ -7,6 +7,7 @@ class BBManager
 {
 public:
     std::vector<DirectX::BoundingBox> world_bb;
+    std::vector<DirectX::BoundingBox> grass_bb;
     std::map <char, DirectX::BoundingBox> character_bb;
 
     static BBManager& instance();

@@ -13,7 +13,8 @@ HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	AABB(pos.ToXMFloat3(), XMFLOAT3(0.5f, 0.5f, 0.5f)),
 	vel(BASIC_VELOCITY),
 
-	hp(100),
+	max_hp(BASIC_HP),
+	hp(max_hp),
 	motion_type((char)MOTION_TYPE::IDLE),
 	character_type((char)CHARACTER_TYPE::NON),
 	character_state((char)PLAYER_STATE::NON),
@@ -21,7 +22,8 @@ HERO::HERO(DMRoom* world, short object_id, char propensity) :
 	remain_state_time(0),
 	propensity(propensity),
 	object_id(object_id),
-	changed_transform(false)
+	changed_transform(false),
+	motion_speed(1.0f)
 {
 }
 
@@ -79,12 +81,15 @@ bool HERO::is_die()
 	return hp <= 0;
 }
 
-void HERO::set_hp(int hp)
+int HERO::set_hp(int hp)
 {
 	this->hp = (hp < 0) ? 0 : hp;
+	this->hp = (hp > max_hp) ? max_hp : hp;
 
 	csss_packet_set_character_hp packet{ object_id, this->hp };
 	world->event_data.emplace_back(&packet, packet.size);
+
+	return hp - this->hp;
 }
 
 void HERO::impact()
@@ -102,7 +107,7 @@ void HERO::death()
 
 void HERO::respawn()
 {
-	set_hp(BASIC_HP);
+	set_hp(max_hp);
 	change_motion((char)MOTION_TYPE::IDLE);
 	change_state((char)PLAYER_STATE::NON);
 }
@@ -113,7 +118,6 @@ void HERO::update(float elapsedTime)
 
 	switch (character_state) {
 	case (char)PLAYER_STATE::ACT_SEMI_INVINCIBILITY:
-	case (char)PLAYER_STATE::ACT_STEALTH:
 		if (remain_state_time <= 0)
 			change_state((char)PLAYER_STATE::NON);
 		break;
@@ -147,6 +151,22 @@ void HERO::do_attack()
 		propensity
 	};
 	world->event_data.emplace_back(&packet, packet.size);
+}
+
+void HERO::hide()
+{
+	if (motion_type != (char)MOTION_TYPE::WALK
+		&& motion_type != (char)MOTION_TYPE::IDLE)
+		return;
+
+	if (character_state == (char)PLAYER_STATE::NON)
+		change_state((char)PLAYER_STATE::ACT_STEALTH);
+}
+
+void HERO::unhide()
+{
+	if (character_state == (char)PLAYER_STATE::ACT_STEALTH)
+		change_state((char)PLAYER_STATE::NON);
 }
 
 void HERO::set_aabb()
@@ -358,8 +378,7 @@ void BERSERKER::update(float elapsedTime)
 ASSASSIN::ASSASSIN(DMRoom* world, short object_id, char propensity) :
 	HERO(world, object_id, propensity),
 	stelth_mode(false),
-	stelth_time(0.0f),
-	stelth_skill(nullptr)
+	stelth_time(0.0f)
 {
 	character_type = (char)CHARACTER_TYPE::ASSASSIN;
 	origin_AABB = AABB = BBManager::instance().character_bb[(char)CHARACTER_TYPE::ASSASSIN];
@@ -374,14 +393,11 @@ void ASSASSIN::do_skill()
 {
 	stelth_mode = true;
 	stelth_time = STELTH_DURATION;
-
-	if (stelth_skill != nullptr) {
-		stelth_skill->destroy();
-		stelth_skill = nullptr;
-	}
+	
+	change_state((char)PLAYER_STATE::ACT_STEALTH);
 
 	int skill_id = world->skill_uid++;
-	stelth_skill = new STELTH{ world, (short)object_id };
+	auto stelth_skill = new STELTH{ world, (short)object_id };
 	
 	stelth_skill->pos = pos;
 	stelth_skill->propensity = propensity;
@@ -400,10 +416,6 @@ void ASSASSIN::do_skill()
 
 void ASSASSIN::death()
 {
-	if (stelth_skill != nullptr) {
-		stelth_skill->destroy();
-		stelth_skill = nullptr;
-	}
 	HERO::death();
 }
 
@@ -412,10 +424,30 @@ void ASSASSIN::update(float elapsedTime)
 	if (true == stelth_mode) {
 		stelth_time -= elapsedTime;
 		if (stelth_time <= 0.0f) {
-			stelth_skill->destroy();
-			stelth_skill = nullptr;
+			change_state((char)PLAYER_STATE::NON);
 			stelth_mode = false;
 		}
 	}
 	HERO::update(elapsedTime);
+}
+
+void ASSASSIN::impact()
+{
+	if (true == stelth_mode)
+		stelth_mode = false;
+	HERO::impact();
+}
+
+void ASSASSIN::do_attack()
+{
+	if (true == stelth_mode)
+		stelth_mode = false;
+	HERO::do_attack();
+}
+
+void ASSASSIN::unhide()
+{
+	if (true == stelth_mode)
+		return;
+	HERO::unhide();
 }

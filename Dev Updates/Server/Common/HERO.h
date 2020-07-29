@@ -18,13 +18,15 @@ public:
 	void change_motion(char motion);
 	void change_state(char state);
 	bool is_die();
-	void set_hp(int hp);
+	int set_hp(int hp);
 	void impact();
 	void respawn();
 	virtual void death();
 	virtual void update(float elapsedTime);
 	virtual void do_attack();
 	virtual void do_skill() {};
+	virtual void hide();
+	virtual void unhide();
 	
 	DMRoom* world;
 
@@ -39,12 +41,14 @@ public:
 	char propensity;
 
 	int hp;
+	int max_hp;
 	short object_id;
 	char character_type;
 	char character_state;
 	char motion_type;
 	float anim_time_pos;
 	float remain_state_time;
+	float motion_speed;
 
 protected:
 	void set_aabb();
@@ -92,9 +96,11 @@ public:
 	virtual void do_skill();
 	virtual void death();
 	virtual void update(float elapsedTime);
+	virtual void impact();
+	virtual void do_attack();
+	virtual void unhide();
 
 private:
 	bool stelth_mode;
 	float stelth_time;
-	SKILL* stelth_skill;
 };

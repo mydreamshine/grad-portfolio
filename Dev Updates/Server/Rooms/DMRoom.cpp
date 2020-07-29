@@ -6,13 +6,14 @@ DMRoom::DMRoom() :
 	max_player(1),
 	player_num(0),
 	delta_time(0),
-	left_time(5.0f),
+	left_time(300.0f),
 	skill_uid(4),
 	kill_count(),
 	game_end(false),
 	total_score(0),
 	win_team(0),
-	m_walls( BBManager::instance().world_bb )
+	m_walls( BBManager::instance().world_bb ),
+	m_grass(BBManager::instance().grass_bb)
 {
 	packet_vector.clear();
 	packets.clear();
@@ -30,9 +31,6 @@ DMRoom::~DMRoom()
 
 void DMRoom::init()
 {
-	// Loading config from resource manager - Client will update this.
-	//m_walls{ BBManager::instance().world_bb };
-
 	//Insert changed scene packet.
 	csss_packet_change_scene packet{ (char)SCENE_TYPE::PLAYGMAE_SCENE };
 	event_data.emplace_back(&packet, packet.size);
@@ -103,6 +101,7 @@ void DMRoom::end()
 			rank += (-20 + bonus);
 		db_manager.update_rank(player.second, rank);
 
+		//Send score to clients.
 		if (sockets.count(player.first) != 0) {
 			csss_packet_change_scene change_scene_packet{ (char)SCENE_TYPE::GAMEOVER_SCENE };
 			csss_packet_send_match_statistic stat_packet{
@@ -234,6 +233,21 @@ bool DMRoom::game_logic()
 		for (auto& wall : m_walls)
 			if (true == hero.second->AABB.Intersects(wall))
 				hero.second->correct_position(wall);
+	}
+
+	//Hero and Grass.
+	bool is_bush{ false };
+	for (auto& hero : m_heros) {
+		is_bush = false;
+		for (auto& grass : m_grass) {
+			if (true == hero.second->AABB.Intersects(grass)) {
+				hero.second->hide();
+				is_bush = true;
+				break;
+			}
+		}
+		if (false == is_bush)
+			hero.second->unhide();
 	}
 
 	//Garbage Collection.
@@ -389,6 +403,8 @@ void DMRoom::process_try_normal_attack(void* packet)
 	sscs_packet_try_normal_attack* data = reinterpret_cast<sscs_packet_try_normal_attack*>(packet);
 	m_heros[data->client_id]->rotate(data->character_yaw_angle);
 	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::ATTACK);
+	if (m_heros[data->client_id]->character_state == (char)PLAYER_STATE::ACT_STEALTH)
+		m_heros[data->client_id]->change_state((char)PLAYER_STATE::NON);
 }
 
 void DMRoom::process_try_use_skill(void* packet)
@@ -396,6 +412,8 @@ void DMRoom::process_try_use_skill(void* packet)
 	sscs_packet_try_use_skill* data = reinterpret_cast<sscs_packet_try_use_skill*>(packet);
 	m_heros[data->client_id]->rotate(data->character_yaw_angle);
 	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::SKILL_POSE);
+	if (m_heros[data->client_id]->character_state == (char)PLAYER_STATE::ACT_STEALTH)
+		m_heros[data->client_id]->change_state((char)PLAYER_STATE::NON);
 }
 
 void DMRoom::process_done_character_motion(void* packet)

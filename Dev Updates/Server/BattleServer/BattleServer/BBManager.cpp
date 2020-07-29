@@ -17,7 +17,7 @@ void BBManager::load_bb()
         "Fence",
         "Box",
         "Pilar",
-        "Cliff",
+        "cliff",
         "water",
         "Bone2"
     };
@@ -35,6 +35,11 @@ void BBManager::load_bb()
             >> tempBox.Extents.x
             >> tempBox.Extents.y
             >> tempBox.Extents.z;
+
+        if (tempName.find("Grass") != std::string::npos) {
+            grass_bb.emplace_back(tempBox);
+            continue;
+        }
 
         for (const std::string& target : world_target) {
             if (tempName.find(target) == std::string::npos) continue;

@@ -83,8 +83,8 @@ void NORMAL_ATTACK::effect(HERO* hero)
 		return;
 	}
 
-	hero->set_hp(hero->hp - damage);
-	world->update_score_damage(owner_id, damage);
+	int delta = hero->set_hp(hero->hp - damage);
+	world->update_score_damage(owner_id, delta);
 
 	if (true == hero->is_die()) {
 		hero->death();
@@ -130,8 +130,9 @@ void HOLY_AREA::effect(HERO* hero)
 	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
 
 	if (effect_time >= HOLY_AREA_EFFECT_RATE) {
-		hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
-		world->update_score_heal(owner_id, HOLY_AREA_HEAL_AMOUNT);
+		int delta = hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
+		if(delta != 0)
+			world->update_score_heal(owner_id, delta);
 	}
 }
 

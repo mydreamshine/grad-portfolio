@@ -61,6 +61,7 @@ private:
 	int skill_uid;
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;
+	std::vector<DirectX::BoundingBox> m_grass;
 	DBMANAGER db_manager;
 
 	HERO* spawn_hero(short object_id, char character_type, char propensity);

@@ -109,7 +109,7 @@ void DBMANAGER::update_rank(int uid, int rank)
 	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &uid, 0, NULL);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
-	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &rank, 0, NULL);
+	retcode = SQLBindParameter(hstmt, 2, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &rank, 0, NULL);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
