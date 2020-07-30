@@ -146,7 +146,7 @@ void HOLY_AREA::effect(HERO* hero)
 	if (effect_time >= HOLY_AREA_EFFECT_RATE) {
 		int delta = hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
 		if(delta != 0)
-			world->update_score_heal(owner_id, delta);
+			world->update_score_heal(owner_id, -delta);
 	}
 }
 
@@ -171,4 +171,64 @@ STELTH::STELTH(DMRoom* world, short owner_id) : SKILL(world, owner_id)
 
 STELTH::~STELTH()
 {
+}
+
+POISON_GAS::POISON_GAS(DMRoom* world) :
+	world(world),
+	safe_area{ SAFE_AREA_LEFT, SAFE_AREA_TOP, SAFE_AREA_RIGHT, SAFE_AREA_BOTTOM },
+	effect_time (0),
+	decrease_time (0),
+	cur_state(0),
+	max_state(GAME_TIME_LIMIT / GAS_DECREASE_TIME)
+{
+}
+
+void POISON_GAS::update(float elapsedTime)
+{
+	if (effect_time > GAS_EFFECT_TIME) {
+		effect_time -= GAS_EFFECT_TIME;
+	}
+	effect_time += elapsedTime;
+
+	if (decrease_time > GAS_DECREASE_TIME) {
+		decrease_time -= GAS_DECREASE_TIME;
+		if (cur_state++ < max_state) {
+			safe_area.left -= (int)((float)SAFE_AREA_LEFT / (float)max_state);
+			safe_area.top -= (int)((float)SAFE_AREA_TOP / (float)max_state);
+			safe_area.right -= (int)((float)SAFE_AREA_RIGHT / (float)max_state);
+			safe_area.bottom -= (int)((float)SAFE_AREA_BOTTOM / (float)max_state);
+
+			csss_packet_update_poison_fog_deact_area packet{
+				safe_area.left,
+				safe_area.top,
+				safe_area.right,
+				safe_area.bottom
+			};
+			world->event_data.emplace_back(&packet, packet.size);
+		}
+	}
+	decrease_time += elapsedTime;
+}
+
+void POISON_GAS::effect(HERO* hero)
+{
+	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
+
+	if (effect_time >= GAS_EFFECT_TIME) {
+		if (true == intersect(hero)) return;
+
+		int left_hp = hero->hp - GAS_DAMAGE;
+		if (left_hp <= 0)
+			left_hp = 1;
+		hero->set_hp(left_hp);
+	}
+}
+
+bool POISON_GAS::intersect(HERO* hero)
+{
+	if (hero->pos.x < safe_area.left) return false;
+	if (hero->pos.x > safe_area.right) return false;
+	if (hero->pos.z > safe_area.top) return false;
+	if (hero->pos.z < safe_area.bottom) return false;
+	return true;
 }

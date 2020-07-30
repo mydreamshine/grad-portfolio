@@ -6,14 +6,15 @@ DMRoom::DMRoom() :
 	max_player(1),
 	player_num(0),
 	delta_time(0),
-	left_time(300.0f),
+	left_time(GAME_TIME_LIMIT),
 	skill_uid(4),
 	kill_count(),
 	game_end(false),
 	total_score(0),
 	win_team(0),
 	m_walls( BBManager::instance().world_bb ),
-	m_grass(BBManager::instance().grass_bb)
+	m_grass(BBManager::instance().grass_bb),
+	poison_gas(this)
 {
 	packet_vector.clear();
 	packets.clear();
@@ -36,6 +37,13 @@ void DMRoom::init()
 	event_data.emplace_back(&packet, packet.size);
 	csss_packet_set_game_playtime_limit limit_packet{ (unsigned int) left_time };
 	event_data.emplace_back(&limit_packet, limit_packet.size);
+	csss_packet_update_poison_fog_deact_area gas_packet{
+		SAFE_AREA_LEFT,
+		SAFE_AREA_TOP,
+		SAFE_AREA_RIGHT,
+		SAFE_AREA_BOTTOM
+	};
+	event_data.emplace_back(&gas_packet, gas_packet.size);
 }
 
 bool DMRoom::regist(int uid, SOCKET client, void* buffer)
@@ -210,6 +218,11 @@ bool DMRoom::game_logic()
 		hero.second->update(delta_time);
 	for (auto& skill : m_skills)
 		skill.second->update(delta_time);
+	poison_gas.update(delta_time);
+
+	//Hero and Gas.
+	for (auto& hero : m_heros)
+		poison_gas.effect(hero.second);
 
 	//Collision check and process.
     for (auto& skill : m_skills) {

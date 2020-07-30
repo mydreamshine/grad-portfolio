@@ -5,7 +5,6 @@ constexpr float BASIC_VELOCITY = 400.0f;
 constexpr float RESPAWN_TIME = 5.0f;
 constexpr float SEMI_INVINCIBLE_TIME = 3.0f;
 
-
 constexpr int NORMAL_ATTACK_DAMAGE = 10;
 constexpr float NORMAL_ATTACK_VELOCITY = 2100.0f;
 constexpr float NORMAL_ATTACK_DURATION = 5.0f;
@@ -33,6 +32,15 @@ constexpr int ASSASSIN_MAX_HP = 100;
 constexpr float ASSASSIN_MOVEMENT = 380.0f;
 constexpr int ASSASSIN_ATTACK_DAMAGE = 30;
 constexpr float STELTH_DURATION = 7.0f;
+
+constexpr float GAME_TIME_LIMIT = 180.0f;
+constexpr float GAS_DECREASE_TIME = 5.0f;
+constexpr float GAS_EFFECT_TIME = 1.0f;
+constexpr int GAS_DAMAGE = 5;
+constexpr int SAFE_AREA_LEFT = -3423;
+constexpr int SAFE_AREA_TOP = 4290;
+constexpr int SAFE_AREA_RIGHT = 4577;
+constexpr int SAFE_AREA_BOTTOM = -3710;
 
 enum class SCENE_TYPE : char
 {

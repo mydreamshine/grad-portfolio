@@ -28,13 +28,16 @@ public:
 	virtual bool update(float elapsedTime);
 	virtual void process_packet(CLIENT* client, int ReceivedBytes);
 
-	std::map<short, SCOREBOARD> m_score;
-	int kill_count[2];
 	void update_score_packet(short obj_id);
 	void update_score_damage(short obj_id, int damage);
 	void update_score_heal(short obj_id, int heal);
 	void update_score_kill(short obj_id);
 	void update_score_death(short obj_id);
+
+	std::map<short, SCOREBOARD> m_score;
+	PACKET_VECTOR event_data; //전송될 이벤트 패킷(플레이어 힛, 리스폰 등)
+	PACKET_VECTOR info_data;  //전송될 위치정보 패킷
+	int kill_count[2];
 private:
 	short max_player; ///< max connect user num.
 	short player_num; ///< current user num
@@ -42,9 +45,6 @@ private:
 	std::mutex packet_lock;
 	PACKET_VECTOR packet_vector;
 	PACKET_VECTOR packets;
-
-	PACKET_VECTOR event_data; //전송될 이벤트 패킷(플레이어 힛, 리스폰 등)
-	PACKET_VECTOR info_data;  //전송될 위치정보 패킷
 
 	float delta_time;
 	float left_time;
@@ -62,6 +62,7 @@ private:
 	std::map<int, SKILL*> m_skills;
 	std::vector<DirectX::BoundingBox> m_walls;
 	std::vector<DirectX::BoundingBox> m_grass;
+	POISON_GAS poison_gas;
 	DBMANAGER db_manager;
 
 	HERO* spawn_hero(short object_id, char character_type, char propensity);

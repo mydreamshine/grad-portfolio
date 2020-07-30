@@ -83,13 +83,14 @@ bool HERO::is_die()
 
 int HERO::set_hp(int hp)
 {
+	int tempHP = this->hp;
 	this->hp = (hp < 0) ? 0 : hp;
 	this->hp = (hp > max_hp) ? max_hp : hp;
 
 	csss_packet_set_character_hp packet{ object_id, this->hp };
 	world->event_data.emplace_back(&packet, packet.size);
 
-	return hp - this->hp;
+	return tempHP - this->hp;
 }
 
 void HERO::impact()

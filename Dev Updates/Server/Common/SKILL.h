@@ -71,3 +71,20 @@ public:
 	STELTH(DMRoom* world, short owner_id);
 	virtual ~STELTH();
 };
+
+class POISON_GAS {
+public:
+	POISON_GAS(DMRoom* world);
+	void update(float elapsedTime);
+	void effect(HERO* hero);
+	
+private:
+	bool intersect(HERO* hero);
+
+	RECT safe_area;
+	DMRoom* world;
+	int cur_state;
+	int max_state;
+	float effect_time;
+	float decrease_time;
+};
