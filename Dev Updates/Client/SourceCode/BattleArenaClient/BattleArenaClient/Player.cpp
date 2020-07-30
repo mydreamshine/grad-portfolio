@@ -44,7 +44,10 @@ void Player::SetState(PLAYER_STATE PlayerState)
 			|| m_CharacterObjRef->Propensity == MainPlayerPropensity)
 			TransformInfo->m_TexAlpha = StealthAlpha;
 		else
+		{
 			TransformInfo->m_TexAlpha = 0.0f;
+			TransformInfo->m_nonShadowRender = true;
+		}
 	}
 	/*else if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_INVINCIBILITY)
 	{
@@ -55,7 +58,10 @@ void Player::SetState(PLAYER_STATE PlayerState)
 
 	}*/
 	else
+	{
 		TransformInfo->m_TexAlpha = 1.0f;
+		TransformInfo->m_nonShadowRender = false;
+	}
 }
 
 void Player::SetHP(int HP)

@@ -1191,6 +1191,16 @@ void Framework::DrawSceneToBackBuffer()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
+    m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
+    auto& SkinnedOpaqueObjRenderLayer_ = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
+    vector<Object*> ExcludeTransparentObjects;
+    for (auto& obj : SkinnedOpaqueObjRenderLayer_)
+    {
+        if (obj->m_TransformInfo->m_TexAlpha == 1.0f)
+            ExcludeTransparentObjects.push_back(obj);
+    }
+    DrawObjRenderLayer(m_commandList.Get(), ExcludeTransparentObjects);
+
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
     auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
     DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);

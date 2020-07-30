@@ -983,7 +983,7 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
 
             float texAlpha = 1.0f;
             if (CurrScaleScala >= MaxScaleScala * 0.5f)
-                texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f ) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
+                texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
 
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
