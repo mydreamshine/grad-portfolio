@@ -39,6 +39,7 @@ public:
     virtual void SetModelSkeletonsRef(std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>>* Skeletons) { m_ModelSkeltonsRef = Skeletons; }
     virtual void SetCharacterModelBoundingBoxesRef(std::unordered_map<std::string, BoundingBox>* CharacterModelBoundingBoxes) { m_CharacterModelBoundingBoxesRef = CharacterModelBoundingBoxes; }
     virtual void SetRederItemsRef(std::unordered_map<std::string, std::unique_ptr<RenderItem>>* RenderItems) { m_AllRitemsRef = RenderItems; }
+    virtual void SetFontsRef(std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>* FontsRef) { m_FontsRef = FontsRef; }
     virtual void BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index) = 0;
 
 public:
@@ -134,6 +135,9 @@ protected:
 
     // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>>* m_AllRitemsRef = nullptr;
+
+    // Original Font
+    std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>* m_FontsRef = nullptr;
 
     // Object divided by PSO.
     std::vector<Object*> m_ObjRenderLayer[(int)RenderLayer::Count];

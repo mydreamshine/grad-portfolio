@@ -340,5 +340,8 @@
     <ClInclude Include="..\..\..\..\Server\Common\CSOCKADDR_IN.h">
       <Filter>Common\NWMODULE</Filter>
     </ClInclude>
+    <ClInclude Include="WND_MessageBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

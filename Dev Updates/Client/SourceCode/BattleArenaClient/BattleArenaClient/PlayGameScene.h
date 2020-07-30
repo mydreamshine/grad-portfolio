@@ -32,6 +32,7 @@ public:
     virtual void AnimateCameras(CTimer& gt);
     void AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
     void AnimateEffectObjectsTransform(CTimer& gt);
+    void AnimateCharacterRenderEffect(CTimer& gt);
     void UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::unordered_map<int, std::unique_ptr<Player>>& Players);
     void RotateBillboardObjects(Camera* MainCamera, std::vector<Object*>& Objects);
 
@@ -74,8 +75,8 @@ public:
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
-    const UINT m_MaxTextObject = 8 + MAX_CHARACTER_OBJECT;
-    UINT       m_MaxUILayoutObject = 12 + MAX_CHARACTER_OBJECT;
+    const UINT m_MaxTextObject = 30 + MAX_CHARACTER_OBJECT;
+    UINT       m_MaxUILayoutObject = 30 + MAX_CHARACTER_OBJECT;
     std::uint64_t m_EffectInstancingNum = 0;
 
     std::vector<RenderItem*> m_CharacterRitems[(int)CHARACTER_TYPE::COUNT];
@@ -90,20 +91,32 @@ private:
     int GameInfo_CountKill = 0;
     int GameInfo_CountDeath = 0;
     int GameInfo_CountAssistance = 0;
+    int GameInfo_CountTeamScore = 0;
+    const int MaxTeamScore = 5;
 
-    const size_t MaxKillLog = 10;
-    const size_t MaxChatLog = 20;
-    std::list<std::wstring> KillLogList;
-    std::list<std::wstring> ChattingList;
-    std::wstring inputChat;
-
-    unsigned int TimeLimit_Sec = 0;
-
-    bool ChattingMode = false;
-
-    bool OnceSendChatLog = false;
+    int TimeLimit_Sec = 0;
+    float TimeLimitIntervalTimeStack = 0.0f;
 
     RECT DeActPoisonGasArea = {-3423, 4290, 4577, -3710 };
+
+private:
+    const size_t MaxKillLog = 10;
+    std::queue<std::wstring> KillLogList;
+    bool KillLogSlidingStart = false;
+    bool KillLogSlidingInit = false;
+
+private:
+    std::list<std::wstring> ChattingList;
+    std::wstring inputChat;
+    const size_t MaxChattingLog = 20;
+    const float MaxChattingLineWidth = 120.0f;
+    const float MaxChattingLineHeight = 200.0f;
+    int ChattingLineTextRenderStartIndex = 0;
+    bool ChattingLayerActivate = true;
+    bool ChattingLayerSliding = false;
+    size_t InputChatInitFormTextNum = 0; // (=wstring(L"MainPlayerName: ").size())
+    const float ChattingLayerSlidingActionEndTime = 0.5f;
+    bool RecvNewChatAlarmActivate = false;
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,

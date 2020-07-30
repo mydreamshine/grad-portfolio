@@ -18,7 +18,6 @@ class DXTK_FONT
 {
 	std::unique_ptr<DirectX::SpriteFont> m_Font;
 	std::unique_ptr<DirectX::DescriptorHeap> m_FontDescriptors;
-	std::unique_ptr<DirectX::GraphicsMemory> m_graphicMemory;
 
 public:
 	// Text를 렌더링할 때 TextPos를 기준으로
@@ -35,8 +34,6 @@ public:
 	// .spritefont파일을 통해 fontsprite 텍스쳐 및 Descriptors를 생성
 	DXTK_FONT(ID3D12Device* device, ID3D12CommandQueue* commandQueue, const std::wstring& font_filepath)
 	{
-		m_graphicMemory = std::make_unique<DirectX::GraphicsMemory>(device);
-
 		m_FontDescriptors = std::make_unique<DirectX::DescriptorHeap>(device,
 			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
@@ -94,5 +91,12 @@ public:
 		catch (...) {
 			abort();
 		}
+	}
+
+	DirectX::XMFLOAT2 GetStringSize(const std::wstring& text)
+	{
+		DirectX::XMVECTOR STRING_SIZE = m_Font->MeasureString(text.c_str());
+		DirectX::XMFLOAT2 StringSize; XMStoreFloat2(&StringSize, STRING_SIZE);
+		return StringSize;
 	}
 };

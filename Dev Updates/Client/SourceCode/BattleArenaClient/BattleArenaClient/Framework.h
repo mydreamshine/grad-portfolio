@@ -112,7 +112,7 @@ private:
     // FontSpriteBatch를 렌더링할 텍스트마다 지니게 한다.
     // 단, 이는 commandQueue가 완전히 비어있는 상태(혹은 독립적인 commandQueue)에서 생성해야 하기에,
     // Object의 TextInfo에서는 FontSpriteBatch를 취급하진 않는다.
-    std::vector<std::unique_ptr<DirectX::SpriteBatch>> m_FontSpriteBatchs;
+    std::unordered_map<std::wstring, std::vector<std::unique_ptr<DirectX::SpriteBatch>>> m_FontSpriteBatchs;
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>>* m_FontsRef = nullptr;
 
     UINT m_nSKinnedCB = 0;
