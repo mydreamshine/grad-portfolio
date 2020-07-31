@@ -33,6 +33,7 @@ public:
 	void update_score_heal(short obj_id, int heal);
 	void update_score_kill(short obj_id);
 	void update_score_death(short obj_id);
+	void update_score_assist(short obj_id);
 
 	std::map<short, SCOREBOARD> m_score;
 	PACKET_VECTOR event_data; //전송될 이벤트 패킷(플레이어 힛, 리스폰 등)

@@ -1,6 +1,8 @@
 #pragma once
 #include "Vector3d.h"
 #include <DirectXCollision.h>
+#include <map>
+#include <chrono>
 using namespace DirectX;
 
 class DMRoom;
@@ -21,6 +23,8 @@ public:
 	int set_hp(int hp);
 	void impact();
 	void respawn();
+	void record_attack(short object_id);
+	void update_assister(short killer);
 	virtual void death();
 	virtual void update(float elapsedTime);
 	virtual void do_attack();
@@ -29,6 +33,7 @@ public:
 	virtual void unhide();
 	
 	DMRoom* world;
+	std::map<short, std::chrono::steady_clock::time_point> hitted_time;
 
 	Vector3d pos;
 	Vector3d rot;
@@ -53,6 +58,9 @@ public:
 protected:
 	void set_aabb();
 	Vector3d get_offset(DirectX::BoundingBox& other);
+
+private:
+
 };
 
 class WARRIOR : public HERO

@@ -491,3 +491,9 @@ void DMRoom::update_score_death(short obj_id)
 	m_score[obj_id].count_death += 1;
 	update_score_packet(obj_id);
 }
+
+void DMRoom::update_score_assist(short obj_id)
+{
+	m_score[obj_id].count_assistance += 1;
+	update_score_packet(obj_id);
+}

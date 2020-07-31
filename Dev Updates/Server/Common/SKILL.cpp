@@ -98,12 +98,16 @@ void NORMAL_ATTACK::effect(HERO* hero)
 
 	if (true == hero->is_die()) {
 		hero->death();
+		hero->update_assister(owner_id);
 		world->update_score_kill(owner_id);
 		world->update_score_death(hero->object_id);
 		csss_packet_send_kill_message packet{ owner_id, hero->object_id };
+		world->event_data.emplace_back(&packet, packet.size);
 	}
-	else
+	else {
 		hero->impact();
+		hero->record_attack(owner_id);
+	}
 
 	destroy();
 }
@@ -215,7 +219,7 @@ void POISON_GAS::effect(HERO* hero)
 	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
 
 	if (effect_time >= GAS_EFFECT_TIME) {
-		if (true == intersect(hero)) return;
+		if (true == is_safe(hero)) return;
 
 		int left_hp = hero->hp - GAS_DAMAGE;
 		if (left_hp <= 0)
@@ -224,7 +228,7 @@ void POISON_GAS::effect(HERO* hero)
 	}
 }
 
-bool POISON_GAS::intersect(HERO* hero)
+bool POISON_GAS::is_safe(HERO* hero)
 {
 	if (hero->pos.x < safe_area.left) return false;
 	if (hero->pos.x > safe_area.right) return false;

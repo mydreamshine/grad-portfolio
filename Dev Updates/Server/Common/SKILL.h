@@ -79,7 +79,7 @@ public:
 	void effect(HERO* hero);
 	
 private:
-	bool intersect(HERO* hero);
+	bool is_safe(HERO* hero);
 
 	RECT safe_area;
 	DMRoom* world;

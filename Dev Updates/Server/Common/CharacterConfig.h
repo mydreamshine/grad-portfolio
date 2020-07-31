@@ -42,6 +42,8 @@ constexpr int SAFE_AREA_TOP = 4290;
 constexpr int SAFE_AREA_RIGHT = 4577;
 constexpr int SAFE_AREA_BOTTOM = -3710;
 
+constexpr float ASSIST_TIME = 5.0f;
+
 enum class SCENE_TYPE : char
 {
 	LOGIN_SCENE,

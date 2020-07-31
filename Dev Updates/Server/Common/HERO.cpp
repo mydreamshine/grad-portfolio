@@ -104,6 +104,7 @@ void HERO::death()
 	change_motion((char)MOTION_TYPE::DIEING);
 	change_state((char)PLAYER_STATE::ACT_DIE);
 	remain_state_time = RESPAWN_TIME;
+	hitted_time.clear();
 }
 
 void HERO::respawn()
@@ -111,6 +112,11 @@ void HERO::respawn()
 	set_hp(max_hp);
 	change_motion((char)MOTION_TYPE::IDLE);
 	change_state((char)PLAYER_STATE::NON);
+}
+
+void HERO::record_attack(short object_id)
+{
+	hitted_time[object_id] = world->current_update_time;
 }
 
 void HERO::update(float elapsedTime)
@@ -213,6 +219,18 @@ Vector3d HERO::get_offset(DirectX::BoundingBox& other)
 		}
 
 		return Offset;
+}
+
+void HERO::update_assister(short killer)
+{
+	for (const auto& pl : hitted_time) {
+		if (killer == pl.first) continue;
+
+		std::chrono::duration<float> last_hit_time{ world->current_update_time - pl.second };
+		if (last_hit_time.count() <= ASSIST_TIME)
+			world->update_score_assist(pl.first);
+		
+	}
 }
 
 ////////////////////////////////////////////////////////////
