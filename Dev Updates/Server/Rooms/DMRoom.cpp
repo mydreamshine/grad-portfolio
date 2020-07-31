@@ -51,6 +51,7 @@ bool DMRoom::regist(int uid, SOCKET client, void* buffer)
 	sscs_packet_try_match_login* packet = reinterpret_cast<sscs_packet_try_match_login*>(buffer);
 
 	socket_lock.lock();
+
 	short cur_player = player_num++;
 	uids[cur_player] = uid;
 	sockets[cur_player] = client;
@@ -69,6 +70,7 @@ bool DMRoom::regist(int uid, SOCKET client, void* buffer)
 		m_heros[cur_player]->pos.x, m_heros[cur_player]->pos.y, m_heros[cur_player]->pos.z,
 		m_heros[cur_player]->propensity };
 	event_data.emplace_back(&spawn_player, spawn_player.size);
+
 	socket_lock.unlock();
 	return (cur_player+1) == max_player;
 }

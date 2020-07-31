@@ -250,8 +250,12 @@ namespace BattleArena {
 			break;
 #endif
 
-		case SSCS_REQUEST_USER_INFO:
+		case SSCS_REQUEST_USER_INFO: {
+			int rank = DBManager.get_rank(m_clients[client].uid);
+			csss_packet_send_user_info user_info_packet{ m_clients[client].id, (int)wcslen(m_clients[client].id), rank };
+			send_packet(client, &user_info_packet);
 			break;
+		}
 
 		case SSCS_TRY_GAME_MATCHING:
 			if (ST_IDLE == m_clients[client].state) {
@@ -316,12 +320,13 @@ namespace BattleArena {
 	{
 		sscs_packet_try_login* packet = reinterpret_cast<sscs_packet_try_login*>(buffer);
 		int uid = DBManager.get_uid(packet->id);
+
 		if (uid == RESULT_NO_ID) {
 			csss_packet_login_fail packet{};
 			send_packet(client, &packet);
 			return;
 		}
-		if (isConnect(uid) != -1) {
+		else if (isConnect(uid) != -1) {
 			csss_packet_login_fail packet{};
 			send_packet(client, &packet);
 			return;
@@ -332,9 +337,6 @@ namespace BattleArena {
 		insert_client_table(uid, client);
 		csss_packet_login_ok login_ok_packet{ (short)uid };
 		send_packet(client, &login_ok_packet);
-
-		csss_packet_send_user_info user_info_packet{ packet->id, (int)wcslen(packet->id), 1 };
-		send_packet(client, &user_info_packet);
 
 		csss_packet_change_scene change_scene_packet{ 1 };
 		send_packet(client, &change_scene_packet);
