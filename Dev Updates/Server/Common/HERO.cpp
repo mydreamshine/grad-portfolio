@@ -84,8 +84,9 @@ bool HERO::is_die()
 int HERO::set_hp(int hp)
 {
 	int tempHP = this->hp;
-	this->hp = (hp < 0) ? 0 : hp;
-	this->hp = (hp > max_hp) ? max_hp : hp;
+	this->hp = hp;
+	this->hp = (this->hp < 0) ? 0 : this->hp;
+	this->hp = (this->hp > max_hp) ? max_hp : this->hp;
 
 	csss_packet_set_character_hp packet{ object_id, this->hp };
 	world->event_data.emplace_back(&packet, packet.size);
@@ -95,6 +96,7 @@ int HERO::set_hp(int hp)
 
 void HERO::impact()
 {
+	change_motion((char)MOTION_TYPE::IMPACT);
 	change_state((char)PLAYER_STATE::ACT_SEMI_INVINCIBILITY);
 	remain_state_time = SEMI_INVINCIBLE_TIME;
 }
@@ -142,7 +144,7 @@ void HERO::update(float elapsedTime)
 void HERO::do_attack()
 {
 	int object_id = world->skill_uid++;
-	SKILL* normal_attack = new NORMAL_ATTACK{world, (short)object_id};
+	SKILL* normal_attack = new NORMAL_ATTACK{world, (short)this->object_id};
 	normal_attack->pos = pos;
 	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;
@@ -252,7 +254,7 @@ WARRIOR::~WARRIOR()
 void WARRIOR::do_attack()
 {
 	int object_id = world->skill_uid++;
-	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)this->object_id };
 	normal_attack->pos = pos;
 	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;
@@ -288,7 +290,7 @@ void WARRIOR::do_skill()
 
 	for (int i = 0; i < 3; ++i) {
 		skill_id = world->skill_uid++;
-		normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+		normal_attack = new NORMAL_ATTACK{ world, (short)this->object_id };
 		normal_attack->pos = pos;
 		normal_attack->pos.y += 50;
 		normal_attack->rot = rot; normal_attack->rot.y -= Deg[i];
@@ -325,7 +327,7 @@ PRIEST::~PRIEST()
 void PRIEST::do_attack()
 {
 	int object_id = world->skill_uid++;
-	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)this->object_id };
 	normal_attack->pos = pos;
 	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;
@@ -348,7 +350,7 @@ void PRIEST::do_attack()
 void PRIEST::do_skill()
 {
 	int skill_id = world->skill_uid++;
-	HOLY_AREA* holy_area = new HOLY_AREA{ world, (short)object_id };
+	HOLY_AREA* holy_area = new HOLY_AREA{ world, (short)this->object_id };
 
 	holy_area->pos = pos;
 	holy_area->propensity = propensity;
@@ -386,7 +388,7 @@ BERSERKER::~BERSERKER()
 void BERSERKER::do_attack()
 {
 	int object_id = world->skill_uid++;
-	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)this->object_id };
 	normal_attack->pos = pos;
 	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;
@@ -413,7 +415,7 @@ void BERSERKER::do_skill()
 	motion_speed = FURY_ROAR_ACCELERATE;
 
 	int skill_id = world->skill_uid++;
-	auto roar_skill = new FURY_ROAR{ world, (short)object_id };
+	auto roar_skill = new FURY_ROAR{ world, (short)this->object_id };
 
 	roar_skill->pos = pos;
 	roar_skill->propensity = propensity;
@@ -486,7 +488,7 @@ void ASSASSIN::do_skill()
 	change_state((char)PLAYER_STATE::ACT_STEALTH);
 
 	int skill_id = world->skill_uid++;
-	auto stelth_skill = new STELTH{ world, (short)object_id };
+	auto stelth_skill = new STELTH{ world, (short)this->object_id };
 	
 	stelth_skill->pos = pos;
 	stelth_skill->propensity = propensity;
@@ -533,7 +535,7 @@ void ASSASSIN::do_attack()
 		stelth_mode = false;
 
 	int object_id = world->skill_uid++;
-	auto normal_attack = new NORMAL_ATTACK{ world, (short)object_id };
+	auto normal_attack = new NORMAL_ATTACK{ world, (short)this->object_id };
 	normal_attack->pos = pos;
 	normal_attack->pos.y += 50;
 	normal_attack->rot = rot;

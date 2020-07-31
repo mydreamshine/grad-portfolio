@@ -3,7 +3,7 @@
 #include "CharacterConfig.h"
 
 DMRoom::DMRoom() :
-	max_player(1),
+	max_player(2),
 	player_num(0),
 	delta_time(0),
 	left_time(GAME_TIME_LIMIT),
@@ -433,7 +433,8 @@ void DMRoom::process_try_use_skill(void* packet)
 void DMRoom::process_done_character_motion(void* packet)
 {
 	sscs_packet_done_character_motion* data = reinterpret_cast<sscs_packet_done_character_motion*>(packet);
-	m_heros[data->client_id]->change_motion((char)MOTION_TYPE::IDLE);
+	if(m_heros[data->client_id]->motion_type != (char)MOTION_TYPE::DIEING)
+		m_heros[data->client_id]->change_motion((char)MOTION_TYPE::IDLE);
 }
 
 void DMRoom::process_activate_anim_notify(void* packet)

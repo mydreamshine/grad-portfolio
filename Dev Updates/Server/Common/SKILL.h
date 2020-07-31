@@ -7,6 +7,10 @@ using namespace DirectX;
 class HERO;
 class DMRoom;
 
+struct RECTANGLE {
+	int left, top, right, bottom;
+};
+
 class SKILL
 {
 public:
@@ -81,7 +85,7 @@ public:
 private:
 	bool is_safe(HERO* hero);
 
-	RECT safe_area;
+	RECTANGLE safe_area;
 	DMRoom* world;
 	int cur_state;
 	int max_state;
