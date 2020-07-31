@@ -21,8 +21,11 @@ void Player::PlayMotion(MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE Sk
 	if (newActionType == AnimActionType::Non) return;
 
 	AnimInfo->SetPlaySpeed(MotionSpeed);
-	AnimInfo->AnimStop(CurrPlayingAction);
-	AnimInfo->AnimPlay(newActionType);
+	if (CurrPlayingAction != newActionType)
+	{
+		AnimInfo->AnimStop(CurrPlayingAction);
+		AnimInfo->AnimPlay(newActionType);
+	}
 	if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
 		AnimInfo->AnimLoop(newActionType);
 }
@@ -30,6 +33,35 @@ void Player::PlayMotion(MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE Sk
 void Player::SetState(PLAYER_STATE PlayerState)
 {
 	m_CharacterObjRef->PlayerState = PlayerState;
+
+	auto TransformInfo = m_CharacterObjRef->m_TransformInfo.get();
+
+	if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_SEMI_INVINCIBILITY)
+		semi_invincivilityRenderBlinkEffectTimeStack = 0.0f;
+	else if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_STEALTH)
+	{
+		if(MainPlayerPropensity == OBJECT_PROPENSITY::NON
+			|| m_CharacterObjRef->Propensity == MainPlayerPropensity)
+			TransformInfo->m_TexAlpha = StealthAlpha;
+		else
+		{
+			TransformInfo->m_TexAlpha = 0.0f;
+			TransformInfo->m_nonShadowRender = true;
+		}
+	}
+	/*else if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_INVINCIBILITY)
+	{
+
+	}
+	else if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_DIE)
+	{
+
+	}*/
+	else
+	{
+		TransformInfo->m_TexAlpha = 1.0f;
+		TransformInfo->m_nonShadowRender = false;
+	}
 }
 
 void Player::SetHP(int HP)
@@ -62,6 +94,13 @@ void Player::Init()
 	ObjManager.DeActivateObj(m_CharacterInfoTextObjRef);
 	for (auto& obj : m_HP_BarObjRef)
 		ObjManager.DeActivateObj(obj);
+
+	m_oldHP = 0;
+	m_SkillCoolTimeStack = 0.0f;
+	m_CurrUseSkill = SKILL_TYPE::NON;
+
+	semi_invincivilityRenderBlinkEffectTimeStack = 0.0f;
+	MainPlayerPropensity = OBJECT_PROPENSITY::NON;
 }
 
 void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
@@ -138,7 +177,12 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 				case CHARACTER_TYPE::ASSASSIN:  SkillType = SKILL_TYPE::STEALTH;    break;
 				case CHARACTER_TYPE::PRIEST:    SkillType = SKILL_TYPE::HOLY_AREA;  break;
 				}
-				eventManager.ReservateEvent_TryUseSkill(GeneratedEvents, Act_Object, Yaw_angle);
+				if (m_CurrUseSkill == SKILL_TYPE::NON)
+				{
+					eventManager.ReservateEvent_TryUseSkill(GeneratedEvents, Act_Object, Yaw_angle);
+					m_CurrUseSkill = SkillType;
+					m_SkillCoolTimeStack = 0.0f;
+				}
 			}
 		}
 	}
@@ -323,4 +367,20 @@ void Player::UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewP
 	TextPos.x += 3.0f;  // Offset x
 	TextPos.y -= 93.0f; // Offset y
 	TextInfo->m_TextPos = TextPos;
+}
+
+void Player::UpdateRenderEffect(CTimer& gt)
+{
+	if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_SEMI_INVINCIBILITY)
+	{
+		semi_invincivilityRenderBlinkEffectTimeStack += gt.GetTimeElapsed();
+
+		if (semi_invincivilityRenderBlinkEffectTimeStack >= BlinkEffectInterval)
+		{
+			auto TransformInfo = m_CharacterObjRef->m_TransformInfo.get();
+			if (compareFloat(TransformInfo->m_TexAlpha, 0.0f) == true) TransformInfo->m_TexAlpha = 1.0f;
+			else TransformInfo->m_TexAlpha = 0.0f;
+			semi_invincivilityRenderBlinkEffectTimeStack = 0.0f;
+		}
+	}
 }

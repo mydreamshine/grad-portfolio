@@ -32,19 +32,19 @@ void LobyScene::OnInitProperties(CTimer& gt)
         {
             Yaw = 180.0f;
             texAlpha = 0.2f;
-            IdleActionSet = true;
+            IdleActionSet = false;
         }
         else if (CharacterObj->m_Name.find("Assassin") != std::string::npos)
         {
             Yaw = 0.0f;
             texAlpha = 0.2f;
-            IdleActionSet = true;
+            IdleActionSet = false;
         }
         else if (CharacterObj->m_Name.find("Priest") != std::string::npos)
         {
             Yaw = 90.0f;
             texAlpha = 0.2f;
-            IdleActionSet = true;
+            IdleActionSet = false;
         }
 
         XMVECTOR CartesianPos = MathHelper::SphericalToCartesian(200.0f, Yaw * deg2rad, 90.0f * deg2rad);
@@ -425,8 +425,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo = L"Name: Warrior\n";
         CharacterInfo += L"HP: 100\n";
         CharacterInfo += L"Damage: 30\n";
-        CharacterInfo += L"Movement Speed: 1.0\n";
         CharacterInfo += L"Attack Speed: 1.0\n";
+        CharacterInfo += L"Movement Speed: 360\n";
         CharacterInfo += L"Skill Name: Sword Wave\n";
         CharacterInfo += L"Skill Desc: Shoot 3 Sword\nWaves ahead.\n";
         CharacterInfo += L"Skill CoolTime: 4 seconds.";
@@ -436,8 +436,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo  = L"Name: Berserker\n";
         CharacterInfo += L"HP: 150\n";
         CharacterInfo += L"Damage: 40\n";
-        CharacterInfo += L"Movement Speed: 1.0\n";
         CharacterInfo += L"Attack Speed: 0.6\n";
+        CharacterInfo += L"Movement Speed: 300\n";
         CharacterInfo += L"Skill Name: Fury Roar\n";
         CharacterInfo += L"Skill Desc: Movement \n& Attack speed are \nmultiplied(x2) for\n8 seconds.\n";
         CharacterInfo += L"Skill CoolTime: 10 seconds.";
@@ -447,8 +447,8 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo  = L"Name: Assassin\n";
         CharacterInfo += L"HP: 100\n";
         CharacterInfo += L"Damage: 30\n";
-        CharacterInfo += L"Movement Speed: 1.4\n";
         CharacterInfo += L"Attack Speed: 1.2\n";
+        CharacterInfo += L"Movement Speed: 380\n";
         CharacterInfo += L"Skill Name: Stealth\n";
         CharacterInfo += L"Skill Desc: Stealth for 7\nseconds.\n";
         CharacterInfo += L"Skill CoolTime: 12 seconds.";
@@ -458,10 +458,10 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
         CharacterInfo  = L"Name: Priest\n";
         CharacterInfo += L"HP: 80\n";
         CharacterInfo += L"Damage: 15\n";
-        CharacterInfo += L"Movement Speed: 0.8\n";
-        CharacterInfo += L"Attack Speed: 0.8\n";
+        CharacterInfo += L"Movement Speed: 1.0\n";
+        CharacterInfo += L"Attack Speed: 360\n";
         CharacterInfo += L"Skill Name: Holy Area\n";
-        CharacterInfo += L"Skill Desc: Creates a\nholy area that restores\n15 health every 1 sec\nfor 10 sec.\n";
+        CharacterInfo += L"Skill Desc: Creates a\nheal area that restores\n15 health every 1 sec\nfor 10 sec.\n";
         CharacterInfo += L"Skill CoolTime: 12 seconds.";
         break;
     case CHARACTER_TYPE::NON:

@@ -269,18 +269,24 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // PlayGameScene Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> UILayerBacground_Meshes;
-        UILayerBacground_Meshes["UI_Layout_GameTimeLimit"] = geoGen.CreateQuad( -50.0f * wnd_x_factor * 1.4f,  360.0f * wnd_y_factor, 100.0f * wnd_x_factor * 1.4f,  60.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_KDA"]           = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 200.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_KillLog"]       = geoGen.CreateQuad(-640.0f * wnd_x_factor,  280.0f * wnd_y_factor, 200.0f * wnd_x_factor, 200.0f * wnd_y_factor, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_ChattingLog"]   = geoGen.CreateQuad(-640.0f * wnd_x_factor,   20.0f * wnd_y_factor, 200.0f * wnd_x_factor, 300.0f * wnd_y_factor, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_SkillList"]     = geoGen.CreateQuad(-250.0f * wnd_x_factor * 1.4f, -280.0f * wnd_y_factor, 500.0f * wnd_x_factor * 1.4f,  80.0f * wnd_y_factor, 0.1f);
-        UILayerBacground_Meshes["UI_Layout_Skill1"]        = geoGen.CreateQuad(-200.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill2"]        = geoGen.CreateQuad( -80.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill3"]        = geoGen.CreateQuad(  30.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_Skill4"]        = geoGen.CreateQuad( 140.0f * wnd_x_factor * 1.4f, -295.0f * wnd_y_factor,  50.0f * wnd_x_factor * 1.4f,  50.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_HPBarDest"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"] = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.11f);
-        UILayerBacground_Meshes["UI_Layout_HPBarBack"]     = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.12f);
+        UILayerBacground_Meshes["UI_Layout_GameTimeLimit"]          = geoGen.CreateQuad( -60.0f * wnd_x_factor * 1.4f,  340.0f * wnd_y_factor, 100.0f * wnd_x_factor * 1.4f,  48.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_Score"]                  = geoGen.CreateQuad(332.5f * wnd_x_factor,  330.0f * wnd_y_factor, 271.3f * wnd_x_factor,  203.0f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_KillLog"]                = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 497.0f * wnd_x_factor,  73.0f * wnd_y_factor, 0.3f);
+        UILayerBacground_Meshes["UI_Layout_GameChattingLog"]      = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.01f);
+        UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton"]       = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton_alarm"] = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest_Enemy"]        = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest_Allies"]       = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"]          = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.11f);
+        UILayerBacground_Meshes["UI_Layout_HPBarBack"]              = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.12f);
+        UILayerBacground_Meshes["UI_Layout_Warrior_InfoLayer"]      = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
+        UILayerBacground_Meshes["UI_Layout_Berserker_InfoLayer"]    = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
+        UILayerBacground_Meshes["UI_Layout_Assassin_InfoLayer"]     = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
+        UILayerBacground_Meshes["UI_Layout_Priest_InfoLayer"]       = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
+        UILayerBacground_Meshes["UI_Layout_InfoLayer_HPBarBack"]    = geoGen.CreateQuad( 0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 317.14f * wnd_x_factor * 1.4f, 34.09f * wnd_y_factor * 1.1f, 0.13f);
+        UILayerBacground_Meshes["UI_Layout_InfoLayer_HPBarIncrease"] = geoGen.CreateQuad(0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 317.14f * wnd_x_factor * 1.4f, 34.09f * wnd_y_factor * 1.1f, 0.12f);
+        UILayerBacground_Meshes["UI_Layout_InfoLayer_HPBarDest"]     = geoGen.CreateQuad(0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 317.14f * wnd_x_factor * 1.4f, 34.09f * wnd_y_factor * 1.1f, 0.11f);
+        UILayerBacground_Meshes["UI_Layout_Skill_Icon_Fade"]        = geoGen.CreateQuad(0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 82.57f * wnd_x_factor * 1.4f, 78.85f * wnd_y_factor * 1.1f, 0.11f);
 
 
         m_Geometries["PlayGameSceneUIGeo"]
@@ -546,13 +552,28 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/CancelButton.png",
         m_additionalAssetPath + "UI/Layout/CancelButton_Press.png",
         m_additionalAssetPath + "UI/Layout/ChattingLogLayer.png",
+        m_additionalAssetPath + "UI/Layout/ChattingLogLayer_ver2.png",
         m_additionalAssetPath + "UI/Layout/ChattingInputBoxLayer.png",
+        m_additionalAssetPath + "UI/Layout/ChattingPopUpButton.png",
+        m_additionalAssetPath + "UI/Layout/ChattingPopUpButton_alarm.png",
         m_additionalAssetPath + "UI/Layout/UserInfoLayer.png",
         m_additionalAssetPath + "UI/Layout/White_Transparency50.png",
         m_additionalAssetPath + "UI/Layout/LightGreen_Transparency50.png",
-        m_additionalAssetPath + "UI/Layout/HPBar_Dest.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Dest_Orange.png",
+        m_additionalAssetPath + "UI/Layout/HPBar_Dest_SkyBlue.png",
         m_additionalAssetPath + "UI/Layout/HPBar_Increase.png",
         m_additionalAssetPath + "UI/Layout/HPBar_Back.png",
+        m_additionalAssetPath + "UI/Layout/TimeLimit_Layer.png",
+        m_additionalAssetPath + "UI/Layout/TeamGoalScoreLayer.png",
+        m_additionalAssetPath + "UI/Layout/KillLog_Layout.png",
+        m_additionalAssetPath + "UI/Layout/Warrior_InfoLayer.png",
+        m_additionalAssetPath + "UI/Layout/Berserker_InfoLayer.png",
+        m_additionalAssetPath + "UI/Layout/Assassin_InfoLayer.png",
+        m_additionalAssetPath + "UI/Layout/Priest_InfoLayer.png",
+        m_additionalAssetPath + "UI/Layout/InfoLayer_HPBar_Grey.png",
+        m_additionalAssetPath + "UI/Layout/InfoLayer_HPBar_Yellow.png",
+        m_additionalAssetPath + "UI/Layout/InfoLayer_HPBar_Green.png",
+        m_additionalAssetPath + "UI/Layout/Skill_Icon_Fade.png",
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/Sword_Wave_RedLight.png",
         m_additionalAssetPath + "UI/Effect/Sting_Wave_BlueLight.png",
@@ -718,10 +739,14 @@ void ResourceManager::BuildMaterials(int& matCB_index, int& diffuseSrvHeap_index
 
 void ResourceManager::LoadFontSprites(ID3D12Device* device, ID3D12CommandQueue* commandQueue)
 {
+    m_FontGraphicMemory = std::make_unique<DirectX::GraphicsMemory>(device);
+
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring additionalAssetPath = converter.from_bytes(m_additionalAssetPath.c_str());
     m_Fonts[L"¸¼Àº °íµñ"]
         = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ.spritefont");
+    m_Fonts[L"¸¼Àº °íµñ(16pt)"]
+        = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ(16pt).spritefont");
 }
 
 void ResourceManager::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)
@@ -839,21 +864,70 @@ void ResourceManager::BuildRenderItems()
         for (auto& subMesh_iter : m_Geometries["PlayGameSceneUIGeo"]->DrawArgs)
         {
             std::string subMeshName = subMesh_iter.first;
-            if (subMeshName.find("Skill") != std::string::npos)
+            if (subMeshName.find("HP") != std::string::npos)
             {
-                if (subMeshName.find("List") != std::string::npos)
-                    SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
+                if (subMeshName.find("InfoLayer") != std::string::npos)
+                {
+                    if (subMeshName.find("Dest") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["InfoLayer_HPBar_Green"].get();
+                    else if (subMeshName.find("Increase") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["InfoLayer_HPBar_Yellow"].get();
+                    else if (subMeshName.find("Back") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["InfoLayer_HPBar_Grey"].get();
+                }
                 else
-                    SceneRitems[subMeshName]->Mat = m_Materials["LightGreen_Transparency50"].get();
+                {
+                    if (subMeshName.find("Dest") != std::string::npos)
+                    {
+                        if (subMeshName.find("Enemy") != std::string::npos)
+                            SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Dest_Orange"].get();
+                        else if (subMeshName.find("Allies") != std::string::npos)
+                            SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Dest_SkyBlue"].get();
+                    }
+                    else if (subMeshName.find("Increase") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Increase"].get();
+                    else if (subMeshName.find("Back") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Back"].get();
+                }
             }
-            else if (subMeshName.find("HP") != std::string::npos)
+            else if (subMeshName.find("InfoLayer") != std::string::npos)
             {
-                if (subMeshName.find("Dest") != std::string::npos)
-                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Dest"].get();
-                else if (subMeshName.find("Increase") != std::string::npos)
-                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Increase"].get();
-                else if (subMeshName.find("Back") != std::string::npos)
-                    SceneRitems[subMeshName]->Mat = m_Materials["HPBar_Back"].get();
+                if (subMeshName.find("Warrior") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Warrior_InfoLayer"].get();
+                else if (subMeshName.find("Berserker") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Berserker_InfoLayer"].get();
+                else if (subMeshName.find("Assassin") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Assassin_InfoLayer"].get();
+                else if (subMeshName.find("Priest") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Priest_InfoLayer"].get();
+            }
+            else if (subMeshName.find("Skill_Icon_Fade") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["Skill_Icon_Fade"].get();
+            }
+            else if (subMeshName.find("KillLog") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["KillLog_Layout"].get();
+            }
+            else if (subMeshName.find("TimeLimit") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["TimeLimit_Layer"].get();
+            }
+            else if (subMeshName.find("Layout_Score") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["TeamGoalScoreLayer"].get();
+            }
+            else if (subMeshName.find("GameChatting") != std::string::npos)
+            {
+                if (subMeshName.find("Log") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["ChattingLogLayer_ver2"].get();
+                else if (subMeshName.find("PopUpButton") != std::string::npos)
+                {
+                    if (subMeshName.find("alarm") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["ChattingPopUpButton_alarm"].get();
+                    else
+                        SceneRitems[subMeshName]->Mat = m_Materials["ChattingPopUpButton"].get();
+                }
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }

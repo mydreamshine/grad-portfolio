@@ -19,6 +19,15 @@ struct Player
 
 	int m_oldHP = 0;
 
+	SKILL_TYPE m_CurrUseSkill = SKILL_TYPE::NON;
+	float m_SkillCoolTimeStack = 0.0f;
+
+	const float StealthAlpha = 0.3f;
+	const float BlinkEffectInterval = 0.3f;
+	float semi_invincivilityRenderBlinkEffectTimeStack = 0.0f;
+
+	OBJECT_PROPENSITY MainPlayerPropensity = OBJECT_PROPENSITY::NON;
+
 public:
 	void SetTransform(const DirectX::XMFLOAT3& Scale, const DirectX::XMFLOAT3& RotationEuler, const DirectX::XMFLOAT3& Position);
 	void PlayMotion(MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);
@@ -43,4 +52,6 @@ public:
 	void UpdateCamera(CTimer& gt, float aspect);
 
 	void UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt);
+
+	void UpdateRenderEffect(CTimer& gt);
 };

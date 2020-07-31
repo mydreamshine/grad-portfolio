@@ -92,6 +92,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<aiModelData::aiSkeleton>> m_ModelSkeltons;
     std::unordered_map<std::wstring, std::unique_ptr<DXTK_FONT>> m_Fonts;
     std::unordered_map<std::string, DirectX::BoundingBox> m_CharacterModelBoundingBoxes;
+    std::unique_ptr<DirectX::GraphicsMemory> m_FontGraphicMemory = nullptr;
 
     // List of all render item.
     std::unordered_map<std::string, std::unique_ptr<RenderItem>> m_AllRitems[(int)RenderTargetScene::Count];

@@ -105,16 +105,16 @@ enum class PLAYER_STATE : char
 namespace AnimNotifyTime
 {
 	constexpr float Warrior_NormalAttackObjGenTiming = 0.6f;
-	constexpr float Warrior_SkillObjGenTiming = 0.3f;
+	constexpr float Warrior_SkillObjGenTiming = 0.875f;
 
-	constexpr float Berserker_NormalAttackObjGenTiming = 0.6f;
-	constexpr float Berserker_SkillObjGenTiming = 0.3f;
+	constexpr float Berserker_NormalAttackObjGenTiming = 0.913f;
+	constexpr float Berserker_SkillObjGenTiming = 0.242f;
 
-	constexpr float Assassin_NormalAttackObjGenTiming = 0.6f;
-	constexpr float Assassin_SkillObjGenTiming = 0.3f;
+	constexpr float Assassin_NormalAttackObjGenTiming = 0.501f;
+	constexpr float Assassin_SkillObjGenTiming = 0.281f;
 
-	constexpr float Priest_NormalAttackObjGenTiming = 0.6f;
-	constexpr float Priest_SkillObjGenTiming = 0.3f;
+	constexpr float Priest_NormalAttackObjGenTiming = 0.572f;
+	constexpr float Priest_SkillObjGenTiming = 0.994f;
 }
 enum class ANIM_NOTIFY_TYPE : char
 {
@@ -278,8 +278,8 @@ struct EVENT_DATA_TRY_MATCH_LOGIN : EVENT_DATA
 namespace CharacterSpeed
 {
 	constexpr float Warrior_Speed = 360.0f;
-	constexpr float Berserker_Speed = 360.0f;
-	constexpr float Assassin_Speed = 360.0f;
+	constexpr float Berserker_Speed = 300.0f;
+	constexpr float Assassin_Speed = 380.0f;
 	constexpr float Priest_Speed = 360.0f;
 }
 struct EVENT_DATA_MOVE_INFO : EVENT_DATA

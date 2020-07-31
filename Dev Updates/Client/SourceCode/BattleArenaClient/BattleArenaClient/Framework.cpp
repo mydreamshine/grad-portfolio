@@ -830,6 +830,7 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
             scene->SetMaterialsRef(&(ExternalResource->GetMaterials()));
             scene->SetModelSkeletonsRef(&(ExternalResource->GetModelSkeltons()));
             scene->SetCharacterModelBoundingBoxesRef(&(ExternalResource->GetCharacterModelBoundingBoxes()));
+            scene->SetFontsRef(&(ExternalResource->GetFonts()));
 
             RenderTargetScene target_scene = RenderTargetScene::LoginScene;
             if      (scene_name == "LoginScene")    target_scene = RenderTargetScene::LoginScene;
@@ -854,20 +855,57 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
 void Framework::BuildFontSpriteBatchs()
 {
     RenderTargetState rtState(m_BackBufferFormat, m_DepthStencilFormat);
-    SpriteBatchPipelineStateDescription psoDesc(rtState);
+    D3D12_BLEND_DESC  transparencyBlendDesc =
+    //{
+    //    FALSE, // AlphaToCoverageEnable
+    //    FALSE, // IndependentBlendEnable
+    //    { {
+    //        TRUE, // BlendEnable
+    //        FALSE, // LogicOpEnable
+    //        D3D12_BLEND_SRC_ALPHA, // SrcBlend
+    //        D3D12_BLEND_INV_SRC_ALPHA, // DestBlend
+    //        D3D12_BLEND_OP_ADD, // BlendOp
+    //        D3D12_BLEND_ONE, // SrcBlendAlpha
+    //        D3D12_BLEND_ZERO, // DestBlendAlpha
+    //        D3D12_BLEND_OP_ADD, // BlendOpAlpha
+    //        D3D12_LOGIC_OP_NOOP,
+    //        D3D12_COLOR_WRITE_ENABLE_ALL
+    //    } }
+    //};
+    {
+        FALSE, // AlphaToCoverageEnable
+        FALSE, // IndependentBlendEnable
+        { {
+            TRUE, // BlendEnable
+            FALSE, // LogicOpEnable
+            D3D12_BLEND_ONE, // SrcBlend
+            D3D12_BLEND_INV_SRC_ALPHA, // DestBlend
+            D3D12_BLEND_OP_ADD, // BlendOp
+            D3D12_BLEND_ONE, // SrcBlendAlpha
+            D3D12_BLEND_INV_SRC_ALPHA, // DestBlendAlpha
+            D3D12_BLEND_OP_ADD, // BlendOpAlpha
+            D3D12_LOGIC_OP_NOOP,
+            D3D12_COLOR_WRITE_ENABLE_ALL
+        } }
+    };
+    SpriteBatchPipelineStateDescription psoDesc(rtState, &transparencyBlendDesc);
 
     // Make SpriteBatch
-    for (UINT i = 0; i < m_nTextBatch; ++i)
+    for (auto& font_iter : (*m_FontsRef))
     {
-        DirectX::ResourceUploadBatch SpriteBatch_upload(m_device.Get());
-        SpriteBatch_upload.Begin(); // 자체적으로 CommandAllocator와 CommadList를 생성
+        std::wstring FontName = font_iter.first;
+        for (UINT i = 0; i < m_nTextBatch; ++i)
+        {
+            DirectX::ResourceUploadBatch SpriteBatch_upload(m_device.Get());
+            SpriteBatch_upload.Begin(); // 자체적으로 CommandAllocator와 CommadList를 생성
 
-        auto batch = std::make_unique<DirectX::SpriteBatch>(m_device.Get(), SpriteBatch_upload, psoDesc, &m_viewport);
+            auto batch = std::make_unique<DirectX::SpriteBatch>(m_device.Get(), SpriteBatch_upload, psoDesc, &m_viewport);
 
-        auto uploadResourcesFinished = SpriteBatch_upload.End(m_commandQueue.Get()); // CommadList 실행 및 FenceEvent 발생
-        uploadResourcesFinished.wait();
+            auto uploadResourcesFinished = SpriteBatch_upload.End(m_commandQueue.Get()); // CommadList 실행 및 FenceEvent 발생
+            uploadResourcesFinished.wait();
 
-        m_FontSpriteBatchs.push_back(std::move(batch));
+            m_FontSpriteBatchs[FontName].push_back(std::move(batch));
+        }
     }
 }
 
@@ -1154,12 +1192,22 @@ void Framework::DrawSceneToBackBuffer()
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
-    auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
-    DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
+    auto& SkinnedOpaqueObjRenderLayer_ = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
+    vector<Object*> ExcludeTransparentObjects;
+    for (auto& obj : SkinnedOpaqueObjRenderLayer_)
+    {
+        if (obj->m_TransformInfo->m_TexAlpha == 1.0f)
+            ExcludeTransparentObjects.push_back(obj);
+    }
+    DrawObjRenderLayer(m_commandList.Get(), ExcludeTransparentObjects);
 
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
     auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
     DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
+    auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
+    DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
 
     m_commandList->SetPipelineState(m_PSOs["transparent"].Get());
     auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);
@@ -1194,7 +1242,7 @@ void Framework::DrawSceneToUI()
         if (font_iter != m_FontsRef->end())
         {
             auto font_render = font_iter->second.get();
-            auto TextBatch = m_FontSpriteBatchs[TextInfo->TextBatchIndex].get();
+            auto TextBatch = m_FontSpriteBatchs[TextInfo->m_FontName][TextInfo->TextBatchIndex].get();
             font_render->DrawString(m_commandList.Get(), TextBatch,
                 TextInfo->m_TextPos, TextInfo->m_TextPivot, TextInfo->m_TextColor,
                 TextInfo->m_Text);

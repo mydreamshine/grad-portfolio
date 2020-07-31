@@ -66,6 +66,38 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         }
     }
 
+    {
+        ObjectManager ObjManager;
+        Object* ChattingLogTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
+        Object* ChattingLogInputTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
+        /*ChattingLogObject->m_Textinfo->m_Text.clear();
+        ChattingInputObject->m_Textinfo->m_Text.clear();*/
+        Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
+        Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
+
+        auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
+        auto ChattingLogPopUpButtonTransform = ChattingLogPopUpButtonObject->m_TransformInfo.get();
+        auto& ChattingLogTextPosition = ChattingLogTextObject->m_Textinfo->m_TextPos;
+        auto& ChattingLogInputTextPosition = ChattingLogInputTextObject->m_Textinfo->m_TextPos;
+
+        auto& ChattingLogLayerBound = ChattingLogLayer->m_TransformInfo->m_Bound;
+
+        const float SlidingDistance = -fabsf((-319.0f) - (-(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2));
+
+        XMFLOAT3 ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+        ChattingLogLayerPos.x += SlidingDistance;
+        XMFLOAT3 ChattingLogPopUpButtonPos = ChattingLogPopUpButtonTransform->GetWorldPosition();
+        ChattingLogPopUpButtonPos.x += SlidingDistance;
+
+        ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
+        ChattingLogLayerTransform->UpdateWorldTransform();
+        ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
+        ChattingLogPopUpButtonTransform->UpdateWorldTransform();
+        ChattingLogTextPosition.x += SlidingDistance;
+        ChattingLogInputTextPosition.x += SlidingDistance;
+    }
+
+
     m_LightRotationAngle = 0.0f;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
@@ -76,16 +108,24 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     GameInfo_CountKill = 0;
     GameInfo_CountDeath = 0;
     GameInfo_CountAssistance = 0;
+    GameInfo_CountTeamScore = 0;
 
-    KillLogList.clear();
+    while (KillLogList.empty() != true) KillLogList.pop();
     ChattingList.clear();
     inputChat.clear();
+    ChattingLineTextRenderStartIndex = 0;
+    ChattingLayerActivate = false;
+    ChattingLayerSliding = false;
+    InputChatInitFormTextNum = 0;
+    RecvNewChatAlarmActivate = false;
 
     TimeLimit_Sec = 0;
-
-    ChattingMode = false;
+    TimeLimitIntervalTimeStack = 0.0f;
 
     DeActPoisonGasArea = { -3423, 4290, 4577, -3710 };
+
+    KillLogSlidingStart = false;
+    KillLogSlidingInit = false;
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -96,6 +136,7 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
 {
     PlayGameScene::AnimateWorldObjectsTransform(gt, GeneratedEvents);
     PlayGameScene::AnimateEffectObjectsTransform(gt);
+    PlayGameScene::AnimateCharacterRenderEffect(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
 }
 
@@ -106,6 +147,10 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     auto& Geometries = *m_GeometriesRef;
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
     m_MaxUILayoutObject = (UINT)Geometries["PlayGameSceneUIGeo"]->DrawArgs.size() + MAX_CHARACTER_OBJECT;
+
+    bool Exist_Info_Layer_HP_Text = false;
+    bool Exist_Character_Info_Layer = false;
+    bool Exist_ChattingPopUpButton = false;
 
     ObjectManager objManager;
 
@@ -132,7 +177,15 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         }
         else if (Ritem_name.find("UI") != std::string::npos)
         {
-            if (Ritem_name.find("HPBar") != std::string::npos) continue;
+            if (Ritem_name.find("InfoLayer") == std::string::npos
+                && Ritem_name.find("HPBar") != std::string::npos) continue;
+
+            if (Ritem_name.find("InfoLayer") != std::string::npos
+                && Ritem_name.find("HPBar") == std::string::npos
+                && Exist_Character_Info_Layer == true) continue;
+
+            if (Ritem_name.find("PopUpButton") != std::string::npos
+                && Exist_ChattingPopUpButton == true) continue;
 
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
@@ -144,25 +197,189 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             std::vector<RenderItem*> Ritems = { Ritem };
             objManager.SetObjectComponent(newObj, objName, Ritems);
 
-            if (objName == "UI_Layout_SkillList") continue;
+            XMFLOAT3 UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
+            XMFLOAT3 UI_LayoutExtents = Ritem->Geo->DrawArgs[objName].Bounds.Extents;
 
-            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
-            auto text_info = newLayoutTextObj->m_Textinfo.get();
-            newLayoutTextObj->m_Name = "Text" + objName;
-            text_info->m_FontName = L"¸¼Àº °íµñ";
-            text_info->m_TextColor = DirectX::Colors::Blue;
-            auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
-            text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
-            text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
+            int TextObjCreatNum = 1;
 
-            if (objName == "UI_Layout_GameTimeLimit") text_info->m_Text = L"Time Limit";
-            else if (objName == "UI_Layout_KDA")      text_info->m_Text = L"K: 0  D: 0  A: 0";
-            else if (objName == "UI_Layout_KillLog")  text_info->m_Text = L"Kill Log";
-            else if (objName == "UI_Layout_ChattingLog")  text_info->m_Text = L"Chatting Log";
-            else if (objName == "UI_Layout_Skill1")  text_info->m_Text = L"Skill1";
-            else if (objName == "UI_Layout_Skill2")  text_info->m_Text = L"Skill2";
-            else if (objName == "UI_Layout_Skill3")  text_info->m_Text = L"Skill3";
-            else if (objName == "UI_Layout_Skill4")  text_info->m_Text = L"Skill4";
+            if (Ritem_name.find("PopUpButton") != std::string::npos)
+            {
+                newObj->m_Name = "UI_Layout_GameChattingPopUpButton";
+                newObj->m_TransformInfo->SetBound(Ritem->Geo->DrawArgs[objName].Bounds, TransformInfo::BoundPivot::Center);
+                newObj->m_TransformInfo->SetWorldPosition({ -120.0f, 89.33f, 0.0f });
+                newObj->m_TransformInfo->UpdateWorldTransform();
+                UI_LayoutPos = newObj->m_TransformInfo->GetWorldPosition();
+                Exist_ChattingPopUpButton = true;
+                continue;
+            }
+            if (Ritem_name.find("InfoLayer_HPBar") != std::string::npos)
+            {
+                newObj->m_TransformInfo->SetBound(Ritem->Geo->DrawArgs[objName].Bounds, TransformInfo::BoundPivot::Center);
+                newObj->m_TransformInfo->SetWorldPosition({ -UI_LayoutExtents.x, -200.167f, 0.0f });
+                newObj->m_TransformInfo->UpdateWorldTransform();
+                if(Exist_Info_Layer_HP_Text == true) continue;
+            }
+            if (Ritem_name.find("InfoLayer_HPBar") != std::string::npos) Exist_Info_Layer_HP_Text = true;
+            else if (Ritem_name.find("GameChattingLog") != std::string::npos) TextObjCreatNum = 2;
+            else if (Ritem_name.find("Skill_Icon_Fade") != std::string::npos) TextObjCreatNum = 2;
+            else if (Ritem_name.find("Layout_Score") != std::string::npos) TextObjCreatNum = 2;
+            else if (Ritem_name.find("InfoLayer") != std::string::npos)
+            {
+                newObj->m_Name = "CharacterInfoLayer";
+                Exist_Character_Info_Layer = true;
+                TextObjCreatNum = 3;
+            }
+
+            std::vector<Object*> additionalTextObjets;
+
+            Object* newLayoutTextObj = nullptr;
+            TextInfo* text_info = nullptr;
+
+            for (int i = 0; i < TextObjCreatNum; ++i)
+            {
+                newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+                text_info = newLayoutTextObj->m_Textinfo.get();
+                newLayoutTextObj->m_Name = "Text" + objName;
+                text_info->m_FontName = L"¸¼Àº °íµñ";
+                text_info->m_TextColor = DirectX::Colors::Blue;
+                text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
+                text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
+
+                additionalTextObjets.push_back(newLayoutTextObj);
+            }
+
+            if (objName == "UI_Layout_GameTimeLimit")
+            {
+                text_info->m_Text = L"Time Limit";
+                text_info->m_TextPos.x = 0.0f;
+                text_info->m_TextPos.y = 210.0f;
+                text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                text_info->m_TextColor = DirectX::Colors::White;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
+            }
+            else if (objName == "UI_Layout_Score")
+            {
+                additionalTextObjets[0]->m_Name = "TextScoreLayer_KDA";
+                additionalTextObjets[1]->m_Name = "TextScoreLayer_TeamGoalScore";
+                additionalTextObjets[0]->m_Textinfo->m_Text = L"K:0  D:0  A:0";
+                additionalTextObjets[1]->m_Textinfo->m_Text = L"0/" + std::to_wstring(MaxTeamScore);
+                additionalTextObjets[1]->m_Textinfo->m_TextColor = DirectX::Colors::White;
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    text_info = additionalTextObjets[i]->m_Textinfo.get();
+                    text_info->m_TextPos.y = UI_LayoutPos.y + UI_LayoutExtents.y - 10.7f;
+                    text_info->m_TextPos.y -= i * 81.3f;
+                    text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                }
+            }
+            else if (objName == "UI_Layout_KillLog")
+            {
+                newObj->m_TransformInfo->SetBound(Ritem->Geo->DrawArgs[objName].Bounds, TransformInfo::BoundPivot::Center);
+                newObj->m_TransformInfo->SetWorldPosition({ -(m_width / 2.0f) - UI_LayoutExtents.x * 2.0f, m_height / 4.0f + UI_LayoutExtents.y, 0.0f });
+                newObj->m_TransformInfo->UpdateWorldTransform();
+                UI_LayoutPos = newObj->m_TransformInfo->GetWorldPosition();
+
+                text_info->m_Text = L"Kill Log";
+                text_info->m_FontName = L"¸¼Àº °íµñ(16pt)";
+                
+                text_info->m_TextPos.x = UI_LayoutPos.x + UI_LayoutExtents.x;
+                text_info->m_TextPos.y = UI_LayoutPos.y - UI_LayoutExtents.y;
+                text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                text_info->m_TextColor = DirectX::Colors::Red;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
+            }
+            else if (Ritem_name.find("GameChattingLog") != std::string::npos)
+            {
+                newObj->m_TransformInfo->SetBound(Ritem->Geo->DrawArgs[objName].Bounds, TransformInfo::BoundPivot::Center);
+                newObj->m_TransformInfo->SetWorldPosition({ -319.0f, 191.66f, 0.0f });
+                newObj->m_TransformInfo->UpdateWorldTransform();
+                UI_LayoutPos = newObj->m_TransformInfo->GetWorldPosition();
+
+                additionalTextObjets[0]->m_Name = "TextGameChattingInput";
+                additionalTextObjets[1]->m_Name = "TextGameChattingLog";
+                additionalTextObjets[0]->m_Textinfo->m_Text = L"TestInput";
+                additionalTextObjets[1]->m_Textinfo->m_Text = L"TestLog";
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    text_info = additionalTextObjets[i]->m_Textinfo.get();
+                    text_info->m_TextPos.x = UI_LayoutPos.x + 15.2f;
+                    text_info->m_TextPos.y = UI_LayoutPos.y - UI_LayoutExtents.y * 2 + 30.7f;
+                    text_info->m_TextPos.y += i * 30.3f;
+                    text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                    text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+
+                    text_info->m_TextColor = XMVectorSet(254.0f / 255.0f, 216.0f / 255.0f, 109.0f / 255.0f, 1.0f);
+                    text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                }
+            }
+            else if (objName.find("InfoLayer_HPBar") != std::string::npos && Exist_Info_Layer_HP_Text == true)
+            {
+                UI_LayoutPos = newObj->m_TransformInfo->GetWorldPosition();
+
+                newLayoutTextObj->m_Name = "TextCharacterInfoLayer_HP";
+
+                text_info->m_Text = L"100 / 100";
+                text_info->m_TextPos.x = UI_LayoutPos.x + UI_LayoutExtents.x;
+                text_info->m_TextPos.y = UI_LayoutPos.y - UI_LayoutExtents.y + 0.5f;
+                text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                text_info->m_TextColor = XMVectorSet(59.0f / 255.0f, 56.0f / 255.0f, 56.0f / 255.0f, 1.0f);
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
+            }
+            else if (objName.find("InfoLayer") != std::string::npos && Exist_Character_Info_Layer == true)
+            {
+                additionalTextObjets[0]->m_Name = "TextCharacterInfoLayer_AttackDamage";
+                additionalTextObjets[1]->m_Name = "TextCharacterInfoLayer_AttackSpeed";
+                additionalTextObjets[2]->m_Name = "TextCharacterInfoLayer_MovingSpeed";
+                additionalTextObjets[0]->m_Textinfo->m_Text = L"20";
+                additionalTextObjets[1]->m_Textinfo->m_Text = L"1.2";
+                additionalTextObjets[2]->m_Textinfo->m_Text = L"360";
+
+                for (int i = 0; i < 3; ++i)
+                {
+                    text_info = additionalTextObjets[i]->m_Textinfo.get();
+                    text_info->m_TextPos.x = 5.0f;
+                    text_info->m_TextPos.y = -133.0f - i * 23.0f;
+                    text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                    text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                    text_info->m_TextColor = DirectX::Colors::Yellow;
+                    text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                }
+            }
+            else if (Ritem_name.find("Skill_Icon_Fade") != std::string::npos)
+            {
+                newObj->m_TransformInfo->SetBound(Ritem->Geo->DrawArgs[objName].Bounds, TransformInfo::BoundPivot::Center);
+                newObj->m_TransformInfo->SetWorldPosition({ 45.0f, -137.467f, 0.0f });
+                newObj->m_TransformInfo->SetWorldScale({ 1.0f, 0.0f, 1.0f });
+                newObj->m_TransformInfo->UpdateWorldTransform();
+                UI_LayoutPos = newObj->m_TransformInfo->GetWorldPosition();
+
+                additionalTextObjets[0]->m_Name = "TextCharacterInfoLayer_SkillName";
+                additionalTextObjets[1]->m_Name = "TextCharacterInfoLayer_SkillCoolTime";
+                additionalTextObjets[0]->m_Textinfo->m_Text = L"SkillName";
+                additionalTextObjets[1]->m_Textinfo->m_Text = L"";
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    text_info = additionalTextObjets[i]->m_Textinfo.get();
+                    text_info->m_TextPos.x = UI_LayoutPos.x + UI_LayoutExtents.x;
+                    text_info->m_TextPos.y = UI_LayoutPos.y + 9.0f;
+                    text_info->m_TextPos.x += m_width / 2.0f; // Coord Offset
+                    text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                    if (i == 0) text_info->m_TextColor = DirectX::Colors::Yellow;
+                    else
+                    {
+                        text_info->m_TextPos.y = UI_LayoutPos.y - UI_LayoutExtents.y;
+                        text_info->m_TextPos.y = m_height / 2.0f - (text_info->m_TextPos.y); // Coord Offset
+                        text_info->m_TextColor = XMVectorSet(9.0f / 255.0f, 12.0f / 255.0f, 7.0f / 255.0f, 1.0f);
+                    }
+                    text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
+                }
+            }
         }
         else if (Ritem_name.find("Effect") != std::string::npos)
         {
@@ -300,47 +517,251 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
 {
     ObjectManager ObjManager;
     Object* KillLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KillLog");
-    Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_ChattingLog");
+    Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
+    Object* ChattingInputObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
     Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
-    Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KDA");
+    Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextScoreLayer_KDA");
+    Object* Team_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextScoreLayer_TeamGoalScore");
 
     // Update KillLog Text
     {
-        auto& KillLog = KillLogObject->m_Textinfo->m_Text;
-        KillLog.clear();
+        auto KillLogTextInfo = KillLogObject->m_Textinfo.get();
+        auto& KillLogText = KillLogTextInfo->m_Text;
 
-        int EmptyKillLogLine = 6;
-        for (auto& KillLogLine : KillLogList)
+        if (KillLogList.empty() != true && KillLogSlidingStart == false)
         {
-            KillLog += KillLogLine;
-            if (--EmptyKillLogLine == 0) break;
-            else KillLog += L'\n';
+            KillLogSlidingStart = true;
+            KillLogSlidingInit = true;
+            KillLogText = KillLogList.front();
+            KillLogList.pop();
+        }
+
+        if (KillLogSlidingInit == true)
+        {
+            auto& KillLogTextPos = KillLogTextInfo->m_TextPos;
+
+            Object* KillLogLayoutObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_KillLog");
+            auto KillLogLayoutTransformInfo = KillLogLayoutObject->m_TransformInfo.get();
+            auto KillLogLayoutBound = KillLogLayoutTransformInfo->m_Bound;
+
+            XMFLOAT3 KillLogLayoutPos = { -(m_width / 2.0f) - KillLogLayoutBound.Extents.x * 2.0f, m_height / 4.0f + KillLogLayoutBound.Extents.y, 0.0f };
+            KillLogLayoutObject->m_TransformInfo->SetWorldPosition(KillLogLayoutPos);
+            KillLogLayoutObject->m_TransformInfo->UpdateWorldTransform();
+
+            KillLogLayoutPos = KillLogLayoutTransformInfo->GetWorldPosition();
+
+            KillLogTextPos.x = KillLogLayoutPos.x + KillLogLayoutBound.Extents.x;
+            KillLogTextPos.y = KillLogLayoutPos.y - KillLogLayoutBound.Extents.y + 4.0f;
+            KillLogTextPos.x += m_width / 2.0f; // Coord Offset
+            KillLogTextPos.y = m_height / 2.0f - (KillLogTextPos.y); // Coord Offset
+
+            KillLogSlidingInit = false;
+        }
+
+        if (KillLogSlidingStart == true)
+        {
+            XMFLOAT2 WndCenter = { m_width / 2.0f, m_height / 2.0f };
+
+            auto FontInfo = (*m_FontsRef)[KillLogTextInfo->m_FontName].get();
+            XMFLOAT2 KillLogTextSize = FontInfo->GetStringSize(KillLogText);
+            auto& KillLogTextPos = KillLogTextInfo->m_TextPos;
+
+            Object* KillLogLayoutObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_KillLog");
+            auto KillLogLayoutTransformInfo = KillLogLayoutObject->m_TransformInfo.get();
+            XMFLOAT3 KillLogLayoutPos = KillLogLayoutTransformInfo->GetWorldPosition();
+
+            const float SlidingHalfTime = 0.303f;
+            const float MaxSlidingHalfDistance = m_width / 2.0f;
+            float KillLogSlidingSpeed = MaxSlidingHalfDistance * gt.GetTimeElapsed() / SlidingHalfTime;
+
+            if (WndCenter.x - KillLogTextSize.x * 0.7f <= KillLogTextPos.x
+                && KillLogTextPos.x <= WndCenter.x + KillLogTextSize.x * 0.23f)
+                KillLogSlidingSpeed *= 0.1f;
+
+            KillLogTextPos.x += KillLogSlidingSpeed;
+            KillLogLayoutPos.x += KillLogSlidingSpeed;
+
+            KillLogLayoutTransformInfo->SetWorldPosition(KillLogLayoutPos);
+            KillLogLayoutTransformInfo->UpdateWorldTransform();
+
+            auto KillLogLayoutBound = KillLogLayoutTransformInfo->m_Bound;
+            float KillLogtLayoutLeft = KillLogLayoutPos.x - KillLogLayoutBound.Extents.x;
+            if (KillLogtLayoutLeft >= WndCenter.x + m_width / 2.0f)
+            {
+                KillLogSlidingStart = false;
+                KillLogText.clear();
+            }
+        }
+    }
+
+    // Update Character Info Layer
+    {
+        Object* CharacterInfoLayer_HPText = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_HP");
+        Object* CharacterInfoLayer_AttackDamage = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_AttackDamage");
+        Object* CharacterInfoLayer_AttackSpeed = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_AttackSpeed");
+        Object* CharacterInfoLayer_MovingSpeed = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_MovingSpeed");
+        Object* CharacterInfoLayer_SkillCoolTime = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_SkillCoolTime");
+
+        Object* CharacterInfoLayer_HPBar_Dest = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InfoLayer_HPBarDest");
+        Object* CharacterInfoLayer_HPBar_Increase = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InfoLayer_HPBarIncrease");
+        Object* CharacterInfoLayer_Skill_Icon_Fade = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_Skill_Icon_Fade");
+
+        if (m_MainPlayer != nullptr)
+        {
+            auto& HP_text = CharacterInfoLayer_HPText->m_Textinfo->m_Text;
+            auto& AttackDamage_text = CharacterInfoLayer_AttackDamage->m_Textinfo->m_Text;
+            auto& AttackSpeed_text = CharacterInfoLayer_AttackSpeed->m_Textinfo->m_Text;
+            auto& MovingSpeed_text = CharacterInfoLayer_MovingSpeed->m_Textinfo->m_Text;
+            auto& SkillCoolTime_text = CharacterInfoLayer_SkillCoolTime->m_Textinfo->m_Text;
+
+
+            float CharacterCurrHP = (float)m_MainPlayer->m_CharacterObjRef->HP;
+            float CharacterOldHP = (float)m_MainPlayer->m_oldHP;
+            int CharacterMaxHP = 0;
+            int AttackDamage = 0;
+            float AttackSpeed = 0.0f;
+            int MovingSpeed = 0;
+            CHARACTER_TYPE CharacterType = m_MainPlayer->m_CharacterObjRef->CharacterType;
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::WARRIOR:
+                CharacterMaxHP = 100;
+                AttackDamage = 30;
+                AttackSpeed = 1.0f;
+                MovingSpeed = 360;
+                break;
+            case CHARACTER_TYPE::BERSERKER:
+                CharacterMaxHP = 150;
+                AttackDamage = 40;
+                AttackSpeed = 0.6f;
+                MovingSpeed = 300;
+                break;
+            case CHARACTER_TYPE::ASSASSIN:
+                CharacterMaxHP = 100;
+                AttackDamage = 30;
+                AttackSpeed = 1.2f;
+                MovingSpeed = 380;
+                break;
+            case CHARACTER_TYPE::PRIEST:
+                CharacterMaxHP = 80;
+                AttackDamage = 15;
+                AttackSpeed = 1.0f;
+                MovingSpeed = 360;
+                break;
+            }
+
+            // Update Character Info Text(HP, AttackDamage, AttackSpeed, MovingSpeed, etc.)
+            {
+                if (m_MainPlayer->m_CurrUseSkill == SKILL_TYPE::FURY_ROAR)
+                {
+                    AttackSpeed *= 2.0f;
+                    MovingSpeed *= 2;
+                }
+
+                HP_text = std::to_wstring((int)CharacterCurrHP) + L" / " + std::to_wstring(CharacterMaxHP);
+                AttackDamage_text = std::to_wstring(AttackDamage);
+                AttackSpeed_text = std::to_wstring(AttackSpeed);
+                MovingSpeed_text = std::to_wstring(MovingSpeed);
+
+                size_t FloatingPointAct = AttackSpeed_text.find(L'.') + 2;
+                AttackSpeed_text.erase(FloatingPointAct, AttackSpeed_text.size() - (FloatingPointAct + 1));
+            }
+
+
+            // Update HP Bar
+            {
+                float HP_BarScale = CharacterCurrHP / (float)CharacterMaxHP;
+                bool HP_Increase = (CharacterCurrHP - CharacterOldHP > 0.0f);
+                float HP_IncreaseFactor = 6.0f * gt.GetTimeElapsed();
+
+                std::vector<Object*> HP_BarObjRef = { CharacterInfoLayer_HPBar_Dest, CharacterInfoLayer_HPBar_Increase };
+                for (auto& HP_bar_e : HP_BarObjRef)
+                {
+                    auto TransformInfo = HP_bar_e->m_TransformInfo.get();
+
+                    // Set HP Bar Size
+                    float CurrScale = TransformInfo->GetWorldScale().x;
+                    if (HP_bar_e->m_Name.find("Dest") != std::string::npos)
+                    {
+                        float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor * 0.3f : HP_IncreaseFactor;
+                        CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+                        TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+                    }
+                    else if (HP_bar_e->m_Name.find("Increase") != std::string::npos)
+                    {
+                        float IncreaseFactor = (HP_Increase) ? HP_IncreaseFactor : HP_IncreaseFactor * 0.3f;
+                        CurrScale += (HP_BarScale - CurrScale) * IncreaseFactor;
+                        TransformInfo->SetWorldScale({ CurrScale, 1.0f, 1.0f });
+                    }
+
+                    TransformInfo->UpdateWorldTransform();
+                }
+            }
+
+
+            // Update Skill Cool Time
+            {
+                if (m_MainPlayer->m_CurrUseSkill != SKILL_TYPE::NON)
+                {
+                    float MaxCoolTime = 0.0f;
+                    switch (CharacterType)
+                    {
+                    case CHARACTER_TYPE::WARRIOR:   MaxCoolTime = 4.0f; break;
+                    case CHARACTER_TYPE::BERSERKER: MaxCoolTime = 10.0f; break;
+                    case CHARACTER_TYPE::ASSASSIN:  MaxCoolTime = 12.0f; break;
+                    case CHARACTER_TYPE::PRIEST:    MaxCoolTime = 12.0f; break;
+                    }
+                    MaxCoolTime -= 1.0f;
+
+                    m_MainPlayer->m_SkillCoolTimeStack += gt.GetTimeElapsed();
+                    SkillCoolTime_text = std::to_wstring(MaxCoolTime - m_MainPlayer->m_SkillCoolTimeStack);
+                    size_t FloatingPointAct = SkillCoolTime_text.find(L'.') + 2;
+                    SkillCoolTime_text.erase(FloatingPointAct, SkillCoolTime_text.size() - (FloatingPointAct + 1));
+
+                    float ScaleFactor = MathHelper::Clamp((MaxCoolTime - m_MainPlayer->m_SkillCoolTimeStack) / MaxCoolTime, 0.0f, 1.0f);
+                    XMFLOAT3 newSkill_Icon_Scale = { 1.0f, ScaleFactor, 1.0f };
+                    CharacterInfoLayer_Skill_Icon_Fade->m_TransformInfo->SetWorldScale(newSkill_Icon_Scale);
+                    CharacterInfoLayer_Skill_Icon_Fade->m_TransformInfo->UpdateWorldTransform();
+
+                    if (m_MainPlayer->m_SkillCoolTimeStack >= MaxCoolTime)
+                    {
+                        m_MainPlayer->m_CurrUseSkill = SKILL_TYPE::NON;
+                        m_MainPlayer->m_SkillCoolTimeStack = 0.0f;
+                        SkillCoolTime_text.clear();
+                    }
+                }
+            }
         }
     }
 
     // Update Chatting Text
     {
-        auto& ChattingLog = ChattingLogObject->m_Textinfo->m_Text;
-        ChattingLog.clear();
-
-        if (ChattingMode == true)
-        {
-            int EmptyChatLine = 10;
-            for (auto& ChatLine : ChattingList)
-            {
-                ChattingLog += ChatLine;
-                if (--EmptyChatLine == 0) break;
-                else ChattingLog += L'\n';
-            }
-        }
+        auto& ChattingLogRenderText = ChattingLogObject->m_Textinfo->m_Text;
+        //ChattingLogRenderText.clear();
     }
 
     // Update TimeLimit Text
     {
-        auto& TimeLimitText = TimeLimitObject->m_Textinfo->m_Text;
+        auto TimeLimitTextInfo = TimeLimitObject->m_Textinfo.get();
+        auto& TimeLimitText = TimeLimitTextInfo->m_Text;
+
+        TimeLimitIntervalTimeStack += gt.GetTimeElapsed();
+        if (TimeLimitIntervalTimeStack >= 1.0f)
+        {
+            TimeLimitIntervalTimeStack = 0.0f;
+            TimeLimit_Sec = (TimeLimit_Sec - 1 > 0) ? TimeLimit_Sec - 1 : 0;
+
+            if (TimeLimit_Sec <= 10)
+            {
+                XMFLOAT3 Colors3f; XMStoreFloat3(&Colors3f, TimeLimitTextInfo->m_TextColor);
+                if (Colors3f.x == 1.0f) TimeLimitTextInfo->m_TextColor = DirectX::Colors::White;
+                else TimeLimitTextInfo->m_TextColor = DirectX::Colors::Red;
+            }
+        }
+
         int minute = TimeLimit_Sec / 60;
         int sec = TimeLimit_Sec % 60;
-        TimeLimitText = L"Time Limit\n  ";
+        TimeLimitText.clear();
 
         if (minute < 10) TimeLimitText += L"0";
         TimeLimitText += std::to_wstring(minute) + L":";
@@ -348,12 +769,16 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
         TimeLimitText += std::to_wstring(sec);
     }
 
-    // Update KDA Score Text
+    // Update Score Text
     {
         auto& KDA_ScoreText = KDA_ScoreObject->m_Textinfo->m_Text;
-        KDA_ScoreText  = L"K: " + std::to_wstring(GameInfo_CountKill)  + L"  ";
-        KDA_ScoreText += L"D: " + std::to_wstring(GameInfo_CountDeath) + L"  ";
-        KDA_ScoreText += L"A: " + std::to_wstring(GameInfo_CountAssistance);
+        auto& Team_ScoreText = Team_ScoreObject->m_Textinfo->m_Text;
+        KDA_ScoreText  = L"K:" + std::to_wstring(GameInfo_CountKill)  + L"  ";
+        KDA_ScoreText += L"D:" + std::to_wstring(GameInfo_CountDeath) + L"  ";
+        KDA_ScoreText += L"A:" + std::to_wstring(GameInfo_CountAssistance);
+
+        Team_ScoreText = std::to_wstring(GameInfo_CountAssistance) + L"/";
+        Team_ScoreText += std::to_wstring(MaxTeamScore);
     }
 }
 
@@ -440,7 +865,7 @@ void PlayGameScene::AnimateSkeletons(CTimer& gt, std::queue<std::unique_ptr<EVEN
 void PlayGameScene::AnimateCameras(CTimer& gt)
 {
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
-    static XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 LookAtPosition = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 UpDirection = { 0.0f, 1.0f, 0.0f };
 
     float cam_move_factor = 3.0f * gt.GetTimeElapsed();
@@ -558,11 +983,20 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
 
             float texAlpha = 1.0f;
             if (CurrScaleScala >= MaxScaleScala * 0.5f)
-                texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f ) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
+                texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
 
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
         }
+    }
+}
+
+void PlayGameScene::AnimateCharacterRenderEffect(CTimer& gt)
+{
+    for (auto& player_iter : m_Players)
+    {
+        auto player = player_iter.second.get();
+        player->UpdateRenderEffect(gt);
     }
 }
 
@@ -596,23 +1030,169 @@ void PlayGameScene::RotateBillboardObjects(Camera* MainCamera, std::vector<Objec
 
 void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
-    if (m_MainPlayer != nullptr)
-    {
-        CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
-        m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt, m_GroundObj, GeneratedEvents);
-    }
+    bool UI_Click = false;
 
     // Process Chat
     {
+        ObjectManager ObjManager;
+        Object* CharacterInfoLayer = ObjManager.FindObjectName(m_UILayOutObjects, "CharacterInfoLayer");
+        Object* TeamGoalScoreLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_Score");
 
+        Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
+        Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
+        Object* ChattingLogTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
+        Object* ChattingLogInputTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
+
+        auto& CharacterInfoLayerBound = CharacterInfoLayer->m_TransformInfo->m_Bound;
+        auto& TeamGoalScoreLayerBound = TeamGoalScoreLayer->m_TransformInfo->m_Bound;
+        auto& ChattingLogLayerBound = ChattingLogLayer->m_TransformInfo->m_Bound;
+        auto& ChattingPopUpButtonBound = ChattingLogPopUpButtonObject->m_TransformInfo->m_Bound;
+
+        if (key_state[VK_LBUTTON] == true)
+        {
+            RECT CharacterInfoLayerAreainScreen =
+            {
+                (LONG)(CharacterInfoLayerBound.Center.x - CharacterInfoLayerBound.Extents.x), // left
+                (LONG)(CharacterInfoLayerBound.Center.y + CharacterInfoLayerBound.Extents.y), // top
+                (LONG)(CharacterInfoLayerBound.Center.x + CharacterInfoLayerBound.Extents.x), // right
+                (LONG)(CharacterInfoLayerBound.Center.y - CharacterInfoLayerBound.Extents.y), // bottom
+            };
+
+            RECT TeamGoalScoreLayerAreainScreen =
+            {
+                (LONG)(TeamGoalScoreLayerBound.Center.x - TeamGoalScoreLayerBound.Extents.x), // left
+                (LONG)(TeamGoalScoreLayerBound.Center.y + TeamGoalScoreLayerBound.Extents.y), // top
+                (LONG)(TeamGoalScoreLayerBound.Center.x + TeamGoalScoreLayerBound.Extents.x), // right
+                (LONG)(TeamGoalScoreLayerBound.Center.y - TeamGoalScoreLayerBound.Extents.y), // bottom
+            };
+
+            RECT ChattingLogLayerAreainScreen =
+            {
+                (LONG)(ChattingLogLayerBound.Center.x - ChattingLogLayerBound.Extents.x), // left
+                (LONG)(ChattingLogLayerBound.Center.y + ChattingLogLayerBound.Extents.y), // top
+                (LONG)(ChattingLogLayerBound.Center.x + ChattingLogLayerBound.Extents.x), // right
+                (LONG)(ChattingLogLayerBound.Center.y - ChattingLogLayerBound.Extents.y), // bottom
+            };
+
+            RECT ChattingPopUpButtonAreainScreen =
+            {
+                (LONG)(ChattingPopUpButtonBound.Center.x - ChattingPopUpButtonBound.Extents.x), // left
+                (LONG)(ChattingPopUpButtonBound.Center.y + ChattingPopUpButtonBound.Extents.y), // top
+                (LONG)(ChattingPopUpButtonBound.Center.x + ChattingPopUpButtonBound.Extents.x), // right
+                (LONG)(ChattingPopUpButtonBound.Center.y - ChattingPopUpButtonBound.Extents.y), // bottom
+            };
+
+            float CursorPos_x = oldCursorPos.x - m_width * 0.5f;
+            float CursorPos_y = -(oldCursorPos.y - m_height * 0.5f);
+
+            if (PointInRect(CursorPos_x, CursorPos_y, CharacterInfoLayerAreainScreen) == true)
+                UI_Click = true;
+            else if (PointInRect(CursorPos_x, CursorPos_y, TeamGoalScoreLayerAreainScreen) == true)
+                UI_Click = true;
+            else if (PointInRect(CursorPos_x, CursorPos_y, ChattingLogLayerAreainScreen) == true)
+                UI_Click = true;
+
+            // Process Chatting Pop-Up
+            if (PointInRect(CursorPos_x, CursorPos_y, ChattingPopUpButtonAreainScreen) == true)
+            {
+                UI_Click = true;
+
+                if (ChattingLayerSliding == false)
+                {
+                    ChattingLayerActivate = !ChattingLayerActivate;
+                    if (ChattingLayerActivate == true)
+                    {
+                        auto& AllRitems = *m_AllRitemsRef;
+                        std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
+                        ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
+
+                        auto& InputRenderChat = ChattingLogInputTextObject->m_Textinfo->m_Text;
+                        InputRenderChat = inputChat;
+                    }
+                    ChattingLayerSliding = true;
+                }
+            }
+        }
+        else if (key_state[VK_RETURN] == true)
+        {
+            if (ChattingLayerSliding == false)
+            {
+                if (ChattingLayerActivate == false)
+                {
+                    auto& AllRitems = *m_AllRitemsRef;
+                    std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
+                    ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
+
+                    ChattingLayerActivate = true;
+                    ChattingLayerSliding = true;
+                }
+
+                if (inputChat.size() > InputChatInitFormTextNum)
+                {
+                    /*EventManager eventManager;
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);*/
+                    inputChat = m_MainPlayer->m_Name + L": ";
+                }
+            }
+        }
+
+        if (ChattingLayerSliding == true)
+        {
+            auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
+            auto ChattingLogPopUpButtonTransform = ChattingLogPopUpButtonObject->m_TransformInfo.get();
+            auto& ChattingLogTextPosition = ChattingLogTextObject->m_Textinfo->m_TextPos;
+            auto& ChattingLogInputTextPosition = ChattingLogInputTextObject->m_Textinfo->m_TextPos;
+
+            const float SlidingDistance = fabsf((-319.0f) - (-(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2));
+            float SlidingVelocity = 0.0f;
+            float ChattingLayer_DestPos_x = 0.0f;
+            if (ChattingLayerActivate == true)
+            {
+                ChattingLayer_DestPos_x = -319.0f;
+                SlidingVelocity = SlidingDistance * gt.GetTimeElapsed() / ChattingLayerSlidingActionEndTime;
+            }
+            else
+            {
+                ChattingLayer_DestPos_x = -(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2;
+                SlidingVelocity = -SlidingDistance * gt.GetTimeElapsed() / ChattingLayerSlidingActionEndTime;
+            }
+
+            XMFLOAT3 ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+            ChattingLogLayerPos.x += SlidingVelocity;
+            XMFLOAT3 ChattingLogPopUpButtonPos = ChattingLogPopUpButtonTransform->GetWorldPosition();
+            ChattingLogPopUpButtonPos.x += SlidingVelocity;
+
+            ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
+            ChattingLogLayerTransform->UpdateWorldTransform();
+            ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
+            ChattingLogPopUpButtonTransform->UpdateWorldTransform();
+            ChattingLogTextPosition.x += SlidingVelocity;
+            ChattingLogInputTextPosition.x += SlidingVelocity;
+
+            if ((ChattingLayerActivate == true && ChattingLogLayerPos.x >= ChattingLayer_DestPos_x)
+                || (ChattingLayerActivate == false && ChattingLogLayerPos.x <= ChattingLayer_DestPos_x))
+            {
+                ChattingLayerSliding = false;
+
+                float offset = -(ChattingLogLayerPos.x - ChattingLayer_DestPos_x);
+                ChattingLogLayerPos.x += offset;
+                ChattingLogPopUpButtonPos.x += offset;
+
+                ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
+                ChattingLogLayerTransform->UpdateWorldTransform();
+                ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
+                ChattingLogPopUpButtonTransform->UpdateWorldTransform();
+
+                ChattingLogTextPosition.x += offset;
+                ChattingLogInputTextPosition.x += offset;
+            }
+        }
     }
 
-    if (OnceSendChatLog == true)
+    if (m_MainPlayer != nullptr && UI_Click == false)
     {
-        EventManager eventManager;
-        eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);
-        inputChat.clear();
-        OnceSendChatLog = false;
+        CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
+        m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt, m_GroundObj, GeneratedEvents);
     }
 }
 
@@ -666,7 +1246,7 @@ void PlayGameScene::SpawnPlayer(
             CharacterSkeleton = ModelSkeletons["Male Knight 01"].get();
             newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Knight 01"], TransformInfo::BoundPivot::Bottom);
             CharacterAnimNotifys[(int)AnimActionType::Attack]["Warrior_NormalAttackObjGenTiming"] = AnimNotifyTime::Warrior_NormalAttackObjGenTiming;
-            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Warrior_SkillObjGenTiming"] = 0.875f;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Warrior_SkillObjGenTiming"] = AnimNotifyTime::Warrior_SkillObjGenTiming;
         }
             break;
         case CHARACTER_TYPE::BERSERKER:
@@ -675,8 +1255,8 @@ void PlayGameScene::SpawnPlayer(
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::BERSERKER]);
             CharacterSkeleton = ModelSkeletons["Male Warrior 01"].get();
             newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Warrior 01"], TransformInfo::BoundPivot::Bottom);
-            CharacterAnimNotifys[(int)AnimActionType::Attack]["Berserker_NormalAttackObjGenTiming"] = 0.913f;
-            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Berserker_SkillObjGenTiming"] = 0.242f;
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Berserker_NormalAttackObjGenTiming"] = AnimNotifyTime::Berserker_NormalAttackObjGenTiming;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Berserker_SkillObjGenTiming"] = AnimNotifyTime::Berserker_SkillObjGenTiming;
         }
             break;
         case CHARACTER_TYPE::ASSASSIN:
@@ -685,8 +1265,8 @@ void PlayGameScene::SpawnPlayer(
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::ASSASSIN]);
             CharacterSkeleton = ModelSkeletons["Female Warrior 01"].get();
             newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Female Warrior 01"], TransformInfo::BoundPivot::Bottom);
-            CharacterAnimNotifys[(int)AnimActionType::Attack]["Assassin_NormalAttackObjGenTiming"] = 0.501f;
-            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Assassin_SkillObjGenTiming"] = 0.281f;
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Assassin_NormalAttackObjGenTiming"] = AnimNotifyTime::Assassin_NormalAttackObjGenTiming;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Assassin_SkillObjGenTiming"] = AnimNotifyTime::Assassin_SkillObjGenTiming;
         }
             break;
         case CHARACTER_TYPE::PRIEST:
@@ -695,8 +1275,8 @@ void PlayGameScene::SpawnPlayer(
             CharacterRitems = &(m_CharacterRitems[(int)CHARACTER_TYPE::PRIEST]);
             CharacterSkeleton = ModelSkeletons["Male Mage 01"].get();
             newCharacterObj->m_TransformInfo->SetBound((*m_CharacterModelBoundingBoxesRef)["Male Mage 01"], TransformInfo::BoundPivot::Bottom);
-            CharacterAnimNotifys[(int)AnimActionType::Attack]["Priest_NormalAttackObjGenTiming"] = 0.572f;
-            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Priest_SkillObjGenTiming"] = 0.994f;
+            CharacterAnimNotifys[(int)AnimActionType::Attack]["Priest_NormalAttackObjGenTiming"] = AnimNotifyTime::Priest_NormalAttackObjGenTiming;
+            CharacterAnimNotifys[(int)AnimActionType::SkillPose]["Priest_SkillObjGenTiming"] = AnimNotifyTime::Priest_SkillObjGenTiming;
         }
             break;
         }
@@ -734,8 +1314,11 @@ void PlayGameScene::SpawnPlayer(
     // Create Player
     {
         auto newPlayer = std::make_unique<Player>();
-        newPlayer->m_Name = L"    Player" + Name;
+        newPlayer->m_Name = L"Player" + Name;
         newPlayer->m_CharacterObjRef = newCharacterObj;
+        
+        if (m_MainPlayer != nullptr)
+            newPlayer->MainPlayerPropensity = m_MainPlayer->m_CharacterObjRef->Propensity;
 
         // Set Character Info Text(Name, HP, etc.)
         {
@@ -751,7 +1334,17 @@ void PlayGameScene::SpawnPlayer(
             newPlayer->m_HP_BarObjRef[0] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
             newPlayer->m_HP_BarObjRef[1] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
             newPlayer->m_HP_BarObjRef[2] = objManager.FindDeactiveUILayOutObject(m_AllObjects, m_UILayOutObjects, m_MaxUILayoutObject);
-            std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_HPBarDest"].get() };
+            std::vector<RenderItem*> Ritems;
+            if (IsMainPlayer == true)
+            {
+                Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+            }
+            else
+            {
+                OBJECT_PROPENSITY mainPlayerPropensity = m_MainPlayer->m_CharacterObjRef->Propensity;
+                if (mainPlayerPropensity == Propensity) Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+                else Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+            }
             objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Dest - Instancing", Ritems);
             Ritems = { AllRitems["UI_Layout_HPBarIncrease"].get() };
             objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[1], "HP Bar Increase - Instancing", Ritems);
@@ -780,7 +1373,43 @@ void PlayGameScene::SpawnPlayer(
             newPlayer->SetTransform(WorldScale, WorldRotationEuler, WorldPosition);
         }
 
-        if (IsMainPlayer == true) m_MainPlayer = newPlayer.get();
+        if (IsMainPlayer == true)
+        {
+            m_MainPlayer = newPlayer.get();
+
+            ObjectManager ObjManager;
+            Object* CharacterInfoLayer_SkillName = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_SkillName");
+            Object* CharacterInfoLayer_SkillCoolTime = ObjManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_SkillCoolTime");
+            Object* CharacterInfoLayer = ObjManager.FindObjectName(m_UILayOutObjects, "CharacterInfoLayer");
+
+            auto& CharacterInfoLayer_SkillNameText = CharacterInfoLayer_SkillName->m_Textinfo->m_Text;
+            auto& CharacterInfoLayer_SkillCoolTimeText = CharacterInfoLayer_SkillCoolTime->m_Textinfo->m_Text;
+
+            std::vector<RenderItem*> InfoLayer_Ritems;
+            switch (CharacterType)
+            {
+            case CHARACTER_TYPE::WARRIOR:
+                CharacterInfoLayer_SkillNameText = L"SwordWave";
+                InfoLayer_Ritems = { AllRitems["UI_Layout_Warrior_InfoLayer"].get() };
+                break;
+            case CHARACTER_TYPE::BERSERKER:
+                CharacterInfoLayer_SkillNameText = L"FuryRoar";
+                InfoLayer_Ritems = { AllRitems["UI_Layout_Berserker_InfoLayer"].get() };
+                break;
+            case CHARACTER_TYPE::ASSASSIN:
+                CharacterInfoLayer_SkillNameText = L"Stealth";
+                InfoLayer_Ritems = { AllRitems["UI_Layout_Assassin_InfoLayer"].get() };
+                break;
+            case CHARACTER_TYPE::PRIEST:
+                CharacterInfoLayer_SkillNameText = L"HealArea";
+                InfoLayer_Ritems = { AllRitems["UI_Layout_Priest_InfoLayer"].get() };
+                break;
+            }
+            CharacterInfoLayer->m_RenderItems = InfoLayer_Ritems;
+
+            inputChat = m_MainPlayer->m_Name + L": ";
+            InputChatInitFormTextNum = inputChat.size();
+        }
         m_Players[newCharacterObj->m_CE_ID] = std::move(newPlayer);
     }
 }
@@ -1075,17 +1704,15 @@ void PlayGameScene::SetObjectTransform(int CE_ID, XMFLOAT3 Scale, XMFLOAT3 Rotat
     if (ControledObj != nullptr)
     {
         auto TransformInfo = ControledObj->m_TransformInfo.get();
-        TransformInfo->SetWorldTransform(Scale, RotationEuler, Position);
         TransformInfo->SetWorldScale(Scale);
         TransformInfo->SetWorldRotationEuler(RotationEuler);
         TransformInfo->SetInterpolatedDestPosition(Position);
-        TransformInfo->UpdateWorldTransform();
+        //TransformInfo->UpdateWorldTransform();
     }
 }
 
 void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE SkillType)
 {
-    MotionSpeed = 1.0f; // Motion Speed ÀÓ½Ã
     if (m_Players.find(CE_ID) != m_Players.end())
     {
         m_Players[CE_ID]->PlayMotion(MotionType, MotionSpeed, SkillType);
@@ -1103,8 +1730,11 @@ void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float 
         if (newActionType == AnimActionType::Non) return;
 
         AnimInfo->SetPlaySpeed(MotionSpeed);
-        AnimInfo->AnimStop(CurrPlayingAction);
-        AnimInfo->AnimPlay(newActionType);
+        if (CurrPlayingAction != newActionType)
+        {
+            AnimInfo->AnimStop(CurrPlayingAction);
+            AnimInfo->AnimPlay(newActionType);
+        }
         if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
             AnimInfo->AnimLoop(newActionType);
     }
@@ -1186,13 +1816,12 @@ void PlayGameScene::SetKillLog(short Kill_Player_id, short Death_Player_id)
     if (KillerName.empty() || DeadName.empty()) return;
 
     wstring Message = L"[" + KillerName + L"] Killed [" + DeadName + L"]";
-    if (KillLogList.size() == MaxKillLog) KillLogList.pop_back();
-    KillLogList.push_back(Message);
+    KillLogList.push(Message);
 }
 
 void PlayGameScene::SetChatLog(std::wstring Message)
 {
-    if (ChattingList.size() == MaxChatLog) ChattingList.pop_back();
+    if (ChattingList.size() == MaxChattingLog) ChattingList.pop_front();
     ChattingList.push_back(Message);
 }
 
