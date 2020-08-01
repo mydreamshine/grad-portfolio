@@ -98,30 +98,17 @@ void ProcessPacket(int client, void* packet)
 	PACKET_TYPE packet_type = reinterpret_cast<packet_inheritance*>(packet)->type;
 	switch (packet_type)
 	{
-	case TSS_KEYDOWN_W:
-		clients[client].GameFramework.OnKeyDown(0x57); // W
+	case TSS_KEYUP: {
+		tss_packet_keyup* data = reinterpret_cast<tss_packet_keyup*>(packet);
+		clients[client].GameFramework.OnKeyUp(data->key);
 		break;
-	case TSS_KEYDOWN_S:
-		clients[client].GameFramework.OnKeyDown(0x53); // S
+	}
+	case TSS_KEYDOWN: {
+		tss_packet_keydown* data = reinterpret_cast<tss_packet_keydown*>(packet);
+		clients[client].GameFramework.OnKeyDown(data->key);
 		break;
-	case TSS_KEYUP_W:
-		clients[client].GameFramework.OnKeyUp(0x57); // W
-		break;
-	case TSS_KEYUP_S:
-		clients[client].GameFramework.OnKeyUp(0x53); // S
-		break;
-	case TSS_KEYDOWN_A:
-		clients[client].GameFramework.OnKeyDown(0x41); // A
-		break;
-	case TSS_KEYDOWN_D:
-		clients[client].GameFramework.OnKeyDown(0x44); // D
-		break;
-	case TSS_KEYUP_A:
-		clients[client].GameFramework.OnKeyUp(0x41); // A
-		break;
-	case TSS_KEYUP_D:
-		clients[client].GameFramework.OnKeyUp(0x44); // D
-		break;
+	}
+		
 	case TSS_MOUSE_LBUTTON_DOWN:
 	{
 		tss_packet_mouse_button_down* mouse_button_down_packet = reinterpret_cast<tss_packet_mouse_button_down*>(packet);
@@ -131,28 +118,6 @@ void ProcessPacket(int client, void* packet)
 	}
 	case TSS_MOUSE_LBUTTON_UP:
 		clients[client].GameFramework.OnKeyUp(0x01); // VK_LBUTTON
-		break;
-
-
-
-	case TSS_KEYDOWN_F1:
-		clients[client].GameFramework.OnKeyDown(VK_F1); // D
-		break;
-	case TSS_KEYDOWN_F2:
-		clients[client].GameFramework.OnKeyDown(VK_F2); // D
-		break;
-	case TSS_KEYDOWN_F3:
-		clients[client].GameFramework.OnKeyDown(VK_F3); // D
-		break;
-
-	case TSS_KEYUP_F1:
-		clients[client].GameFramework.OnKeyUp(VK_F1); // D
-		break;
-	case TSS_KEYUP_F2:
-		clients[client].GameFramework.OnKeyUp(VK_F2); // D
-		break;
-	case TSS_KEYUP_F3:
-		clients[client].GameFramework.OnKeyUp(VK_F3); // D
 		break;
 	}
 };

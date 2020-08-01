@@ -63,6 +63,129 @@ inline void cleanup<SDL_Surface>(SDL_Surface* surf) {
 
 #endif
 
+char SDLK2VK(int sdlk) {
+	//Only Process 'LEFT' Special Key.
+	//Notes : VK_NUMPAD_0 and SDLK_BACKQUOTE returns SAME VALUE!!.
+	switch (sdlk) {
+	//Special
+	case SDLK_BACKSPACE: return VK_BACK;
+	case SDLK_TAB: return VK_TAB;
+	case SDLK_RETURN: return VK_RETURN;
+	case SDLK_LSHIFT: return VK_SHIFT;
+	case SDLK_LCTRL: return VK_CONTROL;
+	case SDLK_LALT: return VK_MENU;
+	case SDLK_PAUSE: return VK_PAUSE;
+	case SDLK_CAPSLOCK: return VK_CAPITAL;
+	case SDLK_ESCAPE: return VK_ESCAPE;
+	case SDLK_SPACE: return VK_SPACE;
+	case SDLK_PAGEUP: return VK_PRIOR;
+	case SDLK_PAGEDOWN: return VK_NEXT;
+	case SDLK_END: return VK_END;
+	case SDLK_HOME: return VK_HOME;
+	case SDLK_LEFT: return VK_LEFT;
+	case SDLK_UP: return VK_UP;
+	case SDLK_RIGHT: return VK_RIGHT;
+	case SDLK_DOWN: return VK_DOWN;
+	case SDLK_PRINTSCREEN: return VK_SNAPSHOT;
+	case SDLK_INSERT: return VK_INSERT;
+	case SDLK_DELETE: return VK_DELETE;
+	
+	case SDLK_F1: return VK_F1;
+	case SDLK_F2: return VK_F2;
+	case SDLK_F3: return VK_F3;
+	case SDLK_F4: return VK_F4;
+	case SDLK_F5: return VK_F5;
+	case SDLK_F6: return VK_F6;
+	case SDLK_F7: return VK_F7;
+	case SDLK_F8: return VK_F8;
+	case SDLK_F9: return VK_F9;
+	case SDLK_F10: return VK_F10;
+	case SDLK_F11: return VK_F11;
+	case SDLK_F12: return VK_F12;
+
+	//Nums
+	case SDLK_0: return '0';
+	case SDLK_1: return '1';
+	case SDLK_2: return '2';
+	case SDLK_3: return '3';
+	case SDLK_4: return '4';
+	case SDLK_5: return '5';
+	case SDLK_6: return '6';
+	case SDLK_7: return '7';
+	case SDLK_8: return '8';
+	case SDLK_9: return '9';
+
+	case SDLK_KP_0: return VK_NUMPAD0;
+	case SDLK_KP_1: return VK_NUMPAD1;
+	case SDLK_KP_2: return VK_NUMPAD2;
+	case SDLK_KP_3: return VK_NUMPAD3;
+	case SDLK_KP_4: return VK_NUMPAD4;
+	case SDLK_KP_5: return VK_NUMPAD5;
+	case SDLK_KP_6: return VK_NUMPAD6;
+	case SDLK_KP_7: return VK_NUMPAD7;
+	case SDLK_KP_8: return VK_NUMPAD8;
+	case SDLK_KP_9: return VK_NUMPAD9;
+
+	//Char
+	case SDLK_a: return 'A';
+	case SDLK_b: return 'B';
+	case SDLK_c: return 'C';
+	case SDLK_d: return 'D';
+	case SDLK_e: return 'E';
+	case SDLK_f: return 'F';
+	case SDLK_g: return 'G';
+	case SDLK_h: return 'H';
+	case SDLK_i: return 'I';
+	case SDLK_j: return 'J';
+	case SDLK_k: return 'K';
+	case SDLK_l: return 'L';
+	case SDLK_m: return 'M';
+	case SDLK_n: return 'N';
+	case SDLK_o: return 'O';
+	case SDLK_p: return 'P';
+	case SDLK_q: return 'Q';
+	case SDLK_r: return 'R';
+	case SDLK_s: return 'S';
+	case SDLK_t: return 'T';
+	case SDLK_u: return 'U';
+	case SDLK_v: return 'V';
+	case SDLK_w: return 'W';
+	case SDLK_x: return 'X';
+	case SDLK_y: return 'Y';
+	case SDLK_z: return 'Z';
+
+    case SDLK_EXCLAIM: return '!';
+    case SDLK_QUOTEDBL: return '"';
+    case SDLK_HASH: return '#';
+    case SDLK_PERCENT: return '%';
+    case SDLK_DOLLAR: return '$';
+    case SDLK_AMPERSAND: return '&';
+    case SDLK_QUOTE: return '\'';
+    case SDLK_LEFTPAREN: return '(';
+    case SDLK_RIGHTPAREN: return ')';
+    case SDLK_ASTERISK: return '*';
+    case SDLK_PLUS: return '+';
+    case SDLK_COMMA: return ';';
+    case SDLK_MINUS: return '-';
+    case SDLK_PERIOD: return '.';
+    case SDLK_SLASH: return '/';
+    case SDLK_COLON: return ':';
+    case SDLK_SEMICOLON: return ';';
+    case SDLK_LESS: return '<';
+    case SDLK_EQUALS: return '=';
+    case SDLK_GREATER: return '>';
+    case SDLK_QUESTION: return '?';
+    case SDLK_AT: return '@';
+    case SDLK_LEFTBRACKET: return '[';
+    case SDLK_BACKSLASH: return '\\';
+    case SDLK_RIGHTBRACKET: return ']';
+    case SDLK_CARET: return '^';
+    case SDLK_UNDERSCORE: return '_';
+    case SDLK_BACKQUOTE: return '`';
+	}
+	return -1;
+}
+
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 const int FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
@@ -195,67 +318,19 @@ void event_loop()
 			switch (e.type)
 			{
 			case SDL_KEYDOWN:
-				if(e.key.repeat == 0)
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_W;
+				if (e.key.repeat == 0) {
+					tss_packet_keydown packet{SDLK2VK(e.key.keysym.sym)};
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_s:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_S;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_a:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_A;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_d:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_D;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F1:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_F1;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F2:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_F2;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F3:
-				{
-					tss_packet_keydown packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYDOWN_F3;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
 				}
 				break;
+
+			case SDL_KEYUP:
+				if (e.key.repeat == 0) {
+					tss_packet_keyup packet{ SDLK2VK(e.key.keysym.sym) };
+					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+				}
+				break;
+
 			case SDL_MOUSEBUTTONDOWN:
 				if (e.button.button == SDL_BUTTON_LEFT)
 				{
@@ -275,68 +350,6 @@ void event_loop()
 					packet.size = sizeof(packet);
 					packet.type = TSS_MOUSE_LBUTTON_UP;
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-				}
-				break;
-			case SDL_KEYUP:
-				if (e.key.repeat == 0)
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_W;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_s:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_S;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_a:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_A;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_d:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_D;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F1:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_F1;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F2:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_F2;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
-				case SDLK_F3:
-				{
-					tss_packet_keyup packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_KEYUP_F3;
-					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
-					break;
-				}
 				}
 				break;
 

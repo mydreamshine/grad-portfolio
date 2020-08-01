@@ -21,6 +21,8 @@ enum TSS {
 	TSS_KEYUP_F1,
 	TSS_KEYUP_F2,
 	TSS_KEYUP_F3,
+	TSS_KEYDOWN,
+	TSS_KEYUP,
 	TSS_MOUSE_LBUTTON_DOWN,
 	TSS_MOUSE_LBUTTON_UP,
 };
@@ -105,15 +107,23 @@ struct packet_inheritance //
 };
 
 // Terminal -> Streaming Server
-struct tss_packet_keydown
+struct tss_packet_keydown : packet_inheritance
 {
-	PACKET_SIZE size;
-	PACKET_TYPE type;
+	char key;
+
+	tss_packet_keydown(char key) : key(key) {
+		size = sizeof(tss_packet_keydown);
+		type = TSS_KEYDOWN;
+	}
 };
-struct tss_packet_keyup
+struct tss_packet_keyup : packet_inheritance
 {
-	PACKET_SIZE size;
-	PACKET_TYPE type;
+	char key;
+
+	tss_packet_keyup(char key) : key(key) {
+		size = sizeof(tss_packet_keyup);
+		type = TSS_KEYUP;
+	}
 };
 struct tss_packet_mouse_button_down
 {
