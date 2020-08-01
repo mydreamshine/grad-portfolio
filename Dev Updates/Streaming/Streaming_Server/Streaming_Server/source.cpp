@@ -195,20 +195,20 @@ void do_worker() {
 		GetQueuedCompletionStatus(g_iocp, &num_byte, p_key, &p_over, INFINITE);
 		OVER_EX* over_ex = reinterpret_cast<OVER_EX*> (p_over);
 
-		if (num_byte == 0) {
-			DisconnectPlayer((int)key);
-			if (over_ex->event_type() == EV_SEND) delete over_ex;
-			continue;
-		}
-
 		switch (over_ex->event_type())
 		{
 		case EV_RECV:
 		{
-			ProcessPacket((int)key, over_ex->data());
-			DWORD flags = 0;
-			over_ex->reset();
-			WSARecv(clients[key].socket, over_ex->buffer(), 1, 0, &flags, over_ex->overlapped(), 0);
+			if (num_byte == 0) {
+				DisconnectPlayer((int)key);
+				continue;
+			}
+			else {
+				ProcessPacket((int)key, over_ex->data());
+				DWORD flags = 0;
+				over_ex->reset();
+				WSARecv(clients[key].socket, over_ex->buffer(), 1, 0, &flags, over_ex->overlapped(), 0);
+			}
 		}
 		break;
 

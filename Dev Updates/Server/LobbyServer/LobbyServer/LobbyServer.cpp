@@ -257,16 +257,17 @@ namespace BattleArena {
 			break;
 		}
 
-		case SSCS_TRY_GAME_MATCHING:
+		case SSCS_TRY_GAME_MATCHING: {
 			if (ST_IDLE == m_clients[client].state) {
 				match_enqueue(client);
-			#ifndef BATTLE_OFFLINE
+				#ifndef BATTLE_OFFLINE
 				match_make();
-			#endif
+				#endif
 			}
 			else if (ST_QUEUE == m_clients[client].state)
 				match_dequeue(client);
 			break;
+		}
 
 		default:
 			printf("[CLIENT %d] - Unknown Packet : %d\n", client, packet->type);
