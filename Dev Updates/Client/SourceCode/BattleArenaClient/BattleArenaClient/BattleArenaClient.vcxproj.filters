@@ -170,6 +170,9 @@
     <ClCompile Include="WND_MessageBlock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChattingList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Win32Application.h">
@@ -344,6 +347,9 @@
       <Filter>Common\NWMODULE</Filter>
     </ClInclude>
     <ClInclude Include="WND_MessageBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChattingList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
