@@ -4,6 +4,7 @@
 #include <WS2tcpip.h>
 #include <string>
 #include <thread>
+#include <fstream>
 #include "..\..\Streaming_Server\Streaming_Server\packet_struct.h"
 
 #ifndef CLEANUP_H
@@ -191,6 +192,9 @@ const int SCREEN_HEIGHT = 480;
 const int FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
 const int MAX_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
 
+std::wstring config_path{ L".\\TERMINAL_CONFIG.ini" };
+short server_port;
+std::wstring server_addr;
 SOCKET serverSocket;
 SDL_Window* window;
 SDL_Renderer* renderer;
@@ -213,6 +217,28 @@ void error_display(const char* msg, int err_no)
 }
 void logSDLError(std::ostream& os, const std::string& msg) {
 	os << msg << " error: " << SDL_GetError() << std::endl;
+}
+
+void gen_default_config()
+{
+	WritePrivateProfileString(L"TERMINAL", L"SERVER_PORT", L"15700", config_path.c_str());
+	WritePrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", config_path.c_str());
+}
+void InitConfig()
+{
+	wprintf(L"Initializing Configs...");
+	std::ifstream ini{ config_path.c_str() };
+	if (false == ini.is_open())
+		gen_default_config();
+	ini.close();
+
+	wchar_t buffer[512];
+	GetPrivateProfileString(L"TERMINAL", L"SERVER_PORT", L"15700", buffer, 512, config_path.c_str());
+	server_port = std::stoi(buffer);
+
+	GetPrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
+	server_addr = std::wstring(buffer);
+	wprintf(L" Done.\n");
 }
 
 SDL_Texture* loadTexture(const std::string& file, SDL_Renderer* ren) {
@@ -361,6 +387,8 @@ void event_loop()
 
 }
 int main(int, char**) {
+	InitConfig();
+
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa);
 
@@ -369,7 +397,7 @@ int main(int, char**) {
 		return 1;
 	}
 
-	window = SDL_CreateWindow("Lesson 2", 100, 100, SCREEN_WIDTH,
+	window = SDL_CreateWindow("BattleArena", 100, 100, SCREEN_WIDTH,
 		SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
 		logSDLError(std::cout, "CreateWindow");
@@ -400,9 +428,9 @@ int main(int, char**) {
 
 	SOCKADDR_IN serverAddr;
 	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
-	inet_pton(AF_INET, "127.0.0.1", reinterpret_cast<PVOID>(&serverAddr.sin_addr));
+	InetPton(AF_INET, server_addr.c_str(), reinterpret_cast<PVOID>(&serverAddr.sin_addr));
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(9000);
+	serverAddr.sin_port = htons(server_port);
 
 	int retval = connect(serverSocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
 	if (retval != SOCKET_ERROR)

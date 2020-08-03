@@ -29,8 +29,11 @@ namespace BattleArena {
 		std::wcout.imbue(std::locale("korean"));
 		setlocale(LC_ALL, "korean");
 		wprintf(L"[LOBBY SERVER]\n");
+		InitConfig();
+		InitClients();
 		InitWSA();
 		InitThreads();
+		wprintf(L"[SERVER ON]\n");
 	}
 	LOBBYSERVER::~LOBBYSERVER()
 	{
@@ -39,6 +42,7 @@ namespace BattleArena {
 		closesocket(m_listenSocket);
 		closesocket(m_battleSocket);
 		WSACleanup();
+		delete[] m_clients;
 	}
 
 	/**
@@ -55,7 +59,7 @@ namespace BattleArena {
 
 		m_listenSocket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 		m_battleSocket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
-		CSOCKADDR_IN lobbyserverAddr{ INADDR_ANY, LOBBYSERVER_PORT };
+		CSOCKADDR_IN lobbyserverAddr{ INADDR_ANY, LOBBY_PORT };
 
 		wprintf(L"Initializing ListenSocket...");
 		if (SOCKET_ERROR == ::bind(m_listenSocket, lobbyserverAddr.getSockAddr(), *lobbyserverAddr.len()))
@@ -66,10 +70,7 @@ namespace BattleArena {
 
 #ifndef BATTLE_OFFLINE
 		wprintf(L"Connecting to BattleServer...");
-		std::string battle_ip;
-		std::ifstream in("battle_ip.txt");
-		in >> battle_ip;
-		CSOCKADDR_IN battleserverAddr{ battle_ip.c_str(), BATTLESERVER_PORT };
+		CSOCKADDR_IN battleserverAddr{ BATTLE_ADDR.c_str(), BATTLE_PORT };
 		while (SOCKET_ERROR == ::connect(m_battleSocket, battleserverAddr.getSockAddr(), *battleserverAddr.len()))
 			wprintf(L"\n Can't access to BattleServer... Retry...");
 		m_clients[BATTLE_KEY].socket = m_battleSocket;
@@ -90,9 +91,53 @@ namespace BattleArena {
 	void LOBBYSERVER::InitThreads()
 	{
 		wprintf(L"Initializing Threads...");
-		for (UINT i = 0; i < 4; ++i)
+		for (UINT i = 0; i < NUM_THREADS; ++i)
 			m_threads.emplace_back(&LOBBYSERVER::do_worker, this);
 		wprintf(L" Done.\n");
+	}
+	void LOBBYSERVER::InitClients()
+	{
+		wprintf(L"Initializing Clients...");
+		m_clients = new CLIENT[MAX_USER + 1];
+		wprintf(L" Done.\n");
+	}
+	void LOBBYSERVER::InitConfig()
+	{
+		wprintf(L"Initializing Configs...");
+		std::ifstream ini{ config_path.c_str() };
+		if (false == ini.is_open())
+			gen_default_config();
+		ini.close();
+
+		wchar_t buffer[512];
+		GetPrivateProfileString(L"SERVER", L"LOBBY_PORT", L"15500", buffer, 512, config_path.c_str());
+		LOBBY_PORT = std::stoi(buffer);
+
+		GetPrivateProfileString(L"SERVER", L"NUM_THREADS", L"4", buffer, 512, config_path.c_str());
+		NUM_THREADS = std::stoi(buffer);
+
+		GetPrivateProfileString(L"SERVER", L"BATTLE_PORT", L"15600", buffer, 512, config_path.c_str());
+		BATTLE_PORT = std::stoi(buffer);
+
+		GetPrivateProfileString(L"SERVER", L"BATTLE_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
+		BATTLE_ADDR = std::wstring(buffer);
+
+		GetPrivateProfileString(L"SERVER", L"MAX_USER", L"100", buffer, 512, config_path.c_str());
+		MAX_USER = std::stoi(buffer);
+		BATTLE_KEY = MAX_USER;
+
+		GetPrivateProfileString(L"SERVER", L"MATCHMAKING_NUM", L"4", buffer, 512, config_path.c_str());
+		MATCHUP_NUM = MAX_USER = std::stoi(buffer);
+		wprintf(L" Done.\n");
+	}
+	void LOBBYSERVER::gen_default_config()
+	{
+		WritePrivateProfileString(L"SERVER", L"LOBBY_PORT", L"15500", config_path.c_str());
+		WritePrivateProfileString(L"SERVER", L"NUM_THREADS", L"4", config_path.c_str());
+		WritePrivateProfileString(L"SERVER", L"BATTLE_PORT", L"15600", config_path.c_str());
+		WritePrivateProfileString(L"SERVER", L"BATTLE_ADDR", L"127.0.0.1", config_path.c_str());
+		WritePrivateProfileString(L"SERVER", L"MAX_USER", L"100", config_path.c_str());
+		WritePrivateProfileString(L"SERVER", L"MATCHMAKING_NUM", L"4", config_path.c_str());
 	}
 	/**
 	@brief Run server.
@@ -442,7 +487,7 @@ namespace BattleArena {
 		if (m_queueList.size() >= MATCHUP_NUM)
 		{
 			std::list<int>::iterator waiter = m_queueList.begin();
-			ROOM_WAITER room_waiter;
+			ROOM_WAITER room_waiter{MATCHUP_NUM};
 			for (int i = 0; i < MATCHUP_NUM; ++i)
 			{
 				room_waiter.waiter[i] = *waiter;

@@ -30,7 +30,7 @@ namespace BattleArena {
 		m_listenSocket(INVALID_SOCKET)
 	{
 		wprintf(L"[BATTLE SERVER]\n");
-		LoadAsset();
+		LoadConfig();
 		InitRooms();
 		InitWSA();
 		InitThreads();
@@ -52,7 +52,7 @@ namespace BattleArena {
 		m_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, NULL, 0);
 
 		m_listenSocket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
-		CSOCKADDR_IN serverAddr{ INADDR_ANY, BATTLESERVER_PORT };
+		CSOCKADDR_IN serverAddr{ INADDR_ANY, SERVER_PORT };
 
 		wprintf(L"Initializing ListenSocket...");
 		if (SOCKET_ERROR == ::bind(m_listenSocket, serverAddr.getSockAddr(), *serverAddr.len()))
@@ -76,7 +76,7 @@ namespace BattleArena {
 	void BATTLESERVER::InitThreads()
 	{
 		wprintf(L"Initializing Threads...");
-		for (UINT i = 0; i < 4; ++i)
+		for (UINT i = 0; i < NUM_THREADS; ++i)
 			m_threads.emplace_back(&BATTLESERVER::do_worker, this);
 		m_threads.emplace_back(&BATTLESERVER::do_timer, this);
 		wprintf(L" Done.\n");
@@ -84,6 +84,7 @@ namespace BattleArena {
 	void BATTLESERVER::InitRooms()
 	{
 		wprintf(L"Initializing Rooms...");
+		m_Rooms = new ROOM*[MAX_ROOM];
 		roomListLock.lock();
 		for (int i = 0; i < MAX_ROOM; ++i) {
 			roomList.emplace_back(i);
@@ -91,6 +92,7 @@ namespace BattleArena {
 		}
 
 #ifdef TEST_FIELD
+		roomList.pop_front();
 		m_Rooms[0] = make_game_mode(GAMEMODE_DM);
 		m_Rooms[0]->init();
 #endif
@@ -99,10 +101,16 @@ namespace BattleArena {
 		wprintf(L" Done.\n");
 	}
 
-	void BATTLESERVER::LoadAsset()
+	void BATTLESERVER::LoadConfig()
 	{
-		wprintf(L"Load Assets...");
+		wprintf(L"Load Config...");
 		BBManager::instance().load_bb();
+		BBManager::instance().load_config();
+		
+		SERVER_PORT = BBManager::instance().SERVER_PORT;
+		NUM_THREADS = BBManager::instance().NUM_THREADS;
+		UPDATE_INTERVAL = BBManager::instance().UPDATE_INTERVAL;
+		MAX_ROOM = BBManager::instance().MAX_ROOM;
 		wprintf(L" Done.\n");
 	}
 

@@ -1,5 +1,6 @@
 #include <fstream>
 #include <string>
+#include <Windows.h>
 #include "BBManager.h"
 
 
@@ -74,6 +75,48 @@ void BBManager::load_bb()
     hero.close();
 }
 
+void BBManager::load_config()
+{
+    std::ifstream ini{ config_path.c_str() };
+    if (false == ini.is_open())
+        gen_default_config();
+    ini.close();
+
+    wchar_t buffer[512];
+    GetPrivateProfileString(L"SERVER", L"PORT", L"15600", buffer, 512, config_path.c_str());
+    SERVER_PORT = std::stoi(buffer);
+
+    GetPrivateProfileString(L"SERVER", L"NUM_THREADS", L"4", buffer, 512, config_path.c_str());
+    NUM_THREADS = std::stoi(buffer);
+
+    GetPrivateProfileString(L"SERVER", L"UPDATE_INTERVAL", L"30", buffer, 512, config_path.c_str());
+    UPDATE_INTERVAL = std::stoi(buffer);
+
+    GetPrivateProfileString(L"SERVER", L"MAX_ROOM", L"100", buffer, 512, config_path.c_str());
+    MAX_ROOM = std::stoi(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"MAX_PLAYER", L"4", buffer, 512, config_path.c_str());
+    max_player = std::stoi(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"PLAY_TIME", L"180.0", buffer, 512, config_path.c_str());
+    play_time = std::stof(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"WIN_GOAL", L"5", buffer, 512, config_path.c_str());
+    win_goal = std::stoi(buffer);
+}
+
 BBManager::~BBManager()
 {
+}
+
+void BBManager::gen_default_config()
+{
+    WritePrivateProfileString(L"SERVER", L"PORT", L"15600", config_path.c_str());
+    WritePrivateProfileString(L"SERVER", L"NUM_THREADS", L"4", config_path.c_str());
+    WritePrivateProfileString(L"SERVER", L"UPDATE_INTERVAL", L"30", config_path.c_str());
+    WritePrivateProfileString(L"SERVER", L"MAX_ROOM", L"100", config_path.c_str());
+    
+    WritePrivateProfileString(L"DMMODE", L"MAX_PLAYER", L"4", config_path.c_str());
+    WritePrivateProfileString(L"DMMODE", L"PLAYTIME", L"180.0", config_path.c_str());
+    WritePrivateProfileString(L"DMMODE", L"WIN_GOAL", L"5", config_path.c_str());
 }

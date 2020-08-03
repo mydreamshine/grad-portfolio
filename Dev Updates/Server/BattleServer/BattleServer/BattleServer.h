@@ -19,8 +19,6 @@
 #define TEST_FIELD
 
 namespace BattleArena {
-	constexpr auto MAX_ROOM = 100; ///< Max room count of server.
-	constexpr auto UPDATE_INTERVAL = 30; ///< Interval of updateing time. Millisecond.
 	constexpr auto RECV_BUF_SIZE = 256;
 
 	void error_display(const char* msg, int err_no);
@@ -35,12 +33,17 @@ namespace BattleArena {
 	class BATTLESERVER
 	{
 	private:
+		int MAX_ROOM{0};///< Max room count of server.
+		int UPDATE_INTERVAL{ 0 };///< Interval of updateing time. Millisecond.
+		int NUM_THREADS{ 0 };
+		short SERVER_PORT{ 0 };
+
 		std::atomic<int> player_num;	///< current number of user.
 		HANDLE m_iocp;					///< handle for iocp.
 		SOCKET m_listenSocket;			///< socket for listining.
 		CLIENT m_Lobby;					///< client struct for lobby.
 
-		ROOM *m_Rooms[MAX_ROOM];		///< rooms.
+		ROOM **m_Rooms;		///< rooms.
 		std::mutex roomListLock;		///< lock for rooms.
 		std::list<DWORD> roomList;		///< idx for availiable rooms.
 
@@ -66,7 +69,7 @@ namespace BattleArena {
 		/**
 		@brief load room asset.
 		*/
-		void LoadAsset();
+		void LoadConfig();
 
 		/**
 		@brief Add new event to queue.

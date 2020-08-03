@@ -32,6 +32,11 @@ public:
 	~NWMODULE();
 
 	/**
+	@brief Init Config from ini.
+	*/
+	void InitConfig();
+
+	/**
 	@brief enroll packets callback.
 	@param packet_type target packet.
 	@param callback when packet_type arrived, this callback will execute.
@@ -135,6 +140,8 @@ public:
 		battle_over.set_event(ev_battle);
 	}
 
+
+
 private:
 	T& MainModule;									///< Main class need to attach NW MODULE.
 	HANDLE iocp;									///< Handle for IOCP.
@@ -143,11 +150,17 @@ private:
 	vector<thread> threads;							///< Thread list operated in NW MODULE.
 	vector<function<void(T&, packet_inheritance*)>> callbacks;			///< Callbacks when packet arrived.
 
+	std::wstring config_path{ L".\\CLIENT_CONFIG.ini" };
+
+	std::wstring lobby_addr;
+	short lobby_port;
+	std::wstring battle_addr;
+	short battle_port;
+
 	OVER_EX lobby_over;								///< EXPENDED OVERLAPPED Structure for lobby.
 	PACKET_BUFFER lobby_buffer;						///< Buffer for complete packet.
 	OVER_EX battle_over;							///< EXPENDED OVERLAPPED Structure for battle.
 	PACKET_BUFFER battle_buffer;					///< Buffer for complete packet.
-
 	DWORD lobby_recv_flag{ 0 };
 	DWORD battle_recv_flag{ 0 };
 
@@ -156,6 +169,7 @@ private:
 	int ev_lobby;
 	int ev_battle;
 private:
+	
 
 	void error_display(const char* msg, int err_no);
 
@@ -187,7 +201,7 @@ private:
 	@param port server port with big-endian.
 	@return true when success or not.
 	*/
-	bool connect_server(SOCKET& socket, const char* address, const short port);
+	bool connect_server(SOCKET& socket, const wchar_t* address, const short port);
 
 	/**
 	@brief read and make complete packet from buffer after recv and save to packet_buffer.
@@ -210,6 +224,11 @@ private:
 	@param buffer packets data.
 	*/
 	void process_packet(int packet_type, void* buffer);
+
+	/**
+	@brief Generate default ini file.
+	*/
+	void gen_default_config();
 };
 
 

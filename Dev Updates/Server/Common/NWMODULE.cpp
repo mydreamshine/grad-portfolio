@@ -1,8 +1,7 @@
 #include "NWMODULE.h"
 #include <iostream>
-
-
-
+#include <string>
+#include <fstream>
 
 template <class T>
 void NWMODULE<T>::error_display(const char* msg, int err_no)
@@ -29,6 +28,29 @@ void NWMODULE<T>::InitWSA()
 		error_display("Error at WSAStartup()", WSAGetLastError());
 }
 
+template<class T>
+void NWMODULE<T>::InitConfig()
+{
+
+	std::ifstream ini{ config_path.c_str() };
+	if (false == ini.is_open())
+		gen_default_config();
+	ini.close();
+
+	wchar_t buffer[512];
+	GetPrivateProfileString(L"CLIENT", L"LOBBY_PORT", L"15500", buffer, 512, config_path.c_str());
+	lobby_port = std::stoi(buffer);
+
+	GetPrivateProfileString(L"CLIENT", L"LOBBY_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
+	lobby_addr = std::wstring(buffer);
+
+	GetPrivateProfileString(L"CLIENT", L"BATTLE_PORT", L"15600", buffer, 512, config_path.c_str());
+	battle_port = std::stoi(buffer);
+
+	GetPrivateProfileString(L"CLIENT", L"BATTLE_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
+	battle_addr = std::wstring(buffer);
+}
+
 
 template <class T>
 void NWMODULE<T>::send_default_packet(int type)
@@ -41,7 +63,7 @@ void NWMODULE<T>::send_default_packet(int type)
 
 
 template <class T>
-bool NWMODULE<T>::connect_server(SOCKET& socket, const char* address, const short port)
+bool NWMODULE<T>::connect_server(SOCKET& socket, const wchar_t* address, const short port)
 {
 	socket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 	if (INVALID_SOCKET == socket) {
@@ -112,6 +134,15 @@ template <class T>
 void NWMODULE<T>::process_packet(int packet_type, void* buffer)
 {
 	callbacks[packet_type](MainModule, reinterpret_cast<packet_inheritance*>(buffer));
+}
+
+template<class T>
+void NWMODULE<T>::gen_default_config()
+{
+	WritePrivateProfileString(L"CLIENT", L"LOBBY_PORT", L"15500", config_path.c_str());
+	WritePrivateProfileString(L"CLIENT", L"LOBBY_ADDR", L"127.0.0.1", config_path.c_str());
+	WritePrivateProfileString(L"CLIENT", L"BATTLE_PORT", L"15600", config_path.c_str());
+	WritePrivateProfileString(L"CLIENT", L"BATTLE_ADDR", L"127.0.0.1", config_path.c_str());
 }
 
 template<class T>
@@ -198,7 +229,7 @@ template <class T>
 bool NWMODULE<T>::connect_lobby()
 {
 	bool retval = false;
-	retval = connect_server(lobby_socket, "127.0.0.1", LOBBYSERVER_PORT);
+	retval = connect_server(lobby_socket, lobby_addr.c_str(), lobby_port);
 	if (false == retval) return retval;
 
 	if (INVALID_HANDLE_VALUE == iocp)
@@ -226,7 +257,7 @@ void NWMODULE<T>::disconnect_lobby()
 template <class T>
 bool NWMODULE<T>::connect_battle()
 {
-	bool retval = connect_server(battle_socket, "127.0.0.1", BATTLESERVER_PORT);
+	bool retval = connect_server(battle_socket, battle_addr.c_str(), battle_port);
 	if (false == retval) return retval;
 
 	if (INVALID_HANDLE_VALUE == iocp)

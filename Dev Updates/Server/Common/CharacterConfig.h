@@ -37,6 +37,7 @@ constexpr float GAME_TIME_LIMIT = 180.0f;
 constexpr float GAS_DECREASE_TIME = 5.0f;
 constexpr float GAS_EFFECT_TIME = 1.0f;
 constexpr int GAS_DAMAGE = 5;
+
 constexpr int SAFE_AREA_LEFT = -3423;
 constexpr int SAFE_AREA_TOP = 4290;
 constexpr int SAFE_AREA_RIGHT = 4577;

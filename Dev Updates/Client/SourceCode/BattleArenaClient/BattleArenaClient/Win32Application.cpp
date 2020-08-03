@@ -44,10 +44,7 @@ HWND Win32Application::CreateWND(DXSample* pSample, HINSTANCE hInstance, UINT wi
         hInstance,
         pSample);
 
-    //m_nwmodule = new NWMODULE<EventProcessor>{ m_eventProcessor };
-    //for (int i = 0; i < SSCS_PACKET_COUNT; ++i)
-    //    m_nwmodule->enroll_callback(i, &EventProcessor::PacketToEvent);
-    //m_nwmodule->connect_lobby(0);
+    m_eventProcessor.nw_module.InitConfig();
 
     return m_hwnd;
 }

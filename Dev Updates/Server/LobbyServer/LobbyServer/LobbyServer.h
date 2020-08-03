@@ -19,12 +19,8 @@
 #define BATTLE_OFFLINE
 #define FRIEND_OFFLINE
 
-
 namespace BattleArena {
-	constexpr auto RECV_BUFFER_SIZE = 200; /// max buffer size for socket communication
-	constexpr auto MAX_USER = 100; /// max user count that lobby server can hold
-	constexpr auto BATTLE_KEY = MAX_USER; /// last index for battle server
-	constexpr auto MATCHUP_NUM = 1; /// will deprecated. at least count for match-making.
+	constexpr auto RECV_BUFFER_SIZE = 256; /// max buffer size for socket communication
 
 	enum EVENT_TYPE {EV_CLIENT, EV_SEND, EV_BATTLE}; /// iocp events, EV_CLIENT : recv from clients, EV_SEND : send is done, EV_BATTLE : recv from battle server
 	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY }; /// client status, ST_QUEUE : client get queued, ST_IDLE : client do nothing, ST_PLAY : playing game.
@@ -88,7 +84,14 @@ namespace BattleArena {
 */
 	struct ROOM_WAITER
 	{
-		int waiter[MATCHUP_NUM]; ///< array for clients index.
+		int *waiter; ///< array for clients index.
+
+		ROOM_WAITER(int nums) {
+			waiter = new int[nums];
+		}
+		~ROOM_WAITER() {
+			delete[] waiter;
+		}
 	};
 
 /**
@@ -108,13 +111,24 @@ namespace BattleArena {
 		void Run();
 
 	private:
+		int MAX_USER = 100; /// max user count that lobby server can hold
+		int BATTLE_KEY = MAX_USER; /// last index for battle server
+		int MATCHUP_NUM = 1; /// will deprecated. at least count for match-making.
+
+		std::wstring config_path{ L".\\LOBBY_CONFIG.ini" };
+		short LOBBY_PORT{0};
+		int NUM_THREADS{ 0 };
+		short BATTLE_PORT{0};
+		std::wstring BATTLE_ADDR{};
+		
+
 		std::vector<std::thread> m_threads; ///< threads for server.
 		std::atomic<int> player_num; ///< use for clients index.
 		HANDLE m_iocp; ///< handle for iocp.
 		SOCKET m_listenSocket; ///< socket for listening client.
 		SOCKET m_battleSocket; ///< socket for connecting battle server.
 		
-		CLIENT m_clients[MAX_USER + 1]; ///< array for clients.
+		CLIENT* m_clients; ///< array for clients.
 		std::mutex client_table_lock; ///< lock for m_clients.
 		std::map<int, int> client_table; ///<connected user table that consist of (user UID, m_clients's INDEX).
 
@@ -130,6 +144,9 @@ namespace BattleArena {
 		void error_display(const char* msg, int err_no); ///< error display function for socket communication.
 		void InitWSA(); ///< Initializing WSA environment.
 		void InitThreads(); ///< Initializing threads.
+		void InitClients(); ///< Initializing Clients.
+		void InitConfig();
+		void gen_default_config();
 
 		void do_worker(); ///< Function for iocp thread.
 
@@ -139,17 +156,15 @@ namespace BattleArena {
 		void send_packet_request_room(char mode); ///< request room to battle server.
 #ifndef FRIEND_OFFLINE
 		void send_packet_friend_status(int client, int who, int status); ///< notify client that friends status is changed.
+
+		void process_packet_request_friend(int client, void* buffer); ///< process add friend request.
+		void process_packet_accept_friend(int client, void* buffer); ///< process answer for add friend request.
 #endif
 
 		void process_client_packet(DWORD client, void* packet); ///< process clients packet.
 		void process_battle_packet(DWORD client, void* packet); ///< process battle server packet.
 		void process_packet_response_room(void* buffer); ///< process response room packet.
 		void process_packet_login(int client, void* buffer); ///< process clients login.
-
-#ifndef FRIEND_OFFLINE
-		void process_packet_request_friend(int client, void* buffer); ///< process add friend request.
-		void process_packet_accept_friend(int client, void* buffer); ///< process answer for add friend request.
-#endif
 
 		void match_enqueue(DWORD client); ///< enqueue client to match pool.
 		void match_dequeue(DWORD client); ///< dequeue client to match pool.

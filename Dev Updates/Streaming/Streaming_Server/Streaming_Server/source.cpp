@@ -22,7 +22,7 @@
 using namespace std;
 
 constexpr auto FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
-constexpr auto MAX_USER = 5;
+int MAX_USER = 5;
 
 enum EVENT_TYPE{EV_SEND, EV_RECV, EV_LOBBY_NOTIFY, EV_MATCH_NOTIFY, EV_UPDATE, EV_ENCODE};
 
@@ -37,13 +37,16 @@ struct CLIENT {
 	ENCODER encoder{ SCREEN_WIDTH, SCREEN_HEIGHT, 6000 * 1000, 60 };
 };
 
+short server_port;
+int NUM_THREADS;
 SOCKET listenSocket;
+ID_POOLER *IdPooler;
 HANDLE g_iocp;
-ID_POOLER IdPooler(MAX_USER);
-CLIENT clients[MAX_USER];
+CLIENT *clients;
 vector<HANDLE> fence_events;
 ResourceManager resourceManager;
 std::string additionalAssetPath;
+std::wstring config_path{ L".\\STREAMING_CONFIG.ini" };
 
 void error_display(const char* msg, int err_no)
 {
@@ -71,17 +74,45 @@ void InitializeExternalResource(ResourceManager* ExternalResource)
 void InitializeClients()
 {
 	wcout << "Initializing PLAYERs... ";
+	clients = new CLIENT[MAX_USER];
+
 	for (int user_id = 0; user_id < MAX_USER; ++user_id) {
 		clients[user_id].id = user_id;
 		clients[user_id].socket = INVALID_SOCKET;
 		clients[user_id].connect = false;
 
 		clients[user_id].recv_over = new OVER_EX{ EV_RECV, MAX_BUFFER_SIZE };
+		clients[user_id].FrameworkEventProcessor.nw_module.InitConfig();
 		clients[user_id].FrameworkEventProcessor.nw_module.set_iocp(g_iocp, user_id, EV_SEND, EV_LOBBY_NOTIFY, EV_MATCH_NOTIFY);
 		clients[user_id].GameFramework.OnInit(0, WND_WIDTH, WND_HEIGHT, L"Framework-" + std::to_wstring(user_id), &resourceManager, &additionalAssetPath);
-		//fence_events.emplace_back(clients[user_id].GameFramework.GetFenceEvent());
 	}
 	wcout << "Done.\n";
+}
+
+void gen_default_config()
+{
+	WritePrivateProfileString(L"STREAMING", L"SERVER_PORT", L"15700", config_path.c_str());
+	WritePrivateProfileString(L"STREAMING", L"NUM_THREADS", L"4", config_path.c_str());
+	WritePrivateProfileString(L"STREAMING", L"MAX_USER", L"5", config_path.c_str());
+}
+void InitConfig()
+{
+	wprintf(L"Initializing Configs...");
+	std::ifstream ini{ config_path.c_str() };
+	if (false == ini.is_open())
+		gen_default_config();
+	ini.close();
+
+	wchar_t buffer[512];
+	GetPrivateProfileString(L"STREAMING", L"SERVER_PORT", L"15700", buffer, 512, config_path.c_str());
+	server_port = std::stoi(buffer);
+
+	GetPrivateProfileString(L"STREAMING", L"NUM_THREADS", L"4", buffer, 512, config_path.c_str());
+	NUM_THREADS = std::stoi(buffer);
+
+	GetPrivateProfileString(L"STREAMING", L"MAX_USER", L"5", buffer, 512, config_path.c_str());
+	MAX_USER = std::stoi(buffer);
+	wprintf(L" Done.\n");
 }
 
 void SendFramePacket(int client, BYTE* frame)
@@ -134,7 +165,7 @@ void DisconnectPlayer(int client)
 	closesocket(clients[client].socket);
 	clients[client].GameFramework.OnInitAllSceneProperties();
 	clients[client].FrameworkEventProcessor.disconnect();
-	IdPooler.DeleteClientId(client);
+	IdPooler->DeleteClientId(client);
 	wcout << "[CLIENT] >> [Disconnect] >> [" << client << "]" << endl;
 }
 
@@ -265,10 +296,9 @@ int main()
 {
 	wcout.imbue(std::locale("korean"));
 	setlocale(LC_ALL, "korean");
-	//쓰레드 갯수 (코어 개수만큼)
-	//size_t concurrentThreadsSupported = thread::hardware_concurrency();
-	size_t concurrentThreadsSupported = MAX_CORES;
-	cout << "Concurrent Threads Supported By H/W Cores: " << concurrentThreadsSupported << endl;
+	InitConfig();
+	IdPooler = new ID_POOLER{ MAX_USER };
+	cout << "Concurrent Threads Supported By H/W Cores: " << NUM_THREADS << endl;
 
 	BOOL fSuccess = SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 	g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
@@ -290,7 +320,7 @@ int main()
 	memset(&addr, 0, sizeof(SOCKADDR_IN));
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(SERVER_PORT);
+	addr.sin_port = htons(server_port);
 
 	if(::bind(listenSocket, reinterpret_cast<SOCKADDR*>(&addr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
 		error_display("bind()", WSAGetLastError());
@@ -302,9 +332,8 @@ int main()
 	int addrlen = sizeof(SOCKADDR_IN);
 
 	vector<thread> threads;
-	for (int i = 0; i < (int)concurrentThreadsSupported; ++i)
+	for (int i = 0; i < (int)NUM_THREADS; ++i)
 		threads.emplace_back(do_worker);
-	//threads.emplace_back(do_checker);
 
 	while (true)
 	{
@@ -313,7 +342,7 @@ int main()
 		if (clientSocket == INVALID_SOCKET)
 			error_display("accept()", WSAGetLastError());
 
-		int new_id = IdPooler.GetNewClientId();
+		int new_id = IdPooler->GetNewClientId();
 		clients[new_id].connect = true;
 		clients[new_id].socket = clientSocket;
 		wcout << "[CLIENT] >> [Accept] >> [" << new_id << "]" << endl;
@@ -339,4 +368,6 @@ int main()
 
 	closesocket(listenSocket);
 	WSACleanup();
+	delete[] clients;
+	delete[] IdPooler;
 }

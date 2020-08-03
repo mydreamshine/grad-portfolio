@@ -3,10 +3,10 @@
 #include "CharacterConfig.h"
 
 DMRoom::DMRoom() :
-	max_player(2),
+	max_player(BBManager::instance().max_player),
 	player_num(0),
 	delta_time(0),
-	left_time(GAME_TIME_LIMIT),
+	left_time(BBManager::instance().play_time),
 	skill_uid(4),
 	kill_count(),
 	game_end(false),
@@ -14,7 +14,8 @@ DMRoom::DMRoom() :
 	win_team(0),
 	m_walls( BBManager::instance().world_bb ),
 	m_grass(BBManager::instance().grass_bb),
-	poison_gas(this)
+	poison_gas(this),
+	win_goal(BBManager::instance().win_goal)
 {
 	packet_vector.clear();
 	packets.clear();
@@ -331,7 +332,7 @@ void DMRoom::send_game_state()
 bool DMRoom::end_check()
 {
 	for (int i = 0; i < 2; ++i)
-		if (kill_count[i] >= WIN_GOAL) {
+		if (kill_count[i] >= win_goal) {
 			win_team = i;
 
 			total_score = 0;

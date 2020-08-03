@@ -22,6 +22,10 @@ public:
 	@brief Constructor for char type addr.
 	*/
 	CSOCKADDR_IN(const char* addr, short port);
+	/**
+	@brief Constructor for char type addr.
+	*/
+	CSOCKADDR_IN(const wchar_t* addr, short port);
 
 	/**
 	@brief return pointer of size. remember it can be changed.
