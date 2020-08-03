@@ -329,13 +329,14 @@ namespace aiModelData
 			if (TimePos + newDeltaTime >= ClipEndTime)
 			{
 				if (IsLoop)
+				{
 					TimePos = (TimePos + newDeltaTime) - ClipEndTime;
+					initDuration = true;
+				}
 				else
 					TimePos = ClipEndTime;
 
 				DurationOnceDone = true;
-
-				initDuration = true;
 			}
 			else
 			{

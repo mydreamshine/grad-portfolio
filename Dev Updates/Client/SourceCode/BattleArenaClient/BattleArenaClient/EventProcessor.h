@@ -293,6 +293,14 @@ public:
                 (CHARACTER_TYPE)packetData->played_character_type);
         }
         break;
+        case CSSS_SET_IN_GAME_TEAM_SCORE:
+        {
+            auto packetData = reinterpret_cast<csss_packet_send_in_game_team_score*>(packet);
+            EventManager eventManager;
+            eventManager.ReservateEvent_SetInGameTeamScore(m_ExternalEvents,
+                packetData->in_game_score_team);
+        }
+        break;
 
         case CSSS_MATCH_ENQUEUE:
         {

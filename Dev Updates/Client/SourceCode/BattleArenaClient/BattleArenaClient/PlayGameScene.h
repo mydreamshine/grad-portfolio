@@ -1,5 +1,6 @@
 #pragma once
 #include "Scene.h"
+#include "WND_MessageBlock.h"
 
 class PlayGameScene : public Scene
 {
@@ -70,6 +71,8 @@ public:
     virtual void SetGamePlayTimeLimit(unsigned int Sec);
     // Remaining HP
     virtual void SetPlayerHP(int CE_ID, int HP);
+    // In Game Team Score (Team's Total Kill)
+    virtual void SetInGameTeamScore(unsigned char InGameScore_Team);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private:
@@ -106,17 +109,48 @@ private:
     bool KillLogSlidingInit = false;
 
 private:
-    std::list<std::wstring> ChattingList;
-    std::wstring inputChat;
+    const float MaxChattingLineWidth = 180.0f;
+    const float MaxChattingLineHeight = 210.0f;
+    WND_MessageBlock ChattingListMessageBlock;
+    WND_MessageBlock InputChatMessageBlock;
+
+    bool ChattingListUpdate = false;
+    bool ChattingListScrolling = false;
+    bool ChattingListScrollingIntervalAct = false;
+    const float ChattingListScrollingInterval = 0.06f;
+    float ChattingListScrollingTimeStack = 0.0f;
     const size_t MaxChattingLog = 20;
-    const float MaxChattingLineWidth = 120.0f;
-    const float MaxChattingLineHeight = 200.0f;
-    int ChattingLineTextRenderStartIndex = 0;
-    bool ChattingLayerActivate = true;
+    std::list<std::wstring> ChattingList;
+
+    const float InputChatCharacterInsertInterval = 0.01f;
+    const float InputChatContinuousInputInterval = 0.3f;
+    const float InputChatCharacterEraseInterval = 0.01f;
+    const float InputChatContinuousEraseInterval = 0.3f;
+    float InputChatCharacterInsertTimeStack = 0.0f;
+    float InputChatContinuousInputTimeStack = 0.0f;
+    float InputChatCharacterEraseTimeStack = 0.0f;
+    float InputChatContinuousEraseTimeStack = 0.0f;
+
+    bool ContinouseInputIntervalAct = false;
+    bool ContinouseEraseIntervalAct = false;
+
+    bool InputBoxScrolling = false;
+    bool InputBoxScrollingAct = false;
+    const float InputBoxScrollingInterval = 0.06f;
+    float InputBoxScorllingTimeStack = 0.0f;
+    int inputMessageCaretPosIndex = 0;
+    int MessageBlockCaretPosIndex_inputChat = 0;
+    wchar_t LastInputText = L'\0';
+    bool CapsLock = false;
+    bool CapsLockAct = false;
+    std::wstring inputChat;
+
+    const float InputChatCaretBlinkInterval = 0.5f;
+    float InputChatCaretBlinkTimeStack = 0.0f;
+
+    bool ChattingLayerActivate = false;
     bool ChattingLayerSliding = false;
-    size_t InputChatInitFormTextNum = 0; // (=wstring(L"MainPlayerName: ").size())
     const float ChattingLayerSlidingActionEndTime = 0.5f;
-    bool RecvNewChatAlarmActivate = false;
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,

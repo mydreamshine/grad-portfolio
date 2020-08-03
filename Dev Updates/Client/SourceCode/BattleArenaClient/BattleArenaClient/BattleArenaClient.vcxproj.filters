@@ -167,6 +167,9 @@
     <ClCompile Include="..\..\..\..\Server\Common\csockaddr_in.cpp">
       <Filter>Common\NWMODULE</Filter>
     </ClCompile>
+    <ClCompile Include="WND_MessageBlock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Win32Application.h">

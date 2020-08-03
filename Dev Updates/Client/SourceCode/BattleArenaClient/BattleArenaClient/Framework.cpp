@@ -191,7 +191,12 @@ void Framework::ProcessEvent(EVENT& Event)
             EventData->PlayedCharacterType);
     }
     break;
-
+    case FEC_SET_IN_GAME_TEAM_SCORE:
+    {
+        EVENT_DATA_IN_GAME_TEAM_SCORE* EventData = reinterpret_cast<EVENT_DATA_IN_GAME_TEAM_SCORE*>(Event.Data.get());
+        Event_Act_Place->SetInGameTeamScore(EventData->InGameScore_Team);
+    }
+    break;
 
     case FEC_MATCH_ENQUEUE:
     {
@@ -1191,6 +1196,9 @@ void Framework::DrawSceneToBackBuffer()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
+    // Skinned 오브젝트의 Alpha블렌딩 Layer Depth를 정렬하기 위해
+    // 아래와 같이 다른 투명 오브젝트를 렌더링하기 전에
+    // 미리 한번 Skinned 오브젝트를 렌더링해준다.
     m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
     auto& SkinnedOpaqueObjRenderLayer_ = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
     vector<Object*> ExcludeTransparentObjects;

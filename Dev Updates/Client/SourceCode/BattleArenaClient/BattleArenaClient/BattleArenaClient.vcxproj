@@ -223,6 +223,7 @@
     <ClCompile Include="Win32Application.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="WND_MessageBlock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Server\Common\CSOCKADDR_IN.h" />

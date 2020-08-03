@@ -37,9 +37,10 @@ void Scene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
     UpdateShadowTransform(gt);
     UpdateMainPassCB(frame_resource->PassCB.get(), gt);
     UpdateShadowPassCB(frame_resource->PassCB.get(), shadow_map, gt);
-    UpdateTextInfo(gt, GeneratedEvents);
 
     ProcessInput(key_state, oldCursorPos, gt, GeneratedEvents);
+
+    UpdateTextInfo(gt, GeneratedEvents);
 }
 
 void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
