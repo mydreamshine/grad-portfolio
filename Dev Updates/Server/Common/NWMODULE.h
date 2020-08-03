@@ -26,7 +26,7 @@ template <class T>
 class NWMODULE
 {
 public:
-	NWMODULE(T& MainModule, int buffer_size = 256, HANDLE iocp = INVALID_HANDLE_VALUE, int ev_send = 0, int ev_lobby = 0, int ev_battle = 0);
+	NWMODULE(T& MainModule, int buffer_size = 512, HANDLE iocp = INVALID_HANDLE_VALUE, int ev_send = 0, int ev_lobby = 0, int ev_battle = 0);
 
 
 	~NWMODULE();

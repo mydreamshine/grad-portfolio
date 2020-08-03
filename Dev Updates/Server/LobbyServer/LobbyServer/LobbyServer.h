@@ -20,7 +20,7 @@
 #define FRIEND_OFFLINE
 
 namespace BattleArena {
-	constexpr auto RECV_BUFFER_SIZE = 256; /// max buffer size for socket communication
+	constexpr auto RECV_BUFFER_SIZE = 512; /// max buffer size for socket communication
 
 	enum EVENT_TYPE {EV_CLIENT, EV_SEND, EV_BATTLE}; /// iocp events, EV_CLIENT : recv from clients, EV_SEND : send is done, EV_BATTLE : recv from battle server
 	enum CL_STATE { ST_QUEUE, ST_IDLE, ST_PLAY }; /// client status, ST_QUEUE : client get queued, ST_IDLE : client do nothing, ST_PLAY : playing game.

@@ -392,6 +392,10 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 		process_activate_anim_notify(packet);
 		break;
 
+	case SSCS_SEND_IN_GAME_CHAT:
+		process_chat(packet);
+		break;
+
 	default:
 		break;
 	}
@@ -458,6 +462,16 @@ void DMRoom::process_activate_anim_notify(void* packet)
 		m_heros[data->client_id]->do_skill();
 		break;
 	}
+}
+
+void DMRoom::process_chat(void* packet)
+{
+	sscs_packet_send_chat_message* msg = reinterpret_cast<sscs_packet_send_chat_message*>(packet);
+	csss_packet_send_chat_message retmsg{ 2, msg->message, (int)wcslen(msg->message) };
+	socket_lock.lock();
+	for (auto& socket : sockets)
+		send_packet(socket.second, &retmsg, retmsg.size);
+	socket_lock.unlock();
 }
 
 void DMRoom::update_score_packet(short obj_id)

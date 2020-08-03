@@ -991,7 +991,7 @@ struct csss_packet_send_chat_message : packet_inheritance
 {
 	// contents ref.
 	char    scene_type_to_recv;
-	wchar_t message[string_len];
+	wchar_t message[chatting_len];
 
 	csss_packet_send_chat_message()
 	{

@@ -81,6 +81,7 @@ private:
 	void process_try_use_skill(void* packet);
 	void process_done_character_motion(void* packet);
 	void process_activate_anim_notify(void* packet);
+	void process_chat(void* packet);
 
 	friend HERO;
 	friend WARRIOR;

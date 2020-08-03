@@ -318,6 +318,16 @@ namespace BattleArena {
 			break;
 		}
 
+		case SSCS_SEND_IN_LOBY_CHAT: {
+			sscs_packet_send_chat_message* chat = reinterpret_cast<sscs_packet_send_chat_message*>(buffer);
+			csss_packet_send_chat_message retmsg{ 1, chat->message, (int)wcslen(chat->message) };
+			client_table_lock.lock();
+			for (auto& cl : client_table)
+				send_packet(cl.second, &retmsg);
+			client_table_lock.unlock();
+			break;
+		}
+
 		default:
 			printf("[CLIENT %d] - Unknown Packet : %d\n", client, packet->type);
 			while (true);

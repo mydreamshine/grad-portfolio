@@ -19,7 +19,7 @@
 #define TEST_FIELD
 
 namespace BattleArena {
-	constexpr auto RECV_BUF_SIZE = 256;
+	constexpr auto RECV_BUF_SIZE = 512;
 
 	void error_display(const char* msg, int err_no);
 
