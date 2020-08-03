@@ -788,8 +788,8 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
             }
 
             // Match Status Test
-            StartMatching = true;
-            OnceTryGameMatching = false;
+            /*StartMatching = true;
+            OnceTryGameMatching = false;*/
         }
         else if (CancelButtonPress == true && CancelButtonUp == false)
         {
@@ -810,8 +810,8 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
             }
 
             // Match Status Test
-            StartMatching = false;
-            OnceTryGameMatching = false;
+            /*StartMatching = false;
+            OnceTryGameMatching = false;*/
         }
 
         if (ChangeButton == true && StartMatching == true && OnceTryGameMatching == false)
