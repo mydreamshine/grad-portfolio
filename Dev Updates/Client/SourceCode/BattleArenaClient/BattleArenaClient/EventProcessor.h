@@ -43,12 +43,15 @@ public:
                 (char)EventData->SelectedCharacter);
         }
             break;
-        case FEC_SEND_CHAT_LOG:
+        case FEC_SEND_IN_GAME_CHAT:
+        case FEC_SEND_IN_LOBY_CHAT:
         {
             EVENT_DATA_SENDING_CHAT_LOG* EventData = reinterpret_cast<EVENT_DATA_SENDING_CHAT_LOG*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_send_chat_message>(
                 m_ClientID,
                 (const wchar_t*)EventData->Message.c_str(), (int)EventData->Message.size());
+            if (Event.Command == FEC_SEND_IN_GAME_CHAT)newPacket->type = SSCS_SEND_IN_GAME_CHAT;
+            else if (Event.Command == FEC_SEND_IN_LOBY_CHAT)newPacket->type = SSCS_SEND_IN_LOBY_CHAT;
         }
             break;
         case FEC_TRY_MOVE_CHARACTER:

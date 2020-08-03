@@ -31,6 +31,7 @@ enum TSS {
 using PACKET_SIZE = unsigned char;
 using PACKET_TYPE = unsigned char;
 constexpr int string_len = 32;
+constexpr int chatting_len = 128;
 
 enum ROOM_MODE {
 	GAMEMODE_DM,
@@ -41,12 +42,13 @@ enum SSCS_PACKET {
 	SSCS_TRY_LOGIN,
 	SSCS_REQUEST_USER_INFO,
 	SSCS_TRY_GAME_MATCHING,
+	SSCS_SEND_IN_LOBY_CHAT,
 	
 	SSCS_TO_LOBBY_TO_BATTLE,
 
 	//To Battle
 	SSCS_TRY_MATCH_LOGIN,
-	SSCS_SEND_CHAT,
+	SSCS_SEND_IN_GAME_CHAT,
 	SSCS_TRY_MOVE_CHARACTER,		//Done.
 	SSCS_TRY_MOVE_STOP_CHARACTER,	//Done.
 	SSCS_TRY_NORMAL_ATTACK,			//DOne.
@@ -236,22 +238,23 @@ struct sscs_packet_send_chat_message : packet_inheritance
 {
 	// contents ref.
 	short client_id{0};
-	wchar_t message[string_len]{};
+	wchar_t message[chatting_len]{};
 
 	sscs_packet_send_chat_message()
 	{
 		size = (PACKET_SIZE)sizeof(sscs_packet_send_chat_message);
-		type = SSCS_SEND_CHAT;
-		for (unsigned char i = 0; i < string_len; ++i)
+		type = SSCS_SEND_IN_LOBY_CHAT;
+		for (unsigned char i = 0; i < chatting_len; ++i)
 			message[i] = 0x00;
 	}
 	sscs_packet_send_chat_message(short clientID, const wchar_t* message_text, int message_text_size)
 	{
 		size = (PACKET_SIZE)sizeof(sscs_packet_send_chat_message);
-		type = SSCS_SEND_CHAT;
+		type = SSCS_SEND_IN_LOBY_CHAT;
+
 		client_id = clientID;
-		unsigned char Message_Text_size = (message_text_size > string_len) ? string_len : (unsigned char)message_text_size;
-		for (unsigned char i = 0; i < string_len; ++i)
+		unsigned char Message_Text_size = (message_text_size > chatting_len) ? chatting_len : (unsigned char)message_text_size;
+		for (unsigned char i = 0; i < chatting_len; ++i)
 		{
 			if (Message_Text_size > i) message[i] = message_text[i];
 			else message[i] = 0x00;

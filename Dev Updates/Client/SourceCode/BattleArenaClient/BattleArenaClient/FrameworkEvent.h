@@ -398,13 +398,14 @@ enum FEC {
 	FEC_MATCH_DEQUEUE,
 	FEC_ACCESS_MATCH,
 	FEC_TRY_MATCH_LOGIN,
+	FEC_SEND_IN_LOBY_CHAT,
     ////////////////////////////////////////////////////////////////////
 
     //// Framework Event Command (Framework 내부에서 발생한 이벤트) /////
     FEC_TRY_LOBBY_LOGIN,
     FEC_GET_USER_INFO,
     FEC_TRY_GAME_MATCHING,
-    FEC_SEND_CHAT_LOG,
+    FEC_SEND_IN_GAME_CHAT,
     FEC_TRY_MOVE_CHARACTER,
     FEC_TRY_MOVESTOP_CHARACTER,
     FEC_TRY_NORMAL_ATTACK,
@@ -722,7 +723,9 @@ public:
 	void ReservateEvent_SendChatLog(std::queue<std::unique_ptr<EVENT>>& Events, char Act_Place,
 		std::wstring Message)
 	{
-		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, Act_Place, FEC_SEND_CHAT_LOG);
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, Act_Place, FEC_SEND_IN_LOBY_CHAT);
+		if (Act_Place == FEP_LOBY_SCENE) newEvent->Command = FEC_SEND_IN_LOBY_CHAT;
+		else if (Act_Place == FEP_PLAYGMAE_SCENE) newEvent->Command = FEC_SEND_IN_GAME_CHAT;
 		auto newEventData = std::make_unique<EVENT_DATA_SENDING_CHAT_LOG>();
 		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::SENDING_CHAT_LOG;
 		newEventData->Message = Message;
