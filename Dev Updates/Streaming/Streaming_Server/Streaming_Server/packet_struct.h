@@ -75,6 +75,7 @@ enum CSSS_PACKET {
 	CSSS_SET_PLAYER_HP,				//Done.
 	CSSS_UPDATE_POISON_FOG_DEACT_AREA,
 	CSSS_SET_GAME_PLAY_TIME_LIMIT,	//When start game, send once.
+	CSSS_SET_IN_GAME_TEAM_SCORE,
 
 	CSSS_SET_KDA_SCORE,				//UI will be updated after implement main logic
 	CSSS_SET_KILL_LOG,
@@ -1075,6 +1076,26 @@ struct csss_packet_send_match_statistic : packet_inheritance
 	}
 };
 
+// ÆÀÀÇ ÃÑ Å³ ¼ö
+struct csss_packet_send_in_game_team_score : packet_inheritance
+{
+	// contents ref.
+	unsigned char in_game_score_team;
+
+	csss_packet_send_in_game_team_score()
+	{
+		size = (PACKET_SIZE)sizeof(csss_packet_send_in_game_team_score);
+		type = CSSS_SET_IN_GAME_TEAM_SCORE;
+	}
+	csss_packet_send_in_game_team_score(
+		unsigned char InGameScore_Team)
+	{
+		size = (PACKET_SIZE)sizeof(csss_packet_send_in_game_team_score);
+		type = CSSS_SET_IN_GAME_TEAM_SCORE;
+
+		in_game_score_team = InGameScore_Team;
+	}
+};
 
 //
 

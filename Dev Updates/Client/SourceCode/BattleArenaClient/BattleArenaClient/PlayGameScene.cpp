@@ -66,38 +66,6 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         }
     }
 
-    {
-        ObjectManager ObjManager;
-        Object* ChattingLogTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
-        Object* ChattingLogInputTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
-        /*ChattingLogObject->m_Textinfo->m_Text.clear();
-        ChattingInputObject->m_Textinfo->m_Text.clear();*/
-        Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
-        Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
-
-        auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
-        auto ChattingLogPopUpButtonTransform = ChattingLogPopUpButtonObject->m_TransformInfo.get();
-        auto& ChattingLogTextPosition = ChattingLogTextObject->m_Textinfo->m_TextPos;
-        auto& ChattingLogInputTextPosition = ChattingLogInputTextObject->m_Textinfo->m_TextPos;
-
-        auto& ChattingLogLayerBound = ChattingLogLayer->m_TransformInfo->m_Bound;
-
-        const float SlidingDistance = -fabsf((-319.0f) - (-(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2));
-
-        XMFLOAT3 ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
-        ChattingLogLayerPos.x += SlidingDistance;
-        XMFLOAT3 ChattingLogPopUpButtonPos = ChattingLogPopUpButtonTransform->GetWorldPosition();
-        ChattingLogPopUpButtonPos.x += SlidingDistance;
-
-        ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
-        ChattingLogLayerTransform->UpdateWorldTransform();
-        ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
-        ChattingLogPopUpButtonTransform->UpdateWorldTransform();
-        ChattingLogTextPosition.x += SlidingDistance;
-        ChattingLogInputTextPosition.x += SlidingDistance;
-    }
-
-
     m_LightRotationAngle = 0.0f;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
@@ -110,22 +78,82 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     GameInfo_CountAssistance = 0;
     GameInfo_CountTeamScore = 0;
 
-    while (KillLogList.empty() != true) KillLogList.pop();
-    ChattingList.clear();
-    inputChat.clear();
-    ChattingLineTextRenderStartIndex = 0;
-    ChattingLayerActivate = false;
-    ChattingLayerSliding = false;
-    InputChatInitFormTextNum = 0;
-    RecvNewChatAlarmActivate = false;
-
     TimeLimit_Sec = 0;
     TimeLimitIntervalTimeStack = 0.0f;
 
     DeActPoisonGasArea = { -3423, 4290, 4577, -3710 };
 
+    while (KillLogList.empty() != true) KillLogList.pop();
     KillLogSlidingStart = false;
     KillLogSlidingInit = false;
+
+    // Initialize Chatting Rel. 
+    {
+        ChattingListMessageBlock.init(MaxChattingLineWidth, MaxChattingLineHeight);
+        InputChatMessageBlock.init(MaxChattingLineWidth, 22.0f);
+
+        ChattingListUpdate = false;
+        ChattingListScrolling = false;
+        ChattingListScrollingIntervalAct = false;
+        ChattingListScrollingTimeStack = 0.0f;
+        ChattingList.clear();
+
+        InputChatCharacterInsertTimeStack = 0.0f;
+        InputChatContinuousInputTimeStack = 0.0f;
+        InputChatCharacterEraseTimeStack = 0.0f;
+        InputChatContinuousEraseTimeStack = 0.0f;
+
+        ContinouseInputIntervalAct = false;
+        ContinouseEraseIntervalAct = false;
+
+        inputMessageCaretPosIndex = 0;
+        MessageBlockCaretPosIndex_inputChat = 0;
+        LastInputText = L'\0';
+        CapsLock = false;
+        CapsLockAct = false;
+        inputChat.clear();
+
+        ChattingLayerActivate = false;
+        ChattingLayerSliding = false;
+
+        ObjectManager ObjManager;
+        Object* ChattingLogTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
+        Object* ChattingInputTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
+        Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
+        Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
+        Object* InputChatCaretObjet = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InputBoxCaret");
+
+        auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
+        auto ChattingInputTextInfo = ChattingInputTextObject->m_Textinfo.get();
+        ChattingLogTextInfo->m_Text.clear();
+        ChattingInputTextInfo->m_Text.clear();
+
+        auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
+        auto ChattingLogPopUpButtonTransform = ChattingLogPopUpButtonObject->m_TransformInfo.get();
+        auto InputChatCaretTransform = InputChatCaretObjet->m_TransformInfo.get();
+        auto& ChattingLogTextPosition = ChattingLogTextObject->m_Textinfo->m_TextPos;
+        auto& ChattingLogInputTextPosition = ChattingInputTextObject->m_Textinfo->m_TextPos;
+
+        auto& ChattingLogLayerBound = ChattingLogLayer->m_TransformInfo->m_Bound;
+
+        const float SlidingDistance = -fabsf((-319.0f) - (-(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2));
+
+        XMFLOAT3 ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+        ChattingLogLayerPos.x += SlidingDistance;
+        XMFLOAT3 ChattingLogPopUpButtonPos = ChattingLogPopUpButtonTransform->GetWorldPosition();
+        ChattingLogPopUpButtonPos.x += SlidingDistance;
+        XMFLOAT3 InputChatCaretPos = InputChatCaretTransform->GetWorldPosition();
+        InputChatCaretPos.x += SlidingDistance;
+
+        ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
+        ChattingLogLayerTransform->UpdateWorldTransform();
+        ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
+        ChattingLogPopUpButtonTransform->UpdateWorldTransform();
+        InputChatCaretTransform->SetWorldPosition(InputChatCaretPos);
+        InputChatCaretTransform->UpdateWorldTransform();
+        ChattingLogTextPosition.x += SlidingDistance;
+        ChattingLogInputTextPosition.x += SlidingDistance;
+    }
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -151,6 +179,8 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     bool Exist_Info_Layer_HP_Text = false;
     bool Exist_Character_Info_Layer = false;
     bool Exist_ChattingPopUpButton = false;
+
+    Object* InputChatCaretObjet = nullptr;
 
     ObjectManager objManager;
 
@@ -223,6 +253,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             else if (Ritem_name.find("GameChattingLog") != std::string::npos) TextObjCreatNum = 2;
             else if (Ritem_name.find("Skill_Icon_Fade") != std::string::npos) TextObjCreatNum = 2;
             else if (Ritem_name.find("Layout_Score") != std::string::npos) TextObjCreatNum = 2;
+            else if (Ritem_name.find("InputBoxCaret") != std::wstring::npos) TextObjCreatNum = 0;
             else if (Ritem_name.find("InfoLayer") != std::string::npos)
             {
                 newObj->m_Name = "CharacterInfoLayer";
@@ -300,8 +331,6 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
                 additionalTextObjets[0]->m_Name = "TextGameChattingInput";
                 additionalTextObjets[1]->m_Name = "TextGameChattingLog";
-                additionalTextObjets[0]->m_Textinfo->m_Text = L"TestInput";
-                additionalTextObjets[1]->m_Textinfo->m_Text = L"TestLog";
 
                 for (int i = 0; i < 2; ++i)
                 {
@@ -315,6 +344,10 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                     text_info->m_TextColor = XMVectorSet(254.0f / 255.0f, 216.0f / 255.0f, 109.0f / 255.0f, 1.0f);
                     text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
                 }
+            }
+            else if (Ritem_name.find("InputBoxCaret") != std::string::npos)
+            {
+                InputChatCaretObjet = newObj;
             }
             else if (objName.find("InfoLayer_HPBar") != std::string::npos && Exist_Info_Layer_HP_Text == true)
             {
@@ -424,6 +457,29 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         }
     }
 
+    if (InputChatCaretObjet != nullptr)
+    {
+        Object* ChattingInputTextObject = objManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
+
+        auto ChattingInputTextInfo = ChattingInputTextObject->m_Textinfo.get();
+        auto InputChatCaretTransform = InputChatCaretObjet->m_TransformInfo.get();
+        auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+        XMFLOAT2 InputChatTextSize = Font->GetStringSize(ChattingInputTextInfo->m_Text);
+        XMFLOAT2 InputChatTextPos = ChattingInputTextInfo->m_TextPos;
+        XMFLOAT3 newInputChatCaretPos = { 0.0f, 0.0f, 0.0f };
+
+        InputChatTextPos.x -= m_width / 2.0f;
+        InputChatTextPos.y -= m_height / 2.0f;
+        InputChatTextPos.y *= -1.0f;
+        newInputChatCaretPos.x = InputChatTextPos.x + InputChatTextSize.x;
+        newInputChatCaretPos.y = InputChatTextPos.y;
+
+        InputChatCaretTransform->SetWorldPosition(newInputChatCaretPos);
+        InputChatCaretTransform->UpdateWorldTransform();
+    }
+
+
     // Create DeActive Objects
     {
         // SkinnedCB를 지닌(Skeleton이 있는) 오브젝트를 생성하면
@@ -519,6 +575,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
     Object* KillLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_KillLog");
     Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
     Object* ChattingInputObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
+    Object* InputChatCaretObjet = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InputBoxCaret");
     Object* TimeLimitObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
     Object* KDA_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextScoreLayer_KDA");
     Object* Team_ScoreObject = ObjManager.FindObjectName(m_TextObjects, "TextScoreLayer_TeamGoalScore");
@@ -736,8 +793,100 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
 
     // Update Chatting Text
     {
-        auto& ChattingLogRenderText = ChattingLogObject->m_Textinfo->m_Text;
-        //ChattingLogRenderText.clear();
+        auto ChattingLogTextInfo = ChattingLogObject->m_Textinfo.get();
+        auto ChattingInputTextInfo = ChattingInputObject->m_Textinfo.get();
+        auto& ChattingLogRenderText = ChattingLogTextInfo->m_Text;
+        auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+        if (ChattingListUpdate == true)
+        {
+            ChattingLogRenderText.clear();
+            auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+            ChattingListMessageBlock.AddMessageLine(ChattingList.back(), Font, L':', WND_MessageBlock::SetMessageBlockPosInMessageLines::BOTTOM);
+            ChattingLogRenderText = ChattingListMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageLines);
+
+            Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
+            auto ChattingLogLayerPos = ChattingLogLayer->m_TransformInfo->GetWorldPosition();
+            auto ChattingLogLayerExtents = ChattingLogLayer->m_TransformInfo->m_Bound.Extents;
+            auto ChattingLogRenderTextSize = Font->GetStringSize(ChattingLogRenderText);
+
+            ChattingLogTextInfo->m_TextPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y * 2 + 30.7f;
+            ChattingLogTextInfo->m_TextPos.y += 26.8f;
+            ChattingLogTextInfo->m_TextPos.y += ChattingLogRenderTextSize.y * 0.5f;
+            ChattingLogTextInfo->m_TextPos.y = m_height / 2.0f - (ChattingLogTextInfo->m_TextPos.y); // Coord Offset
+
+            ChattingListUpdate = false;
+        }
+        else if (ChattingListScrolling == true)
+        {
+            ChattingLogRenderText.clear();
+            auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+            ChattingLogRenderText = ChattingListMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageLines);
+
+            Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
+            auto ChattingLogLayerPos = ChattingLogLayer->m_TransformInfo->GetWorldPosition();
+            auto ChattingLogLayerExtents = ChattingLogLayer->m_TransformInfo->m_Bound.Extents;
+            auto ChattingLogRenderTextSize = Font->GetStringSize(ChattingLogRenderText);
+
+            ChattingLogTextInfo->m_TextPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y * 2 + 30.7f;
+            ChattingLogTextInfo->m_TextPos.y += 26.8f;
+            ChattingLogTextInfo->m_TextPos.y += ChattingLogRenderTextSize.y * 0.5f;
+            ChattingLogTextInfo->m_TextPos.y = m_height / 2.0f - (ChattingLogTextInfo->m_TextPos.y); // Coord Offset
+
+            ChattingListScrolling = false;
+        }
+
+        // Update Caret
+        {
+            auto InputChatCaretTransform = InputChatCaretObjet->m_TransformInfo.get();
+            auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+            XMFLOAT2 InputChatTextSize = {0.0f, 0.0f};
+            if (ChattingInputTextInfo->m_Text.empty() == false)
+            {
+                if (MessageBlockCaretPosIndex_inputChat >= 0)
+                {
+                    wchar_t SpacingWdithHelperCharacter = '.';
+                    int CaretPosAddOffset = 1;
+                    std::wstring InputChatRenderText = ChattingInputTextInfo->m_Text.substr(0, (size_t)MessageBlockCaretPosIndex_inputChat + 1);
+                    if (InputChatRenderText.back() == L' ')
+                    {
+                        InputChatRenderText.push_back(SpacingWdithHelperCharacter);
+                        CaretPosAddOffset++;
+                    }
+
+                    InputChatTextSize = Font->GetStringSize(InputChatRenderText.substr(0, (size_t)MessageBlockCaretPosIndex_inputChat + CaretPosAddOffset));
+                }
+            }
+
+            XMFLOAT2 InputChatTextPos = ChattingInputTextInfo->m_TextPos;
+            XMFLOAT3 newInputChatCaretPos = { 0.0f, 0.0f, 0.0f };
+
+            InputChatTextPos.x -= m_width / 2.0f;
+            InputChatTextPos.y -= m_height / 2.0f;
+            InputChatTextPos.y *= -1.0f;
+            newInputChatCaretPos.x = InputChatTextPos.x + InputChatTextSize.x;
+            newInputChatCaretPos.y = InputChatTextPos.y;
+
+            InputChatCaretTransform->SetWorldPosition(newInputChatCaretPos);
+            InputChatCaretTransform->UpdateWorldTransform();
+
+            if (ChattingLayerActivate == true && ChattingLayerSliding == false)
+            {
+                if (InputChatCaretBlinkTimeStack >= InputChatCaretBlinkInterval)
+                {
+                    if (InputChatCaretTransform->m_TexAlpha == 1.0f)
+                        InputChatCaretTransform->m_TexAlpha = 0.0f;
+                    else if (InputChatCaretTransform->m_TexAlpha == 0.0f)
+                        InputChatCaretTransform->m_TexAlpha = 1.0f;
+                    InputChatCaretBlinkTimeStack = 0.0f;
+                }
+                else InputChatCaretBlinkTimeStack += gt.GetTimeElapsed();
+            }
+            else InputChatCaretBlinkTimeStack = 0.0f;
+        }
     }
 
     // Update TimeLimit Text
@@ -777,7 +926,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
         KDA_ScoreText += L"D:" + std::to_wstring(GameInfo_CountDeath) + L"  ";
         KDA_ScoreText += L"A:" + std::to_wstring(GameInfo_CountAssistance);
 
-        Team_ScoreText = std::to_wstring(GameInfo_CountAssistance) + L"/";
+        Team_ScoreText = std::to_wstring(GameInfo_CountTeamScore) + L"/";
         Team_ScoreText += std::to_wstring(MaxTeamScore);
     }
 }
@@ -1040,6 +1189,7 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
 
         Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
         Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
+        Object* InputChatCaretObjet = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InputBoxCaret");
         Object* ChattingLogTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingLog");
         Object* ChattingLogInputTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameChattingInput");
 
@@ -1048,7 +1198,7 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
         auto& ChattingLogLayerBound = ChattingLogLayer->m_TransformInfo->m_Bound;
         auto& ChattingPopUpButtonBound = ChattingLogPopUpButtonObject->m_TransformInfo->m_Bound;
 
-        if (key_state[VK_LBUTTON] == true)
+        if (key_state[VK_LBUTTON] == true) // Mouse Left Button
         {
             RECT CharacterInfoLayerAreainScreen =
             {
@@ -1106,35 +1256,610 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
                         std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
                         ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
 
-                        auto& InputRenderChat = ChattingLogInputTextObject->m_Textinfo->m_Text;
-                        InputRenderChat = inputChat;
+                        if (inputChat.empty() == true)
+                        {
+                            std::wstring PlayerNameAddInputChat;
+                            if (m_MainPlayer != nullptr)
+                                PlayerNameAddInputChat = m_MainPlayer->m_Name + L": " + inputChat;
+                            else
+                                PlayerNameAddInputChat = L"Unknown: " + inputChat;
+
+                            inputMessageCaretPosIndex = MathHelper::Clamp((int)PlayerNameAddInputChat.size() - 1, 0, (int)PlayerNameAddInputChat.size() - 1);
+
+                            auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                            auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+                            bool MessageCutted = false;
+                            InputChatMessageBlock.GenerateMessageBlockFrom(PlayerNameAddInputChat, Font, MessageCutted, WND_MessageBlock::SetMessageBlockPosInMessageText::RIGHT);
+
+                            ChattingInputTextInfo->m_Text = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                            MessageBlockCaretPosIndex_inputChat = (int)ChattingInputTextInfo->m_Text.size() - 1;
+                        }
                     }
+
                     ChattingLayerSliding = true;
                 }
             }
         }
-        else if (key_state[VK_RETURN] == true)
+
+        if (key_state[VK_RETURN] == true) // Enter Key
         {
             if (ChattingLayerSliding == false)
             {
+                auto& AllRitems = *m_AllRitemsRef;
+                std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
+                ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
+                auto ChattingLogTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                auto& ChattingLogRenderText = ChattingLogTextInfo->m_Text;
+                auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+                std::wstring PlayerNameInputForm;
+                if (m_MainPlayer != nullptr)
+                    PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                else
+                    PlayerNameInputForm = L"Unknown: ";
+
+                std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
                 if (ChattingLayerActivate == false)
                 {
-                    auto& AllRitems = *m_AllRitemsRef;
-                    std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
-                    ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
+                    if (inputChat.empty() == true)
+                    {
+                        auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+                        bool MessageCutted = false;
+                        InputChatMessageBlock.GenerateMessageBlockFrom(PlayerNameInputForm, Font, MessageCutted, WND_MessageBlock::SetMessageBlockPosInMessageText::RIGHT);
+                        ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                        inputMessageCaretPosIndex = (int)ChattingInputRenderText.size() - 1;
+                        MessageBlockCaretPosIndex_inputChat = (int)ChattingInputRenderText.size() - 1;
+                    }
 
                     ChattingLayerActivate = true;
                     ChattingLayerSliding = true;
                 }
 
-                if (inputChat.size() > InputChatInitFormTextNum)
+                if (ChattingLayerSliding == false && inputChat.size() > 0)
                 {
-                    /*EventManager eventManager;
-                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);*/
-                    inputChat = m_MainPlayer->m_Name + L": ";
+                    EventManager eventManager;
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, PlayerNameAddInputText);
+
+                    ChattingList.push_back(PlayerNameAddInputText);
+                    ChattingListUpdate = true;
+                    inputChat.clear();
+                    
+                    auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+                    bool MessageCutted = false;
+                    InputChatMessageBlock.GenerateMessageBlockFrom(PlayerNameInputForm, Font, MessageCutted, WND_MessageBlock::SetMessageBlockPosInMessageText::RIGHT);
+                    ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                    inputMessageCaretPosIndex = (int)ChattingInputRenderText.size() - 1;
+                    MessageBlockCaretPosIndex_inputChat = (int)ChattingInputRenderText.size() - 1;
                 }
             }
         }
+
+        if (key_state[VK_CAPITAL] == true) // CapsLock Key
+        {
+            CapsLockAct = true;
+        }
+        else if (key_state[VK_CAPITAL] == false)
+        {
+            if (CapsLockAct == true)
+            {
+                CapsLock = !CapsLock;
+                CapsLockAct = false;
+            }
+        }
+        
+        if (key_state[VK_UP] == true)
+        {
+            if (ChattingLayerActivate == true && ChattingListScrolling == false)
+            {
+                if (ChattingListScrollingIntervalAct == false)
+                {
+                    auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
+                    auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+                    ChattingListMessageBlock.MoveStartIndex_InMessageLines(-1, Font);
+                    ChattingListScrolling = true;
+
+                    ChattingListScrollingIntervalAct = true;
+                }
+                else
+                {
+                    if (ChattingListScrollingTimeStack >= ChattingListScrollingInterval)
+                    {
+                        auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
+                        auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+                        ChattingListMessageBlock.MoveStartIndex_InMessageLines(-1, Font);
+                        ChattingListScrolling = true;
+
+                        ChattingListScrollingTimeStack = 0.0f;
+                    }
+                    else ChattingListScrollingTimeStack += gt.GetTimeElapsed();
+                }
+            }
+        }
+        else if (key_state[VK_DOWN] == true)
+        {
+            if (ChattingListScrollingIntervalAct == false)
+            {
+                auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
+                auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+                ChattingListMessageBlock.MoveStartIndex_InMessageLines(+1, Font);
+                ChattingListScrolling = true;
+
+                ChattingListScrollingIntervalAct = true;
+            }
+            else
+            {
+                if (ChattingListScrollingTimeStack >= ChattingListScrollingInterval)
+                {
+                    auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
+                    auto Font = (*m_FontsRef)[ChattingLogTextInfo->m_FontName].get();
+
+                    ChattingListMessageBlock.MoveStartIndex_InMessageLines(+1, Font);
+                    ChattingListScrolling = true;
+
+                    ChattingListScrollingTimeStack = 0.0f;
+                }
+                else ChattingListScrollingTimeStack += gt.GetTimeElapsed();
+            }
+        }
+        else
+        {
+            ChattingListScrollingTimeStack = 0.0f;
+            ChattingListScrolling = false;
+            ChattingListScrollingIntervalAct = false;
+        }
+
+        if (ChattingLayerActivate == true)
+        {
+            std::wstring RenderableText;
+            RenderableText.insert(RenderableText.size(), L"0123456789");
+            RenderableText.insert(RenderableText.size(), L"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+            RenderableText.insert(RenderableText.size(), L"abcdefghijklmnopqrstuvwxyz");
+            RenderableText.insert(RenderableText.size(), L" ");
+
+            // insert text
+            {
+                int key_code = 0;
+                wchar_t key_down_text = '\0';
+                bool RenderableText_AllKeyUp = true;
+                for (auto& wchar : RenderableText)
+                {
+                    key_code = (int)wchar;
+                    if (key_state[key_code] == true)
+                    {
+                        if (ContinouseInputIntervalAct == false)
+                        {
+                            LastInputText = wchar;
+
+                            auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                            auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+                            auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+                            wchar_t AddText = wchar;
+                            if (CapsLock == false && 0x41 <= key_code && key_code <= 0x5A)
+                                AddText = (wchar_t)(key_code + 0x20);
+
+                            std::wstring PlayerNameInputForm;
+                            if (m_MainPlayer != nullptr)
+                                PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                            else
+                                PlayerNameInputForm = L"Unknown: ";
+
+                            int InsertIndex = inputMessageCaretPosIndex + 1;
+                            InsertIndex -= (int)PlayerNameInputForm.size();
+                            inputChat.insert((size_t)InsertIndex, 1, AddText);
+
+                            bool MessageCutted = false;
+                            InputChatMessageBlock.AddMessageCharacter(AddText, Font, inputMessageCaretPosIndex + 1, MessageCutted);
+                            ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                            inputMessageCaretPosIndex++;
+                            MessageBlockCaretPosIndex_inputChat
+                                = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+                        }
+
+                        key_down_text = wchar;
+                        if (key_down_text == LastInputText)
+                            ContinouseInputIntervalAct = true;
+                        else
+                            ContinouseInputIntervalAct = false;
+
+                        RenderableText_AllKeyUp = false;
+
+                        break;
+                    }
+                }
+
+                if (RenderableText_AllKeyUp == true)
+                    ContinouseInputIntervalAct = false;
+
+                if (ContinouseInputIntervalAct == true)
+                {
+                    if (InputChatContinuousInputTimeStack >= InputChatContinuousInputInterval)
+                    {
+                        if (InputChatCharacterInsertTimeStack >= InputChatCharacterInsertInterval)
+                        {
+                            if (key_down_text != '\0')
+                            {
+                                auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                                auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+                                auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+
+                                if (CapsLock == false && 0x41 <= key_code && key_code <= 0x5A)
+                                    key_down_text = (wchar_t)(key_code + 0x20);
+
+                                std::wstring PlayerNameInputForm;
+                                if (m_MainPlayer != nullptr)
+                                    PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                                else
+                                    PlayerNameInputForm = L"Unknown: ";
+
+                                int InsertIndex = inputMessageCaretPosIndex + 1;
+                                InsertIndex -= (int)PlayerNameInputForm.size();
+                                inputChat.insert((size_t)InsertIndex, 1, key_down_text);
+
+                                bool MessageCutted = false;
+                                InputChatMessageBlock.AddMessageCharacter(key_down_text, Font, inputMessageCaretPosIndex + 1, MessageCutted);
+                                ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                                inputMessageCaretPosIndex++;
+                                MessageBlockCaretPosIndex_inputChat
+                                    = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+                            }
+                            InputChatCharacterInsertTimeStack = 0.0f;
+                        }
+                        else InputChatCharacterInsertTimeStack += gt.GetTimeElapsed();
+                    }
+                    else InputChatContinuousInputTimeStack += gt.GetTimeElapsed();
+                }
+                else
+                {
+                    InputChatCharacterInsertTimeStack = 0.0f;
+                    InputChatContinuousInputTimeStack = 0.0f;
+                    ContinouseInputIntervalAct = false;
+                }
+            }
+
+            // erase text
+            {
+                if (key_state[VK_BACK] == true || key_state[VK_DELETE] == true)
+                {
+                    if (ContinouseEraseIntervalAct == false)
+                    {
+                        if (inputChat.empty() == false)
+                        {
+                            auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                            auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+                            auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+                            int ErasePosIndex = inputMessageCaretPosIndex;
+
+                            std::wstring PlayerNameInputForm;
+                            if (m_MainPlayer != nullptr)
+                                PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                            else
+                                PlayerNameInputForm = L"Unknown: ";
+                            std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
+                            if (key_state[VK_DELETE] == true)
+                            {
+                                if (inputMessageCaretPosIndex > (int)PlayerNameInputForm.size())
+                                {
+                                    ErasePosIndex
+                                        = MathHelper::Clamp(inputMessageCaretPosIndex + 1, (int)PlayerNameInputForm.size() - 1, (int)PlayerNameAddInputText.size() - 1);
+                                }
+                            }
+
+                            int ErasePrevStartIdex_inMessageText = InputChatMessageBlock.GetStartIndex_InMessageText();
+                            int EraseAfterStartIndex_inMessageText = 0;
+                            if (ErasePosIndex >= PlayerNameInputForm.size())
+                            {
+                                if ((inputMessageCaretPosIndex != ((int)PlayerNameAddInputText.size() - 1)) || key_state[VK_DELETE] != true)
+                                {
+                                    bool MessageCutted = false;
+                                    InputChatMessageBlock.EraseMessageCharacter(ErasePosIndex, Font, MessageCutted);
+                                    ErasePosIndex -= (int)PlayerNameInputForm.size();
+                                    inputChat.erase(ErasePosIndex, 1);
+
+                                    EraseAfterStartIndex_inMessageText = InputChatMessageBlock.GetStartIndex_InMessageText();
+                                }
+                            }
+
+                            ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                            if (key_state[VK_DELETE] == true)
+                            {
+                                if (ErasePosIndex == (int)PlayerNameAddInputText.size() - 1)
+                                    inputMessageCaretPosIndex = (int)PlayerNameAddInputText.size() - 1;
+
+                                if (ErasePrevStartIdex_inMessageText != EraseAfterStartIndex_inMessageText)
+                                {
+                                    MessageBlockCaretPosIndex_inputChat
+                                        = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+                                }
+                            }
+
+                            PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
+                            if (key_state[VK_BACK] == true)
+                            {
+                                inputMessageCaretPosIndex
+                                    = MathHelper::Clamp(inputMessageCaretPosIndex - 1, (int)PlayerNameInputForm.size() - 1, (int)PlayerNameAddInputText.size() - 1);
+
+                                if (ErasePrevStartIdex_inMessageText == EraseAfterStartIndex_inMessageText)
+                                {
+                                    if (PlayerNameAddInputText.size() <= ChattingInputRenderText.size())
+                                    {
+                                        MessageBlockCaretPosIndex_inputChat
+                                            = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, (int)PlayerNameInputForm.size() - 1, (int)ChattingInputRenderText.size() - 1);
+                                    }
+                                    else
+                                    {
+                                        MessageBlockCaretPosIndex_inputChat
+                                            = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, -1, (int)ChattingInputRenderText.size() - 1);
+                                    }
+                                }
+                            }
+                        }
+
+                        ContinouseEraseIntervalAct = true;
+                    }
+
+                    if (InputChatContinuousEraseTimeStack >= InputChatContinuousEraseInterval)
+                    {
+                        if (InputChatCharacterEraseTimeStack >= InputChatCharacterEraseInterval)
+                        {
+                            auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                            auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+                            auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+                            if (inputChat.empty() == false)
+                            {
+                                int ErasePosIndex = inputMessageCaretPosIndex;
+
+                                std::wstring PlayerNameInputForm;
+                                if (m_MainPlayer != nullptr)
+                                    PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                                else
+                                    PlayerNameInputForm = L"Unknown: ";
+                                std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
+                                if (key_state[VK_DELETE] == true)
+                                {
+                                    if (inputMessageCaretPosIndex > (int)PlayerNameInputForm.size())
+                                    {
+                                        ErasePosIndex
+                                            = MathHelper::Clamp(inputMessageCaretPosIndex + 1, (int)PlayerNameInputForm.size() - 1, (int)PlayerNameAddInputText.size() - 1);
+                                    }
+                                }
+
+                                int ErasePrevStartIdex_inMessageText = InputChatMessageBlock.GetStartIndex_InMessageText();
+                                int EraseAfterStartIndex_inMessageText = 0;
+                                if (ErasePosIndex >= PlayerNameInputForm.size())
+                                {
+                                    if ((inputMessageCaretPosIndex != ((int)PlayerNameAddInputText.size() - 1)) || key_state[VK_DELETE] != true)
+                                    {
+                                        bool MessageCutted = false;
+                                        InputChatMessageBlock.EraseMessageCharacter(ErasePosIndex, Font, MessageCutted);
+                                        ErasePosIndex -= (int)PlayerNameInputForm.size();
+                                        inputChat.erase(ErasePosIndex, 1);
+
+                                        EraseAfterStartIndex_inMessageText = InputChatMessageBlock.GetStartIndex_InMessageText();
+                                    }
+                                }
+
+                                ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                                if (key_state[VK_DELETE] == true)
+                                {
+                                    if (ErasePosIndex == (int)PlayerNameAddInputText.size() - 1)
+                                        inputMessageCaretPosIndex = (int)PlayerNameAddInputText.size() - 1;
+
+                                    if (ErasePrevStartIdex_inMessageText != EraseAfterStartIndex_inMessageText)
+                                    {
+                                        MessageBlockCaretPosIndex_inputChat
+                                            = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+                                    }
+                                }
+
+                                PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
+                                if (key_state[VK_BACK] == true)
+                                {
+                                    inputMessageCaretPosIndex
+                                        = MathHelper::Clamp(inputMessageCaretPosIndex - 1, (int)PlayerNameInputForm.size() - 1, (int)PlayerNameAddInputText.size() - 1);
+
+                                    if (ErasePrevStartIdex_inMessageText == EraseAfterStartIndex_inMessageText)
+                                    {
+                                        if (PlayerNameAddInputText.size() <= ChattingInputRenderText.size())
+                                        {
+                                            MessageBlockCaretPosIndex_inputChat
+                                                = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, (int)PlayerNameInputForm.size() - 1, (int)ChattingInputRenderText.size() - 1);
+                                        }
+                                        else
+                                        {
+                                            MessageBlockCaretPosIndex_inputChat
+                                                = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, -1, (int)ChattingInputRenderText.size() - 1);
+                                        }
+                                    }
+                                }
+                            }
+
+                            InputChatCharacterEraseTimeStack = 0.0f;
+                        }
+                        else InputChatCharacterEraseTimeStack += gt.GetTimeElapsed();
+                    }
+                    else InputChatContinuousEraseTimeStack += gt.GetTimeElapsed();
+                }
+                else
+                {
+                    InputChatContinuousEraseTimeStack = 0.0f;
+                    InputChatCharacterEraseTimeStack = 0.0f;
+                    ContinouseEraseIntervalAct = false;
+                }
+            }
+
+            // Move Caret
+            {
+                if (key_state[VK_LEFT] == true)
+                {
+                    auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                    auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+                    auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+                    std::wstring PlayerNameInputForm;
+                    if (m_MainPlayer != nullptr)
+                        PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                    else
+                        PlayerNameInputForm = L"Unknown: ";
+
+                    std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+
+                    if (InputBoxScrollingAct == false)
+                    {
+                        if (MessageBlockCaretPosIndex_inputChat == -1)
+                        {
+                            bool MessageCutted = false;
+                            InputChatMessageBlock.MoveStartIndex_InMessageText(-1, Font, MessageCutted);
+                            ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+                        }
+
+                        if (PlayerNameAddInputText.size() > ChattingInputRenderText.size())
+                        {
+                            if (inputMessageCaretPosIndex == (int)PlayerNameInputForm.size())
+                            {
+                                bool MessageCutted = false;
+                                InputChatMessageBlock.MoveStartIndex_InMessageText(-(int)(PlayerNameInputForm.size()), Font, MessageCutted);
+                                ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                                MessageBlockCaretPosIndex_inputChat = (int)PlayerNameInputForm.size() - 1;
+                            }
+                            else
+                            {
+                                MessageBlockCaretPosIndex_inputChat
+                                    = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, -1, (int)ChattingInputRenderText.size() - 1);
+                            }
+                        }
+                        else
+                        {
+                            MessageBlockCaretPosIndex_inputChat
+                                = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, (int)PlayerNameInputForm.size() - 1, (int)ChattingInputRenderText.size() - 1);
+                        }
+
+                        inputMessageCaretPosIndex
+                            = MathHelper::Clamp(inputMessageCaretPosIndex - 1, (int)PlayerNameInputForm.size(), (int)PlayerNameAddInputText.size() - 1);
+
+                        InputBoxScrollingAct = true;
+                    }
+                    else
+                    {
+                        if (InputBoxScorllingTimeStack >= InputBoxScrollingInterval)
+                        {
+                            if (MessageBlockCaretPosIndex_inputChat == -1)
+                            {
+                                bool MessageCutted = false;
+                                InputChatMessageBlock.MoveStartIndex_InMessageText(-1, Font, MessageCutted);
+                                ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+                            }
+
+                            if (PlayerNameAddInputText.size() > ChattingInputRenderText.size())
+                            {
+                                if (inputMessageCaretPosIndex == (int)PlayerNameInputForm.size())
+                                {
+                                    bool MessageCutted = false;
+                                    InputChatMessageBlock.MoveStartIndex_InMessageText(-(int)(PlayerNameInputForm.size()), Font, MessageCutted);
+                                    ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+
+                                    MessageBlockCaretPosIndex_inputChat = (int)PlayerNameInputForm.size() - 1;
+                                }
+                                else
+                                {
+                                    MessageBlockCaretPosIndex_inputChat
+                                        = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, -1, (int)ChattingInputRenderText.size() - 1);
+                                }
+                            }
+                            else
+                            {
+                                MessageBlockCaretPosIndex_inputChat
+                                    = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat - 1, (int)PlayerNameInputForm.size() - 1, (int)ChattingInputRenderText.size() - 1);
+                            }
+
+                            inputMessageCaretPosIndex
+                                = MathHelper::Clamp(inputMessageCaretPosIndex - 1, (int)PlayerNameInputForm.size(), (int)PlayerNameAddInputText.size() - 1);
+
+                            ChattingListScrollingTimeStack = 0.0f;
+                        }
+                        else ChattingListScrollingTimeStack += gt.GetTimeElapsed();
+                    }
+                }
+                else if (key_state[VK_RIGHT] == true)
+                {
+                    auto ChattingInputTextInfo = ChattingLogInputTextObject->m_Textinfo.get();
+                    auto Font = (*m_FontsRef)[ChattingInputTextInfo->m_FontName].get();
+                    auto& ChattingInputRenderText = ChattingInputTextInfo->m_Text;
+
+                    std::wstring PlayerNameInputForm;
+                    if (m_MainPlayer != nullptr)
+                        PlayerNameInputForm = m_MainPlayer->m_Name + L": ";
+                    else
+                        PlayerNameInputForm = L"Unknown: ";
+
+                    if (InputBoxScrollingAct == false)
+                    {
+                        if (MessageBlockCaretPosIndex_inputChat == (int)ChattingInputRenderText.size() - 1)
+                        {
+                            bool MessageCutted = false;
+                            InputChatMessageBlock.MoveStartIndex_InMessageText(+1, Font, MessageCutted);
+                            ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+                        }
+
+                        std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+                        inputMessageCaretPosIndex
+                            = MathHelper::Clamp(inputMessageCaretPosIndex + 1, -1, (int)PlayerNameAddInputText.size() - 1);
+                        MessageBlockCaretPosIndex_inputChat
+                            = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+
+                        InputBoxScrollingAct = true;
+                    }
+                    else
+                    {
+                        if (InputBoxScorllingTimeStack >= InputBoxScrollingInterval)
+                        {
+                            if (MessageBlockCaretPosIndex_inputChat == (int)ChattingInputRenderText.size() - 1)
+                            {
+                                bool MessageCutted = false;
+                                InputChatMessageBlock.MoveStartIndex_InMessageText(+1, Font, MessageCutted);
+                                ChattingInputRenderText = InputChatMessageBlock.GetMessageBlock(Font, WND_MessageBlock::MessageBlockFrom::MessageText);
+                            }
+
+                            std::wstring PlayerNameAddInputText = PlayerNameInputForm + inputChat;
+                            inputMessageCaretPosIndex
+                                = MathHelper::Clamp(inputMessageCaretPosIndex + 1, -1, (int)PlayerNameAddInputText.size() - 1);
+                            MessageBlockCaretPosIndex_inputChat
+                                = MathHelper::Clamp(MessageBlockCaretPosIndex_inputChat + 1, -1, (int)ChattingInputRenderText.size() - 1);
+
+                            ChattingListScrollingTimeStack = 0.0f;
+                        }
+                        else ChattingListScrollingTimeStack += gt.GetTimeElapsed();
+                    }
+                }
+                else
+                {
+                    InputBoxScorllingTimeStack = 0.0f;
+                    InputBoxScrollingAct = false;
+                }
+            }
+        }
+
 
         if (ChattingLayerSliding == true)
         {
@@ -1189,7 +1914,7 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
         }
     }
 
-    if (m_MainPlayer != nullptr && UI_Click == false)
+    if (m_MainPlayer != nullptr && UI_Click == false && ChattingLayerActivate == false)
     {
         CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
         m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt, m_GroundObj, GeneratedEvents);
@@ -1338,12 +2063,23 @@ void PlayGameScene::SpawnPlayer(
             if (IsMainPlayer == true)
             {
                 Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+
+                // Set Other Player HP Bar Ritem (피아식별용)
+                OBJECT_PROPENSITY mainPlayerPropensity = Propensity;
+                for (auto& Player_iter : m_Players)
+                {
+                    auto otherPlayer = Player_iter.second.get();
+                    auto otherPlayerPropensity = otherPlayer->m_CharacterObjRef->Propensity;
+                    auto& otherPlayerRitems = otherPlayer->m_CharacterObjRef->m_RenderItems;
+                    if (otherPlayerPropensity == mainPlayerPropensity)
+                        otherPlayerRitems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+                    else
+                        otherPlayerRitems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                }
             }
             else
             {
-                OBJECT_PROPENSITY mainPlayerPropensity = m_MainPlayer->m_CharacterObjRef->Propensity;
-                if (mainPlayerPropensity == Propensity) Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
-                else Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
             }
             objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Dest - Instancing", Ritems);
             Ritems = { AllRitems["UI_Layout_HPBarIncrease"].get() };
@@ -1406,9 +2142,6 @@ void PlayGameScene::SpawnPlayer(
                 break;
             }
             CharacterInfoLayer->m_RenderItems = InfoLayer_Ritems;
-
-            inputChat = m_MainPlayer->m_Name + L": ";
-            InputChatInitFormTextNum = inputChat.size();
         }
         m_Players[newCharacterObj->m_CE_ID] = std::move(newPlayer);
     }
@@ -1734,6 +2467,7 @@ void PlayGameScene::SetCharacterMotion(int CE_ID, MOTION_TYPE MotionType, float 
         {
             AnimInfo->AnimStop(CurrPlayingAction);
             AnimInfo->AnimPlay(newActionType);
+            AnimInfo->AnimLoop(newActionType, false);
         }
         if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
             AnimInfo->AnimLoop(newActionType);
@@ -1823,6 +2557,16 @@ void PlayGameScene::SetChatLog(std::wstring Message)
 {
     if (ChattingList.size() == MaxChattingLog) ChattingList.pop_front();
     ChattingList.push_back(Message);
+    ChattingListUpdate = true;
+
+    ObjectManager ObjManager;
+    Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
+    if (ChattingLayerActivate == false)
+    {
+        auto& AllRitems = *m_AllRitemsRef;
+        std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton_alarm"].get() };
+        ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
+    }
 }
 
 void PlayGameScene::SetGamePlayTimeLimit(unsigned int Sec)
@@ -1837,4 +2581,9 @@ void PlayGameScene::SetPlayerHP(int CE_ID, int HP)
     Player* ControledPlayer = Player_iter->second.get();
 
     ControledPlayer->SetHP(HP);
+}
+
+void PlayGameScene::SetInGameTeamScore(unsigned char InGameScore_Team)
+{
+    GameInfo_CountTeamScore = InGameScore_Team;
 }

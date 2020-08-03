@@ -113,6 +113,8 @@ public:
         unsigned char Count_Kill, unsigned char Count_Death, unsigned char Count_Assistance,
         int TotalScore_Damage, int TotalScore_Heal,
         CHARACTER_TYPE PlayedCharacterType) {}
+    // In Game Team Score (Team's Total Kill)
+    virtual void SetInGameTeamScore(unsigned char InGameScore_Team) {}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

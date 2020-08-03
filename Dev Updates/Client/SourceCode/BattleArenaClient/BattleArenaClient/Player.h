@@ -28,6 +28,8 @@ struct Player
 
 	OBJECT_PROPENSITY MainPlayerPropensity = OBJECT_PROPENSITY::NON;
 
+	bool oldMouseButtonDown = false;
+
 public:
 	void SetTransform(const DirectX::XMFLOAT3& Scale, const DirectX::XMFLOAT3& RotationEuler, const DirectX::XMFLOAT3& Position);
 	void PlayMotion(MOTION_TYPE MotionType, float MotionSpeed = 1.0f, SKILL_TYPE SkillMotionType = SKILL_TYPE::NON);

@@ -272,7 +272,8 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         UILayerBacground_Meshes["UI_Layout_GameTimeLimit"]          = geoGen.CreateQuad( -60.0f * wnd_x_factor * 1.4f,  340.0f * wnd_y_factor, 100.0f * wnd_x_factor * 1.4f,  48.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Score"]                  = geoGen.CreateQuad(332.5f * wnd_x_factor,  330.0f * wnd_y_factor, 271.3f * wnd_x_factor,  203.0f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_KillLog"]                = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 497.0f * wnd_x_factor,  73.0f * wnd_y_factor, 0.3f);
-        UILayerBacground_Meshes["UI_Layout_GameChattingLog"]      = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.01f);
+        UILayerBacground_Meshes["UI_Layout_GameChattingLog"]        = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.02f);
+        UILayerBacground_Meshes["UI_Layout_InputBoxCaret"]          = geoGen.CreateQuad(-1.0f, 10.0f, 1.0f, 20.0f, 0.01f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton"]       = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton_alarm"] = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_HPBarDest_Enemy"]        = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
@@ -541,6 +542,8 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/Background_SkullPattern.png",
         m_additionalAssetPath + "UI/Layout/id_input_box_layout_test.tga",
         m_additionalAssetPath + "UI/Layout/password_input_box_layout_test.tga",
+        m_additionalAssetPath + "UI/Layout/caret_white.png",
+        m_additionalAssetPath + "UI/Layout/caret_black.png",
         m_additionalAssetPath + "UI/Layout/LeftButton.png",
         m_additionalAssetPath + "UI/Layout/RightButton.png",
         m_additionalAssetPath + "UI/Layout/LeftButton_Press.png",
@@ -928,6 +931,10 @@ void ResourceManager::BuildRenderItems()
                     else
                         SceneRitems[subMeshName]->Mat = m_Materials["ChattingPopUpButton"].get();
                 }
+            }
+            else if (subMeshName.find("InputBoxCaret") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["caret_white"].get();
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }

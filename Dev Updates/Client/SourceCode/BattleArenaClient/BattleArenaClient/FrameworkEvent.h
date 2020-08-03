@@ -35,7 +35,8 @@ enum class FRAMEWORK_EVENT_DATA_TYPE : char
 	PLAYER_HP,
 	MATCH_STATISTIC_INFO,
 	MOVE_INFO,
-	ROTATION_INFO
+	ROTATION_INFO,
+	IN_GAME_TEAM_SCORE_INFO,
 };
 
 // 오브젝트 성향
@@ -292,6 +293,11 @@ struct EVENT_DATA_ACCESS_MATCH : EVENT_DATA
 	int room_id;
 };
 
+struct EVENT_DATA_IN_GAME_TEAM_SCORE : EVENT_DATA
+{
+	unsigned char InGameScore_Team;
+};
+
 
 #pragma pack(pop)
 
@@ -385,6 +391,7 @@ enum FEC {
     FEC_SET_GAME_PLAY_TIME_LIMIT,
     FEC_SET_PLAYER_HP,
     FEC_SET_MATCH_STATISTIC_INFO,
+	FEC_SET_IN_GAME_TEAM_SCORE,
 
 	// For lobby.
 	FEC_MATCH_ENQUEUE,
@@ -668,6 +675,17 @@ public:
 		newEventData->TotalScore_Damage = TotalScore_Damage;
 		newEventData->TotalScore_Heal = TotalScore_Heal;
 		newEventData->PlayedCharacterType = PlayedCharacterType;
+		newEvent->Data = std::move(newEventData);
+		Events.push(std::move(newEvent));
+	}
+
+	void ReservateEvent_SetInGameTeamScore(std::queue<std::unique_ptr<EVENT>>& Events,
+		unsigned char InGameScore_Team)
+	{
+		std::unique_ptr<EVENT> newEvent = std::make_unique<EVENT>(FRAMEWORK_EVENT_TYPE::DO_DIRECT, -1, -1, FEP_PLAYGMAE_SCENE, FEC_SET_IN_GAME_TEAM_SCORE);
+		auto newEventData = std::make_unique<EVENT_DATA_IN_GAME_TEAM_SCORE>();
+		newEventData->EventType = FRAMEWORK_EVENT_DATA_TYPE::IN_GAME_TEAM_SCORE_INFO;
+		newEventData->InGameScore_Team = InGameScore_Team;
 		newEvent->Data = std::move(newEventData);
 		Events.push(std::move(newEvent));
 	}

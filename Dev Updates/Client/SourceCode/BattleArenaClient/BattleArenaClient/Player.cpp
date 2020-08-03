@@ -25,6 +25,7 @@ void Player::PlayMotion(MOTION_TYPE MotionType, float MotionSpeed, SKILL_TYPE Sk
 	{
 		AnimInfo->AnimStop(CurrPlayingAction);
 		AnimInfo->AnimPlay(newActionType);
+		AnimInfo->AnimLoop(newActionType, false);
 	}
 	if (newActionType == AnimActionType::Idle || newActionType == AnimActionType::Walk)
 		AnimInfo->AnimLoop(newActionType);
@@ -156,11 +157,12 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 	{
 		if (ActionType == aiModelData::AnimActionType::Attack) return;
 		if (ActionType == aiModelData::AnimActionType::SkillPose) return;
+		if (oldMouseButtonDown == true) return;
+		else oldMouseButtonDown = true;
 
 		float Yaw_angle = 0.0f;
 		if (Player::ProcessPicking(oldCursorPos, ViewPort, gt, GroundObject, Yaw_angle, GeneratedEvents) == true)
 		{
-
 			if (key_state[VK_LBUTTON] == true)
 			{
 				eventManager.ReservateEvent_TryNormalAttack(GeneratedEvents, Act_Object, Yaw_angle);
@@ -186,6 +188,7 @@ void Player::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 			}
 		}
 	}
+	else oldMouseButtonDown = false;
 }
 
 bool Player::ProcessPicking(const POINT& oldCursorPos, const CD3DX12_VIEWPORT& ViewPort, CTimer& gt,
@@ -311,12 +314,19 @@ void Player::UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewP
 
 	auto PlayerTransformInfo = m_CharacterObjRef->m_TransformInfo.get();
 	XMFLOAT3 CharacterPos = PlayerTransformInfo->GetWorldPosition();
-	XMVECTOR CHARACTER_POS = XMLoadFloat3(&CharacterPos);
+	XMFLOAT4 CharacterPOS = { CharacterPos.x, CharacterPos.y, CharacterPos.z, 1.0f };
+	XMVECTOR CHARACTER_POS = XMLoadFloat4(&CharacterPOS);
 
-	XMVECTOR SCREEN_POS = XMVector3TransformCoord(CHARACTER_POS, VIEWPROJ);
-	XMFLOAT3 CharacterPosFromScreenCoord; XMStoreFloat3(&CharacterPosFromScreenCoord, SCREEN_POS);
-	CharacterPosFromScreenCoord.x *= ViewPort.Width;
-	CharacterPosFromScreenCoord.y *= ViewPort.Height;
+	XMVECTOR SCREEN_POS = XMVector4Transform(CHARACTER_POS, VIEWPROJ);
+	XMFLOAT4 CharacterPosFromScreenCoord; XMStoreFloat4(&CharacterPosFromScreenCoord, SCREEN_POS);
+	float ProjDivision = CharacterPosFromScreenCoord.w;
+	if (compareFloat(ProjDivision, 0.0f) != true)
+	{
+		CharacterPosFromScreenCoord.x /= ProjDivision;
+		CharacterPosFromScreenCoord.y /= ProjDivision;
+	}
+	CharacterPosFromScreenCoord.x *= ViewPort.Width * 0.5f;
+	CharacterPosFromScreenCoord.y *= ViewPort.Height * 0.5f;
 
 	CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
 	float CharacterCurrHP = (float)m_CharacterObjRef->HP;
@@ -338,7 +348,7 @@ void Player::UpdateUITransform(Camera* MainCamera, const CD3DX12_VIEWPORT& ViewP
 		auto TransformInfo = HP_bar_e->m_TransformInfo.get();
 
 		// Set Pos
-		XMFLOAT3 HP_Bar_Pos = CharacterPosFromScreenCoord;
+		XMFLOAT3 HP_Bar_Pos = { CharacterPosFromScreenCoord.x, CharacterPosFromScreenCoord.y, CharacterPosFromScreenCoord.z };
 		HP_Bar_Pos.x -= 35.0f; // Offset x;
 		HP_Bar_Pos.y += 12.5f + 80.0f; // Offset y;
 		HP_Bar_Pos.z = 0.0f;
