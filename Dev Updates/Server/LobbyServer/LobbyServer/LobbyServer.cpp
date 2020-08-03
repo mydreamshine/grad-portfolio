@@ -175,21 +175,25 @@ namespace BattleArena {
 		{
 			GetQueuedCompletionStatus(m_iocp, &ReceivedBytes, &key, &over, INFINITE);
 
-			if (0 == ReceivedBytes) {
-				disconnect_client(key);
-				continue;
-			}
+
 
 			OVER_EX* over_ex = reinterpret_cast<OVER_EX*>(over);
 			DWORD client = static_cast<DWORD>(key);
 			switch (over_ex->event_type())
 			{
 			case EV_CLIENT:
-				process_client_packet(client, over_ex->data());
-				m_clients[client].set_recv();
+				if (0 == ReceivedBytes) {
+					disconnect_client(key);
+					continue;
+				}
+				else {
+					process_client_packet(client, over_ex->data());
+					m_clients[client].set_recv();
+				}
 				break;
 
 			case EV_BATTLE:
+
 				process_battle_packet(client, over_ex->data());
 				m_clients[client].set_recv();
 				break;

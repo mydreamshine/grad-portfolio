@@ -121,7 +121,6 @@ namespace BattleArena {
 		short BATTLE_PORT{0};
 		std::wstring BATTLE_ADDR{};
 		
-
 		std::vector<std::thread> m_threads; ///< threads for server.
 		std::atomic<int> player_num; ///< use for clients index.
 		HANDLE m_iocp; ///< handle for iocp.
