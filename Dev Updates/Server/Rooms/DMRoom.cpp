@@ -501,6 +501,7 @@ void DMRoom::update_score_heal(short obj_id, int heal)
 void DMRoom::update_score_kill(short obj_id)
 {
 	m_score[obj_id].count_kill += 1;
+	kill_count[m_heros[obj_id]->propensity] += 1;
 	update_score_packet(obj_id);
 }
 

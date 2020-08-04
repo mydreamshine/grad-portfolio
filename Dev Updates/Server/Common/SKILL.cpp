@@ -101,8 +101,16 @@ void NORMAL_ATTACK::effect(HERO* hero)
 		hero->update_assister(owner_id);
 		world->update_score_kill(owner_id);
 		world->update_score_death(hero->object_id);
-		csss_packet_send_kill_message packet{ owner_id, hero->object_id };
-		world->event_data.emplace_back(&packet, packet.size);
+		csss_packet_send_kill_message kill_msg{ owner_id, hero->object_id };
+		world->event_data.emplace_back(&kill_msg, kill_msg.size);
+
+		csss_packet_send_in_game_team_score update_team_score{ world->kill_count[propensity] };
+		world->socket_lock.lock();
+		for (auto& hero : world->m_heros) {
+			if (hero.second->propensity == propensity && world->sockets.count(hero.second->object_id) != 0)
+				world->send_packet(world->sockets[hero.second->object_id], &update_team_score, update_team_score.size);
+		}
+		world->socket_lock.unlock();
 	}
 	else {
 		hero->impact();
@@ -147,10 +155,14 @@ void HOLY_AREA::effect(HERO* hero)
 	if (hero->propensity != propensity) return;
 	if (hero->character_state == (char)PLAYER_STATE::ACT_DIE) return;
 
-	if (effect_time >= HOLY_AREA_EFFECT_RATE) {
-		int delta = hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
-		if(delta != 0)
-			world->update_score_heal(owner_id, -delta);
+	Vector3d deltaPos = hero->pos - this->pos;
+	if (deltaPos.square() <= 1000000.0f) {
+
+			if (effect_time >= HOLY_AREA_EFFECT_RATE) {
+				int delta = hero->set_hp(hero->hp + HOLY_AREA_HEAL_AMOUNT);
+				if (delta != 0)
+					world->update_score_heal(owner_id, -delta);
+			}
 	}
 }
 

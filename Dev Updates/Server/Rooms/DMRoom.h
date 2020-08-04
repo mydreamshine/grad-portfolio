@@ -88,4 +88,5 @@ private:
 	friend BERSERKER;
 	friend PRIEST;
 	friend ASSASSIN;
+	friend NORMAL_ATTACK;
 };
