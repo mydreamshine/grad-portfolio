@@ -98,6 +98,11 @@ namespace BattleArena {
 	void LOBBYSERVER::InitClients()
 	{
 		wprintf(L"Initializing Clients...");
+		ID_LOCK.lock();
+		for (int i = 0; i < MAX_USER; ++i)
+			ID_LIST.emplace_back(i);
+		ID_LOCK.unlock();
+
 		m_clients = new CLIENT[MAX_USER + 1];
 		wprintf(L" Done.\n");
 	}
@@ -151,12 +156,26 @@ namespace BattleArena {
 		{
 			clientSocket = accept(m_listenSocket, clientAddr.getSockAddr(), clientAddr.len());
 			
-			int new_id = player_num++;
+			int new_id = -1;
+			ID_LOCK.lock();
+			if (false == ID_LIST.empty()) {
+				new_id = ID_LIST.front();  ID_LIST.pop_front();
+			}
+			ID_LOCK.unlock();
+			CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientSocket), m_iocp, new_id, 0);
+
+			if (new_id == -1) {
+				csss_packet_login_fail packet{};
+				OVER_EX* send_over = new OVER_EX{ EV_SEND, &packet };
+				WSASend(clientSocket, send_over->buffer(), 1, 0, 0, send_over->overlapped(), 0);
+				closesocket(clientSocket);
+				continue;
+			}
+
 			m_clients[new_id].socket = clientSocket;
 			m_clients[new_id].state = ST_IDLE;
 			m_clients[new_id].recv_over.init(RECV_BUFFER_SIZE);
 			m_clients[new_id].recv_over.set_event(EV_CLIENT);
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_clients[new_id].socket), m_iocp, new_id, 0);
 			std::wcout << L"[CLIENT - " << new_id << L"] Accept" << std::endl;
 			m_clients[new_id].set_recv();
 		}
@@ -525,6 +544,8 @@ namespace BattleArena {
 */
 	void LOBBYSERVER::disconnect_client(int client)
 	{
+		if (client < 0) return;
+
 		std::wcout << L"[CLIENT - " << m_clients[client].id << L"] Disconnected" << std::endl;
 		if (m_clients[client].state == ST_QUEUE)
 			match_dequeue(client);
@@ -539,7 +560,11 @@ namespace BattleArena {
 		memset(&m_clients[client].id, 0, sizeof(m_clients[client].id));
 		closesocket(m_clients[client].socket);
 		m_clients[client].friendlist.clear();
-		m_clients[client].socket = INVALID_SOCKET;
+		--player_num;
+
+		ID_LOCK.lock();
+		ID_LIST.emplace_back(client);
+		ID_LOCK.unlock();
 	}
 	/**
 @brief insert client to client_table

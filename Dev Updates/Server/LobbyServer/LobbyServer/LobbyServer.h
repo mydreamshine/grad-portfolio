@@ -122,11 +122,13 @@ namespace BattleArena {
 		std::wstring BATTLE_ADDR{};
 		
 		std::vector<std::thread> m_threads; ///< threads for server.
-		std::atomic<int> player_num; ///< use for clients index.
+		std::atomic<int> player_num; ///< current player nums.
 		HANDLE m_iocp; ///< handle for iocp.
 		SOCKET m_listenSocket; ///< socket for listening client.
 		SOCKET m_battleSocket; ///< socket for connecting battle server.
 		
+		std::list<int> ID_LIST;
+		std::mutex ID_LOCK;
 		CLIENT* m_clients; ///< array for clients.
 		std::mutex client_table_lock; ///< lock for m_clients.
 		std::map<int, int> client_table; ///<connected user table that consist of (user UID, m_clients's INDEX).

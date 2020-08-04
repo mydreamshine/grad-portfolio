@@ -104,7 +104,7 @@ void NORMAL_ATTACK::effect(HERO* hero)
 		csss_packet_send_kill_message kill_msg{ owner_id, hero->object_id };
 		world->event_data.emplace_back(&kill_msg, kill_msg.size);
 
-		csss_packet_send_in_game_team_score update_team_score{ world->kill_count[propensity] };
+		csss_packet_send_in_game_team_score update_team_score{ (unsigned char)world->kill_count[propensity] };
 		world->socket_lock.lock();
 		for (auto& hero : world->m_heros) {
 			if (hero.second->propensity == propensity && world->sockets.count(hero.second->object_id) != 0)
