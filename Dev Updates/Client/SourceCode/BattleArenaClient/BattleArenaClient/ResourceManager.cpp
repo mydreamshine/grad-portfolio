@@ -236,9 +236,14 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // LoginScene UI Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
-        Meshes["UI_Layout_LoginSceneBackground"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.0f);
-        Meshes["UI_Layout_IdBox"]                = geoGen.CreateQuad(-100.0f * wnd_x_factor, -100.0f * wnd_y_factor, 200.0f * wnd_x_factor, 75.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_PasswordBox"]          = geoGen.CreateQuad(-100.0f * wnd_x_factor, -205.0f * wnd_y_factor, 200.0f * wnd_x_factor, 75.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LoginSceneBackground_1"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.23f);
+        Meshes["UI_Layout_LoginSceneBackground_2"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.22f);
+        Meshes["UI_Layout_LoginSceneBackground_3"] = geoGen.CreateQuad(wnd_left, wnd_top, wnd_width, wnd_height, 0.21f);
+        Meshes["UI_Layout_LoginTitleLayer"]        = geoGen.CreateQuad(   55.0f, wnd_top,    265.0f, wnd_height, 0.1f);
+        Meshes["UI_Layout_ID_InputBoxCaret"]       = geoGen.CreateQuad(   -1.0f,   10.0f,      1.0f,      20.0f, 0.01f);
+        Meshes["UI_Layout_Password_InputBoxCaret"] = geoGen.CreateQuad(   -1.0f,   10.0f,      1.0f,      20.0f, 0.01f);
+        Meshes["UI_Layout_LoginButton"]            = geoGen.CreateQuad(  127.0f, -160.5f,    146.0f,      48.0f, 0.0f);
+        Meshes["UI_Layout_LoginButton_Press"]      = geoGen.CreateQuad(  127.0f, -160.5f,    146.0f,      48.0f, 0.0f);
 
         m_Geometries["LoginSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "LoginSceneUIGeo", Meshes));
@@ -248,8 +253,9 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
         Meshes["UI_Layout_LobySceneBackground"]            = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor,  198.0f * wnd_y_factor,  340.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.01f);
-        Meshes["UI_Layout_LobyChattingInputBox"]           = geoGen.CreateQuad(-588.0f * wnd_x_factor, -118.0f * wnd_y_factor,  324.0f * wnd_x_factor,  50.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_LobyChattingLog"]                = geoGen.CreateQuad(-600.0f * wnd_x_factor,  198.0f * wnd_y_factor,  340.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.03f);
+        Meshes["UI_Layout_LobyChattingInputBox"]           = geoGen.CreateQuad(-588.0f * wnd_x_factor, -118.0f * wnd_y_factor,  324.0f * wnd_x_factor,  50.0f * wnd_y_factor, 0.02f);
+        Meshes["UI_Layout_LobyChattingInputBoxCaret"]      = geoGen.CreateQuad(-1.0f, 10.0f, 1.0f, 20.0f, 0.01f);
         Meshes["UI_Layout_GameStartButton"]                = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_GameStartButton_Press"]          = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
         Meshes["UI_Layout_MatchCancelButton"]              = geoGen.CreateQuad(-580.0f * wnd_x_factor, -210.0f * wnd_y_factor,  300.0f * wnd_x_factor,  78.0f * wnd_y_factor, 0.0f);
@@ -317,10 +323,11 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
     // GameOverScene UI Geometry
     {
         std::unordered_map<std::string, GeometryGenerator::MeshData> Meshes;
-        Meshes["UI_Layout_GameOverBackground"] = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_GameOverInfo"]       = geoGen.CreateQuad(-550.0f * wnd_x_factor,  270.0f * wnd_y_factor,  320.0f * wnd_x_factor, 380.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_GameOverResult"]     = geoGen.CreateQuad( -85.0f * wnd_x_factor,  340.0f * wnd_y_factor,  170.0f * wnd_x_factor,  70.0f * wnd_y_factor, 0.0f);
-        Meshes["UI_Layout_ReturnLoby"]         = geoGen.CreateQuad(-100.0f * wnd_x_factor, -210.0f * wnd_y_factor,  200.0f * wnd_x_factor,  80.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameOverBackground"]     = geoGen.CreateQuad(-640.0f * wnd_x_factor,  360.0f * wnd_y_factor, 1280.0f * wnd_x_factor, 720.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameOverInfoLayer"]      = geoGen.CreateQuad(-610.0f * wnd_x_factor,  222.5f * wnd_y_factor,  480.0f * wnd_x_factor, 359.8f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_GameOverTitle"]          = geoGen.CreateQuad(-171.8f * wnd_x_factor,  345.0f * wnd_y_factor,  355.0f * wnd_x_factor, 67.8f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_ReturnLobyButton"]       = geoGen.CreateQuad( -77.0f * wnd_x_factor, -215.0f * wnd_y_factor,  154.0f * wnd_x_factor, 87.0f * wnd_y_factor, 0.0f);
+        Meshes["UI_Layout_ReturnLobyButton_Press"] = geoGen.CreateQuad( -77.0f * wnd_x_factor, -215.0f * wnd_y_factor,  154.0f * wnd_x_factor, 87.0f * wnd_y_factor, 0.0f);
 
         m_Geometries["GameOverSceneUIGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "GameOverSceneUIGeo", Meshes));
@@ -537,13 +544,20 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
 {
     std::vector<std::string> texture_filepaths =
     {
-        m_additionalAssetPath + "UI/Layout/background_test.tga",
+        m_additionalAssetPath + "UI/HighlightScene/Highlight_Priest.png",
+        m_additionalAssetPath + "UI/HighlightScene/Highlight_Warrior.png",
+        m_additionalAssetPath + "UI/HighlightScene/Hightlight_Berserker.png",
+        m_additionalAssetPath + "UI/Layout/LoginTitleLayer.png",
+        m_additionalAssetPath + "UI/Layout/LoginButton.png",
+        m_additionalAssetPath + "UI/Layout/LoginButton_Press.png",
         m_additionalAssetPath + "UI/Layout/Background_SubTitle.png",
         m_additionalAssetPath + "UI/Layout/Background_SkullPattern.png",
-        m_additionalAssetPath + "UI/Layout/id_input_box_layout_test.tga",
-        m_additionalAssetPath + "UI/Layout/password_input_box_layout_test.tga",
-        m_additionalAssetPath + "UI/Layout/caret_white.png",
+        m_additionalAssetPath + "UI/Layout/Home Button.png",
+        m_additionalAssetPath + "UI/Layout/Home Button_Press.png",
+        m_additionalAssetPath + "UI/Layout/GameOverTitle.png",
+        m_additionalAssetPath + "UI/Layout/GameOverInfoLayer.png",
         m_additionalAssetPath + "UI/Layout/caret_black.png",
+        m_additionalAssetPath + "UI/Layout/caret_white.png",
         m_additionalAssetPath + "UI/Layout/LeftButton.png",
         m_additionalAssetPath + "UI/Layout/RightButton.png",
         m_additionalAssetPath + "UI/Layout/LeftButton_Press.png",
@@ -750,6 +764,8 @@ void ResourceManager::LoadFontSprites(ID3D12Device* device, ID3D12CommandQueue* 
         = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ.spritefont");
     m_Fonts[L"¸¼Àº °íµñ(16pt)"]
         = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ(16pt).spritefont");
+    m_Fonts[L"¸¼Àº °íµñ(12pt)"]
+        = std::make_unique<DXTK_FONT>(device, commandQueue, additionalAssetPath + L"UI/Font/¸¼Àº °íµñ(12pt).spritefont");
 }
 
 void ResourceManager::BuildRenderItem(std::unordered_map<std::string, std::unique_ptr<RenderItem>>& GenDestList, MeshGeometry* Geo)
@@ -778,12 +794,30 @@ void ResourceManager::BuildRenderItems()
         for (auto& subMesh_iter : m_Geometries["LoginSceneUIGeo"]->DrawArgs)
         {
             std::string subMeshName = subMesh_iter.first;
-            if (subMeshName == "UI_Layout_LoginSceneBackground")
-                SceneRitems[subMeshName]->Mat = m_Materials["background_test"].get();
-            else if (subMeshName.find("IdBox") != std::string::npos)
-                SceneRitems[subMeshName]->Mat = m_Materials["id_input_box_layout_test"].get();
-            else if (subMeshName.find("PasswordBox") != std::string::npos)
-                SceneRitems[subMeshName]->Mat = m_Materials["password_input_box_layout_test"].get();
+            if (subMeshName.find("Background") != std::string::npos)
+            {
+                if (subMeshName.find("1") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Highlight_Warrior"].get();
+                else if (subMeshName.find("2") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Highlight_Priest"].get();
+                else if (subMeshName.find("3") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Hightlight_Berserker"].get();
+            }
+            else if (subMeshName.find("TitleLayer") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["LoginTitleLayer"].get();
+            }
+            else if (subMeshName.find("Button") != std::string::npos)
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["LoginButton_Press"].get();
+                else
+                    SceneRitems[subMeshName]->Mat = m_Materials["LoginButton"].get();
+            }
+            else if (subMeshName.find("Caret") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["caret_black"].get();
+            }
         }
     }
 
@@ -842,7 +876,12 @@ void ResourceManager::BuildRenderItems()
             else if (subMeshName.find("LobyChatting") != std::string::npos)
             {
                 if (subMeshName.find("InputBox") != std::string::npos)
-                    SceneRitems[subMeshName]->Mat = m_Materials["ChattingInputBoxLayer"].get();
+                {
+                    if (subMeshName.find("Caret") != std::string::npos)
+                        SceneRitems[subMeshName]->Mat = m_Materials["caret_white"].get();
+                    else
+                        SceneRitems[subMeshName]->Mat = m_Materials["ChattingInputBoxLayer"].get();
+                }
                 else
                     SceneRitems[subMeshName]->Mat = m_Materials["ChattingLogLayer"].get();
             }
@@ -978,8 +1017,22 @@ void ResourceManager::BuildRenderItems()
             std::string subMeshName = subMesh_iter.first;
             if (subMeshName.find("Background") != std::string::npos)
                 SceneRitems[subMeshName]->Mat = m_Materials["Background_SubTitle"].get();
-            else
-                SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
+            else if (subMeshName.find("ReturnLoby") != std::string::npos)
+            {
+                if (subMeshName.find("Press") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Home Button_Press"].get();
+                else if (subMeshName.find("Button") != std::string::npos)
+                    SceneRitems[subMeshName]->Mat = m_Materials["Home Button"].get();
+            }
+            else if (subMeshName.find("Title") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["GameOverTitle"].get();
+            }
+            else if (subMeshName.find("InfoLayer") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["GameOverInfoLayer"].get();
+            }
+            else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }
     }
 

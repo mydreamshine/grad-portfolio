@@ -60,5 +60,8 @@ private:
     int GameMatchingResult_TotalHeal = 0;
     CHARACTER_TYPE GameMatchingResult_PlayedCharacterType = CHARACTER_TYPE::NON;
 
+    bool ReturnLobyButtonPress = false;
+    bool ReturnLobyButtonUp = true;
+
     bool OnceTryReturnLoby = false;
 };

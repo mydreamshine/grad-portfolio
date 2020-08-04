@@ -1,6 +1,8 @@
 #pragma once
 #include "Scene.h"
 #include "WND_MessageBlock.h"
+#include "ChattingListBox.h"
+#include "InputTextBox.h"
 
 class PlayGameScene : public Scene
 {
@@ -111,42 +113,8 @@ private:
 private:
     const float MaxChattingLineWidth = 180.0f;
     const float MaxChattingLineHeight = 210.0f;
-    WND_MessageBlock ChattingListMessageBlock;
-    WND_MessageBlock InputChatMessageBlock;
-
-    bool ChattingListUpdate = false;
-    bool ChattingListScrolling = false;
-    bool ChattingListScrollingIntervalAct = false;
-    const float ChattingListScrollingInterval = 0.06f;
-    float ChattingListScrollingTimeStack = 0.0f;
-    const size_t MaxChattingLog = 20;
-    std::list<std::wstring> ChattingList;
-
-    const float InputChatCharacterInsertInterval = 0.01f;
-    const float InputChatContinuousInputInterval = 0.3f;
-    const float InputChatCharacterEraseInterval = 0.01f;
-    const float InputChatContinuousEraseInterval = 0.3f;
-    float InputChatCharacterInsertTimeStack = 0.0f;
-    float InputChatContinuousInputTimeStack = 0.0f;
-    float InputChatCharacterEraseTimeStack = 0.0f;
-    float InputChatContinuousEraseTimeStack = 0.0f;
-
-    bool ContinouseInputIntervalAct = false;
-    bool ContinouseEraseIntervalAct = false;
-
-    bool InputBoxScrolling = false;
-    bool InputBoxScrollingAct = false;
-    const float InputBoxScrollingInterval = 0.06f;
-    float InputBoxScorllingTimeStack = 0.0f;
-    int inputMessageCaretPosIndex = 0;
-    int MessageBlockCaretPosIndex_inputChat = 0;
-    wchar_t LastInputText = L'\0';
-    bool CapsLock = false;
-    bool CapsLockAct = false;
-    std::wstring inputChat;
-
-    const float InputChatCaretBlinkInterval = 0.5f;
-    float InputChatCaretBlinkTimeStack = 0.0f;
+    ChattingListBox ChattinglistBox;
+    InputTextBox inputTextBox;
 
     bool ChattingLayerActivate = false;
     bool ChattingLayerSliding = false;

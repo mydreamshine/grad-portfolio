@@ -1,5 +1,7 @@
 #pragma once
 #include "Scene.h"
+#include "ChattingListBox.h"
+#include "InputTextBox.h"
 
 class LobyScene : public Scene
 {
@@ -56,9 +58,10 @@ private:
 
     float camAngle = -90.0f * (MathHelper::Pi / 180.0f);
 
-    const size_t MaxChatLog = 20;
-    std::list<std::wstring> ChattingList;
-    std::wstring inputChat;
+    const float MaxChattingLineWidth = 150.0f;
+    const float MaxChattingLineHeight = 190.0f;
+    ChattingListBox ChattinglistBox;
+    InputTextBox inputTextBox;
 
     std::wstring UserInfo_UserName;
     int UserInfo_UserRank = 0;
@@ -69,7 +72,6 @@ private:
     float savedTurnTableYaw = 0.0f;
     bool OnceSavedTurnTableYaw = false;
 
-    bool ChattingMode = false;
     const float ChattingModeCoolTime = 0.3f;
     float ChattingModeTimeStack = 0.0f;
     bool ActivateChattingModeCoolTime = false;

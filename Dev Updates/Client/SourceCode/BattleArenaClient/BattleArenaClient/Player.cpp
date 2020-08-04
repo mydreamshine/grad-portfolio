@@ -70,6 +70,8 @@ void Player::SetHP(int HP)
 	m_oldHP = m_CharacterObjRef->HP;
 	m_CharacterObjRef->HP = HP;
 
+	if (HP_BarAcitvate == false) return;
+
 	CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
 	auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();
 
@@ -84,6 +86,43 @@ void Player::SetHP(int HP)
 	case CHARACTER_TYPE::PRIEST:    MaxHPText = L"80"; break;
 	}
 	TextInfo->m_Text += MaxHPText;
+}
+
+void Player::SetHP_BarActivate(bool state)
+{
+	if (state == false)
+	{
+		auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();
+		TextInfo->m_Text.clear();
+
+		for (auto& HP_bar_e : m_HP_BarObjRef)
+			HP_bar_e->Activated = false;
+	}
+	else
+	{
+		if (HP_BarAcitvate != state)
+		{
+			for (auto& HP_bar_e : m_HP_BarObjRef)
+				HP_bar_e->Activated = true;
+
+			CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
+			auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();
+
+			TextInfo->m_Text = m_Name + L"\nHP: ";
+			TextInfo->m_Text += std::to_wstring(m_CharacterObjRef->HP) + L"/";
+			std::wstring MaxHPText;
+			switch (CharacterType)
+			{
+			case CHARACTER_TYPE::WARRIOR:   MaxHPText = L"100"; break;
+			case CHARACTER_TYPE::BERSERKER: MaxHPText = L"150"; break;
+			case CHARACTER_TYPE::ASSASSIN:  MaxHPText = L"100"; break;
+			case CHARACTER_TYPE::PRIEST:    MaxHPText = L"80"; break;
+			}
+			TextInfo->m_Text += MaxHPText;
+		}
+	}
+
+	HP_BarAcitvate = state;
 }
 
 void Player::Init()
