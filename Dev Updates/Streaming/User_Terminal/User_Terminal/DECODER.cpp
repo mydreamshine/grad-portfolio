@@ -44,7 +44,6 @@ DECODER::~DECODER()
     av_parser_close(parser);
     avcodec_free_context(&c);
     av_frame_free(&frame);
-    av_frame_free(&CopyFrame);
     av_packet_free(&pkt);
 }
 

@@ -16,7 +16,7 @@
 #include "..\..\Common\CSOCKADDR_IN.h"
 #include "..\..\Common\OVER_EX.h"
 
-#define BATTLE_OFFLINE
+//#define BATTLE_OFFLINE
 #define FRIEND_OFFLINE
 
 namespace BattleArena {
@@ -84,9 +84,10 @@ namespace BattleArena {
 */
 	struct ROOM_WAITER
 	{
+		int num;
 		int *waiter; ///< array for clients index.
 
-		ROOM_WAITER(int nums) {
+		ROOM_WAITER(int nums) : num(nums) {
 			waiter = new int[nums];
 		}
 		~ROOM_WAITER() {
@@ -139,7 +140,7 @@ namespace BattleArena {
 		std::map<int, std::list<int>::iterator> m_queueMap; ///< map for fast access to m_queueList.
 		
 		std::mutex waiterLock; ///< lock for m_waiters.
-		std::list<ROOM_WAITER> m_waiters; ///< array for match-waiters
+		std::list<ROOM_WAITER*> m_waiters; ///< array for match-waiters
 
 		//Func
 		void error_display(const char* msg, int err_no); ///< error display function for socket communication.

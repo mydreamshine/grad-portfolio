@@ -194,7 +194,12 @@ const int SCREEN_HEIGHT = 480;
 const int FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
 const int MAX_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
 
+int STREMING_RENDER_EVENT = 0;
+
 std::wstring config_path{ L".\\TERMINAL_CONFIG.ini" };
+char title[256];
+chrono::steady_clock::time_point prev_time, cur_time;
+
 short server_port;
 std::wstring server_addr;
 SOCKET serverSocket;
@@ -284,15 +289,15 @@ void RecvFunc()
 	UINT needBytes = 4;
 	UINT decodingBytes = 0;
 
-	char title[256];
-	chrono::steady_clock::time_point prev_time, cur_time;
-	prev_time = cur_time = chrono::high_resolution_clock::now();
-
+	
+	
+	
 
 	while (true)
 	{
 		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), MAX_BUFFER_SIZE, 0);
-		if (retval == 0 || retval == SOCKET_ERROR) return;
+		if (retval == 0 || retval == SOCKET_ERROR) 
+			break;
 		
 		while (retval > 0) {
 			if (savedSize + retval >= needBytes) {
@@ -308,6 +313,13 @@ void RecvFunc()
 					canRender = true;
 					memcpy(completeFrame, savedPacket, needBytes);
 					decodingBytes = needBytes;
+					char* frame_data = new char[decodingBytes];
+					memcpy(frame_data, completeFrame, decodingBytes);
+					SDL_Event render_event;
+					render_event.type = STREMING_RENDER_EVENT;
+					render_event.user.code = decodingBytes;
+					render_event.user.data1 = frame_data;
+					SDL_PushEvent(&render_event);
 					needBytes = 4;
 				}
 
@@ -327,28 +339,13 @@ void RecvFunc()
 				receivedPointer = receivedPacket;
 			}
 		}
-
-		if (canRender == true) {
-			decoder.decode(completeFrame, decodingBytes);
-			AVFrame* frame = decoder.flush(NULL);
-			int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
-			decoder.free_frame(&frame);
-
-			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
-			SDL_RenderPresent(renderer);
-			canRender = false;
-
-			sprintf(title, "BattleArena / FPS : %.1f", 1.0f / chrono::duration<float>(cur_time - prev_time).count());
-			prev_time = cur_time;
-			cur_time = chrono::high_resolution_clock::now();
-			SDL_SetWindowTitle(window, title);
-		}
 	}
 }
 
 void event_loop()
 {
+	prev_time = cur_time = chrono::high_resolution_clock::now();
+
 	SDL_Event e;
 	while (true)
 	{
@@ -392,7 +389,26 @@ void event_loop()
 				}
 				break;
 
+			case SDL_QUIT:
+				return;
+
 			default:
+				if (e.type == STREMING_RENDER_EVENT) {
+						decoder.decode(e.user.data1, e.user.code);
+						AVFrame* frame = decoder.flush(NULL);
+						delete e.user.data1;
+						int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
+						decoder.free_frame(&frame);
+
+						SDL_RenderClear(renderer);
+						SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
+						SDL_RenderPresent(renderer);
+
+						sprintf(title, "BattleArena / FPS : %.1f", 1.0f / chrono::duration<float>(cur_time - prev_time).count());
+						prev_time = cur_time;
+						cur_time = chrono::high_resolution_clock::now();
+						SDL_SetWindowTitle(window, title);
+				}
 				break;
 			}
 		}
@@ -449,19 +465,21 @@ int main(int, char**) {
 	if (retval != SOCKET_ERROR)
 		printf("연결 성공");
 
+	STREMING_RENDER_EVENT = SDL_RegisterEvents(1);
 	std::thread recvThread{ RecvFunc };
 
 	event_loop();
-
-	recvThread.join();
-
 	closesocket(serverSocket);
 	WSACleanup();
+
+	recvThread.join();
 
 	SDL_DestroyTexture(streaming_data);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 
+	
+	
 	return 0;
 }

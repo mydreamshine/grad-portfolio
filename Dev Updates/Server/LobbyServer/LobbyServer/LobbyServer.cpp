@@ -132,7 +132,7 @@ namespace BattleArena {
 		BATTLE_KEY = MAX_USER;
 
 		GetPrivateProfileString(L"SERVER", L"MATCHMAKING_NUM", L"4", buffer, 512, config_path.c_str());
-		MATCHUP_NUM = MAX_USER = std::stoi(buffer);
+		MATCHUP_NUM = std::stoi(buffer);
 		wprintf(L" Done.\n");
 	}
 	void LOBBYSERVER::gen_default_config()
@@ -203,7 +203,6 @@ namespace BattleArena {
 			case EV_CLIENT:
 				if (0 == ReceivedBytes) {
 					disconnect_client(key);
-					continue;
 				}
 				else {
 					process_client_packet(client, over_ex->data());
@@ -212,7 +211,6 @@ namespace BattleArena {
 				break;
 
 			case EV_BATTLE:
-
 				process_battle_packet(client, over_ex->data());
 				m_clients[client].set_recv();
 				break;
@@ -381,12 +379,13 @@ namespace BattleArena {
 	{
 		bs_packet_response_room* packet = reinterpret_cast<bs_packet_response_room*>(buffer);
 		waiterLock.lock();
-		std::list<ROOM_WAITER>::iterator w = m_waiters.begin();
+		std::list<ROOM_WAITER*>::iterator w = m_waiters.begin();
 		for (int i = 0; i < MATCHUP_NUM; ++i)
 		{
-			m_clients[w->waiter[i]].state = ST_IDLE;
-			send_packet_room_info(w->waiter[i], packet->room_id);
+			m_clients[(*w)->waiter[i]].state = ST_IDLE;
+			send_packet_room_info((*w)->waiter[i], packet->room_id);
 		}
+		delete (*w);
 		m_waiters.erase(w);
 		waiterLock.unlock();
 	}
@@ -520,10 +519,10 @@ namespace BattleArena {
 		if (m_queueList.size() >= MATCHUP_NUM)
 		{
 			std::list<int>::iterator waiter = m_queueList.begin();
-			ROOM_WAITER room_waiter{MATCHUP_NUM};
+			ROOM_WAITER* room_waiter = new ROOM_WAITER{MATCHUP_NUM};
 			for (int i = 0; i < MATCHUP_NUM; ++i)
 			{
-				room_waiter.waiter[i] = *waiter;
+				room_waiter->waiter[i] = *waiter;
 				m_clients[*waiter].state = ST_PLAY;
 				m_queueMap.erase(*waiter);
 				m_queueList.erase(waiter++);
