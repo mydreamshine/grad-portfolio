@@ -811,8 +811,10 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             if (TimeLimit_Sec <= 10)
             {
                 XMFLOAT3 Colors3f; XMStoreFloat3(&Colors3f, TimeLimitTextInfo->m_TextColor);
-                if (Colors3f.x == 1.0f) TimeLimitTextInfo->m_TextColor = DirectX::Colors::White;
-                else TimeLimitTextInfo->m_TextColor = DirectX::Colors::Red;
+                if (Colors3f.y == 1.0f)
+                    TimeLimitTextInfo->m_TextColor = DirectX::Colors::Red;
+                else
+                    TimeLimitTextInfo->m_TextColor = DirectX::Colors::White;
             }
         }
 
