@@ -1497,7 +1497,17 @@ void PlayGameScene::SpawnPlayer(
             }
             else
             {
-                Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                if (m_MainPlayer != nullptr)
+                {
+                    // Set Other Player HP Bar Ritem (피아식별용)
+                    OBJECT_PROPENSITY mainPlayerPropensity = m_MainPlayer->m_CharacterObjRef->Propensity;
+                    if (Propensity == mainPlayerPropensity)
+                        Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+                    else
+                        Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                }
+                else
+                    Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
             }
             objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Dest - Instancing", Ritems);
             Ritems = { AllRitems["UI_Layout_HPBarIncrease"].get() };
