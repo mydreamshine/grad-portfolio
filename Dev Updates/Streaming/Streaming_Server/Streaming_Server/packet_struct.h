@@ -31,7 +31,7 @@ enum TSS {
 using PACKET_SIZE = unsigned char;
 using PACKET_TYPE = unsigned char;
 constexpr int string_len = 32;
-constexpr int chatting_len = 128;
+constexpr int chatting_len = 100;
 
 enum ROOM_MODE {
 	GAMEMODE_DM,

@@ -1044,6 +1044,8 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
 
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
+            if (compareFloat(texAlpha, 0.0f) == true)
+                obj->Activated = false;
         }
     }
 }
@@ -1226,26 +1228,26 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
                 if (ChattingLayerSliding == false && inputTextBox.IsEmpty() == false)
                 {
                     EventManager eventManager;
-                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, FullinputTexts);
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_PLAYGMAE_SCENE, FullinputTexts);
 
                     // ChattingList Message Add Test
-                    {
-                        ChattinglistBox.AddMessage(FullinputTexts);
-                        if (ChattinglistBox.IsSizeChanged() == true)
-                        {
-                            auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
-                            auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
-                            auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
-                            auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
+                    //{
+                    //    ChattinglistBox.AddMessage(FullinputTexts);
+                    //    if (ChattinglistBox.IsSizeChanged() == true)
+                    //    {
+                    //        auto ChattingLogLayerTransform = ChattingLogLayer->m_TransformInfo.get();
+                    //        auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+                    //        auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
+                    //        auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
 
-                            XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
-                            newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y * 2 + 30.7f;
-                            newChattingListBoxPos.y += 26.8f;
-                            newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
-                            newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
-                            ChattinglistBox.SetPosition(newChattingListBoxPos);
-                        }
-                    }
+                    //        XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
+                    //        newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y * 2 + 30.7f;
+                    //        newChattingListBoxPos.y += 26.8f;
+                    //        newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
+                    //        newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
+                    //        ChattinglistBox.SetPosition(newChattingListBoxPos);
+                    //    }
+                    //}
 
                     std::wstring PlayerNameInputForm;
                     if (m_MainPlayer != nullptr)
@@ -1484,11 +1486,11 @@ void PlayGameScene::SpawnPlayer(
                 {
                     auto otherPlayer = Player_iter.second.get();
                     auto otherPlayerPropensity = otherPlayer->m_CharacterObjRef->Propensity;
-                    auto& otherPlayerRitems = otherPlayer->m_CharacterObjRef->m_RenderItems;
+                    auto& otherPlayerHPBarRitems = otherPlayer->m_HP_BarObjRef[0]->m_RenderItems;
                     if (otherPlayerPropensity == mainPlayerPropensity)
-                        otherPlayerRitems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+                        otherPlayerHPBarRitems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
                     else
-                        otherPlayerRitems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                        otherPlayerHPBarRitems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
                 }
             }
             else
@@ -1894,6 +1896,17 @@ void PlayGameScene::SetPlayerState(int CE_ID, PLAYER_STATE PlayerState)
     if (Player_iter == m_Players.end()) return;
     Player* ControledPlayer = Player_iter->second.get();
 
+    bool HP_UI_AsStealthAct = true;
+    if (m_MainPlayer != nullptr)
+    {
+        if (m_MainPlayer->m_CharacterObjRef->m_CE_ID != CE_ID)
+        {
+            if (ControledPlayer->m_CharacterObjRef->Propensity != m_MainPlayer->m_CharacterObjRef->Propensity
+                && PlayerState == PLAYER_STATE::ACT_STEALTH)
+                HP_UI_AsStealthAct = false;
+        }
+    }
+    ControledPlayer->SetHP_BarActivate(HP_UI_AsStealthAct);
     ControledPlayer->SetState(PlayerState);
 }
 

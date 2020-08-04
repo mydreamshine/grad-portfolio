@@ -68,10 +68,6 @@ void LobyScene::OnInitProperties(CTimer& gt)
     }
 
     ObjectManager ObjManager;
-    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
-    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
-    ChatInputBox->m_TransformInfo->m_TexAlpha = 1.0f;
-    ChatInputText->m_Textinfo->m_Text = L"[UserName]: bla bla bla";
 
     Object* SelectionLeftButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_LeftButton");
     Object* SelectionRightButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_CharacterSelection_RightButton");
@@ -90,8 +86,28 @@ void LobyScene::OnInitProperties(CTimer& gt)
 
     camAngle = -90.0f * deg2rad;
 
-    ChattingList.clear();
-    inputChat.clear();
+    // Init Chatting Texts
+    {
+        Object* InputChatTextRenderObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
+        Object* ChattingListTextRenderObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingLog");
+        Object* InputChatCaretObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBoxCaret");
+
+        inputTextBox.Init();
+        inputTextBox.SetTextRenderObj(InputChatTextRenderObject);
+        inputTextBox.SetCaretRenderObj(InputChatCaretObject);
+        inputTextBox.SetFont((*m_FontsRef)[L"¸¼Àº °íµñ"].get());
+        inputTextBox.SetStartInputForm(L"Unknown: ");
+        inputTextBox.SetMaxSize(MaxChattingLineWidth, 24.0f);
+        inputTextBox.InitTexts();
+
+        ChattinglistBox.Init();
+        ChattinglistBox.SetTextRenderObj(ChattingListTextRenderObject);
+        ChattinglistBox.SetFont((*m_FontsRef)[L"¸¼Àº °íµñ"].get());
+        ChattinglistBox.SetLineTabCharacter(L':');
+        ChattinglistBox.SetMaxSize(MaxChattingLineWidth, MaxChattingLineHeight);
+    }
+
+
     UserInfo_UserName.clear();
     UserInfo_UserRank = 0;
 
@@ -117,7 +133,6 @@ void LobyScene::OnInitProperties(CTimer& gt)
     CurrButtonIsPlayButton = true;
     ChangeButton = false;
 
-    ChattingMode = false;
     ChattingModeTimeStack = 0.0f;
     ActivateChattingModeCoolTime = false;
 
@@ -148,6 +163,8 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
     auto& AllRitems = *m_AllRitemsRef;
     auto& Geometries = *m_GeometriesRef;
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
+    XMFLOAT2 InputCaretPos = { 0.0f, 0.0f };
 
     ObjectManager objManager;
     const UINT maxUILayOutObject = (UINT)Geometries["LobySceneUIGeo"]->DrawArgs.size();
@@ -186,6 +203,7 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
 
             if (objName.find("CharacterSelection") != std::string::npos) continue;
             if (objName.find("Background") != std::string::npos) continue;
+            if (objName.find("Caret") != std::string::npos) continue;
 
             auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
             auto text_info = newLayoutTextObj->m_Textinfo.get();
@@ -199,19 +217,21 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
 
             if (objName == "UI_Layout_LobyChattingLog")
             {
-                text_info->m_Text = L"Chatting Log";
-                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
-                text_info->m_TextPos.x += m_width / 2.0f;
+                text_info->m_TextPos.y = UI_LayoutPos.y - UI_LayoutExtents.y + 30.7f;
+                text_info->m_TextPos.y += 26.8f;
+                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 13.0f;
+                text_info->m_TextPos.y = m_height / 2.0f - text_info->m_TextPos.y; // offset
+                text_info->m_TextPos.x += m_width / 2.0f;  // offset
                 text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
                 text_info->m_TextColor = DirectX::Colors::GhostWhite;
             }
             else if (objName == "UI_Layout_LobyChattingInputBox")
             {
-                text_info->m_Text = L"[UserName]: bla bla bla";
                 text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
                 text_info->m_TextPos.x += m_width / 2.0f;
                 text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
                 text_info->m_TextColor = DirectX::Colors::GhostWhite;
+                InputCaretPos = text_info->m_TextPos;
             }
             else if (objName == "UI_Layout_GameStartButton")
             {
@@ -241,6 +261,28 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
                 text_info->m_TextColor = DirectX::Colors::Yellow;
             }
         }
+    }
+
+    // Init Chatting Texts
+    {
+        ObjectManager ObjManager;
+        Object* InputChatTextRenderObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
+        Object* ChattingListTextRenderObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingLog");
+        Object* InputChatCaretObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBoxCaret");
+
+        inputTextBox.Init();
+        inputTextBox.SetTextRenderObj(InputChatTextRenderObject);
+        inputTextBox.SetCaretRenderObj(InputChatCaretObject);
+        inputTextBox.SetFont((*m_FontsRef)[L"¸¼Àº °íµñ"].get());
+        inputTextBox.SetStartInputForm(L"Unknown: ");
+        inputTextBox.SetMaxSize(MaxChattingLineWidth, 24.0f);
+        inputTextBox.InitTexts();
+
+        ChattinglistBox.Init();
+        ChattinglistBox.SetTextRenderObj(ChattingListTextRenderObject);
+        ChattinglistBox.SetFont((*m_FontsRef)[L"¸¼Àº °íµñ"].get());
+        ChattinglistBox.SetLineTabCharacter(L':');
+        ChattinglistBox.SetMaxSize(MaxChattingLineWidth, MaxChattingLineHeight);
     }
 
     // Create Character Object
@@ -390,27 +432,12 @@ void LobyScene::UpdateShadowTransform(CTimer& gt)
 void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     ObjectManager ObjManager;
-    Object* ChattingLogObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingLog");
     Object* UserInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyUserInfo");
     Object* CharacterInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterDescrition");
     Object* SelectedCharacterNameObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterName");
 
-    // Update Chatting Text
-    {
-        auto& ChattingLog = ChattingLogObject->m_Textinfo->m_Text;
-        ChattingLog.clear();
-
-        if (ChattingMode == true)
-        {
-            int EmptyChatLine = 10;
-            for (auto& ChatLine : ChattingList)
-            {
-                ChattingLog += ChatLine;
-                if (--EmptyChatLine == 0) break;
-                else ChattingLog += L'\n';
-            }
-        }
-    }
+    // Update Input Box Caret
+    inputTextBox.Update(gt, (float)m_width, (float)m_height);
 
     auto& UserInfo = UserInfoObject->m_Textinfo->m_Text;
     UserInfo = L"UserName: " + UserInfo_UserName + L'\n';
@@ -856,6 +883,8 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
 
     // Process Chat
     {
+        ChattinglistBox.ProcessInput(key_state, oldCursorPos, gt, GeneratedEvents);
+
         if (key_state[VK_RETURN] == true)
         {
             if (ActivateChattingModeCoolTime == false)
@@ -864,23 +893,43 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                 ChattingModeTimeStack += gt.GetTimeElapsed();
             if (ChattingModeTimeStack >= ChattingModeCoolTime)
             {
-                ChattingMode = !ChattingMode;
-                if (ChattingMode == true)
+                std::wstring PlayerNameInputForm;
+                if (UserInfo_UserName.empty() == false)
+                    PlayerNameInputForm = UserInfo_UserName + L": ";
+                else
+                    PlayerNameInputForm = L"Unknown: ";
+
+                ObjectManager ObjManager;
+
+                inputTextBox.SetActivate(false);
+                if (inputTextBox.IsEmpty() == false)
                 {
-                    ObjectManager ObjManager;
-                    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
-                    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
-                    ChatInputBox->m_TransformInfo->m_TexAlpha = 1.0f;
-                    ChatInputText->m_Textinfo->m_Text = L"[UserName]: bla bla bla";
+                    std::wstring FullinputTexts = inputTextBox.GetFullinputTexts();
+                    /*EventManager eventManager;
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, FullinputTexts);*/
+
+                    // Chatting List Test
+                    ChattinglistBox.AddMessage(FullinputTexts);
+                    if (ChattinglistBox.IsSizeChanged() == true)
+                    {
+                        Object* ChattingLogLayerObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingLog");
+                        auto ChattingLogLayerTransform = ChattingLogLayerObject->m_TransformInfo.get();
+                        auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+                        auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
+                        auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
+
+                        XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
+                        newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y + 30.7f;
+                        newChattingListBoxPos.y += 26.8f;
+                        newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
+                        newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
+                        ChattinglistBox.SetPosition(newChattingListBoxPos);
+                    }
+
+                    inputTextBox.SetStartInputForm(PlayerNameInputForm);
+                    inputTextBox.InitTexts();
                 }
-                else if (ChattingMode == false)
-                {
-                    ObjectManager ObjManager;
-                    Object* ChatInputBox = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingInputBox");
-                    Object* ChatInputText = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyChattingInputBox");
-                    ChatInputBox->m_TransformInfo->m_TexAlpha = 0.0f;
-                    ChatInputText->m_Textinfo->m_Text.clear();
-                }
+
                 ActivateChattingModeCoolTime = true;
                 ChattingModeTimeStack = 0.0f;
             }
@@ -890,17 +939,11 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
             ActivateChattingModeCoolTime = false;
         }
 
-        if (OnceSendChatLog == true)
-        {
-            EventManager eventManager;
-            eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, inputChat);
-            inputChat.clear();
-            OnceSendChatLog = false;
-        }
+        inputTextBox.ProcessInput(key_state, oldCursorPos, gt, GeneratedEvents);
     }
 
     //Try matchmaking. e -> enqueue, d -> dequeue.
-    if (key_state['E'] == true && StartMatching == false && OnceTryGameMatching == false)
+    /*if (key_state['E'] == true && StartMatching == false && OnceTryGameMatching == false)
     {
         EventManager eventManager;
         eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
@@ -911,7 +954,7 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         EventManager eventManager;
         eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
         OnceTryGameMatching = true;
-    }
+    }*/
     if (OnceAccessMatch == true) {
         EventManager eventManager;
         eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
@@ -936,8 +979,24 @@ void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)
 
 void LobyScene::SetChatLog(std::wstring UserName, std::wstring Message)
 {
-    if (ChattingList.size() == MaxChatLog) ChattingList.pop_back();
-    ChattingList.push_back(L"[" + UserName + L"]: " + Message);
+    ObjectManager ObjManager;
+
+    ChattinglistBox.AddMessage(Message);
+    if (ChattinglistBox.IsSizeChanged() == true)
+    {
+        Object* ChattingLogLayerObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingLog");
+        auto ChattingLogLayerTransform = ChattingLogLayerObject->m_TransformInfo.get();
+        auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+        auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
+        auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
+
+        XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
+        newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y + 30.7f;
+        newChattingListBoxPos.y += 26.8f;
+        newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
+        newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
+        ChattinglistBox.SetPosition(newChattingListBoxPos);
+    }
 }
 
 void LobyScene::SetMatchStatus(bool status)

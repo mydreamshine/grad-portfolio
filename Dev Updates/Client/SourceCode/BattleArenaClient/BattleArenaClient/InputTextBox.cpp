@@ -24,6 +24,9 @@ void InputTextBox::Init(
 	m_InputTexts.clear();
 	m_InputTextsCaretPosIndex = m_RenderTextsCaretPosIndex = 0;
 
+    m_IsHiding = false;
+    m_HideCharacter = L'*';
+
 	m_TextRenderObj = newTextRenderObj;
 	m_CaretRenderObj = newCaretRenderObj;
 	m_Font = newFont;
@@ -75,6 +78,12 @@ void InputTextBox::SetActivate(bool activate)
     Activate = activate;
 }
 
+void InputTextBox::SetHide(bool State, wchar_t hide_charcter)
+{
+    m_IsHiding = State;
+    m_HideCharacter = hide_charcter;
+}
+
 DirectX::XMFLOAT2 InputTextBox::GetSize()
 {
 	if (m_Font == nullptr) return DirectX::XMFLOAT2(0.0f, 0.0f);
@@ -114,12 +123,18 @@ void InputTextBox::AddText(const wchar_t& newText)
     if (CapsLock == false && 0x41 <= (int)newText && (int)newText <= 0x5A)
         AddText = (wchar_t)((int)newText + 0x20);
 
-    int InsertIndex = m_InputTextsCaretPosIndex + 1;
+    int InsertOffset = 0;
+    if (m_StartInputForm.empty() == false) InsertOffset = 1;;
+
+    int InsertIndex = m_InputTextsCaretPosIndex + InsertOffset;
     InsertIndex -= (int)m_StartInputForm.size();
     m_InputTexts.insert((size_t)InsertIndex, 1, AddText);
 
+    if (m_IsHiding == true)
+        AddText = m_HideCharacter;
+
     bool MessageCutted = false;
-    m_RenderTextsBlock.AddMessageCharacter(AddText, m_Font, m_InputTextsCaretPosIndex + 1, MessageCutted);
+    m_RenderTextsBlock.AddMessageCharacter(AddText, m_Font, m_InputTextsCaretPosIndex + InsertOffset, MessageCutted);
     RenderTexts = m_RenderTextsBlock.GetMessageBlock(m_Font, WND_MessageBlock::MessageBlockFrom::MessageText);
 
     m_InputTextsCaretPosIndex++;

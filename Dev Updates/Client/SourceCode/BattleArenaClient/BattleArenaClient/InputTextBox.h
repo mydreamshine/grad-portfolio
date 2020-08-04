@@ -21,7 +21,7 @@ public:
         Object* newTextRenderObj = nullptr,
         Object* newCaretRenderObj = nullptr,
         const std::wstring& newStartInputForm = L"",
-        size_t newMaxInputText = 128);
+        size_t newMaxInputText = 100);
 
     void SetTextRenderObj(Object* obj);
     void SetCaretRenderObj(Object* obj);
@@ -33,6 +33,7 @@ public:
     void SetPosition(DirectX::XMFLOAT2 newPosition);
 
     void SetActivate(bool activate);
+    void SetHide(bool State, wchar_t hide_charcter = L'*');
 
     DirectX::XMFLOAT2 GetSize();
     DirectX::XMFLOAT2 GetPosition();
@@ -64,6 +65,10 @@ private:
     std::wstring m_InputTexts;
     int m_InputTextsCaretPosIndex = 0;
     int m_RenderTextsCaretPosIndex = 0;
+
+private:
+    bool m_IsHiding = false;
+    wchar_t m_HideCharacter = L'*';
 
 private:
     Object* m_TextRenderObj = nullptr;

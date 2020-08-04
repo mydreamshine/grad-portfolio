@@ -15,29 +15,27 @@ void GameOverScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 
 void GameOverScene::OnInitProperties(CTimer& gt)
 {
-    for (auto& obj : m_CharacterObjects)
+    // Init Character Prop.
     {
-        if (obj->Activated != true) continue;
+        const float ConvertModelUnit = 125.0f;
+        XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+        XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
 
-        if (obj->m_Name.find("Warrior") != std::string::npos)
+        for (auto& obj : m_CharacterObjects)
         {
+            obj->Activated = false;
+
             auto transformInfo = obj->m_TransformInfo.get();
-            float ConvertModelUnit = 125.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+
             transformInfo->SetWorldTransform(WorldScale, WorldRotationEuler, WorldPosition);
             transformInfo->SetLocalRotationEuler(LocalRotationEuler);
-        }
 
-        auto skeletonInfo = obj->m_SkeletonInfo.get();
-        auto animInfo = skeletonInfo->m_AnimInfo.get();
-        animInfo->Init();
-        std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
-        animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-        animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-        animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            auto AnimInfo = obj->m_SkeletonInfo->m_AnimInfo.get();
+            AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
+        }
     }
 
     m_LightRotationAngle = 0.0f;
@@ -52,7 +50,16 @@ void GameOverScene::OnInitProperties(CTimer& gt)
     GameMatchingResult_TotalHeal = 0;
     GameMatchingResult_PlayedCharacterType = CHARACTER_TYPE::NON;
 
+    ReturnLobyButtonPress = false;
+    ReturnLobyButtonUp = true;
+
     OnceTryReturnLoby = false;
+
+    ObjectManager ObjManager;
+    Object* ReturnLobyButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_ReturnLobyButton");
+    auto& AllRitems = *m_AllRitemsRef;
+    auto Ritem_ButtonPress = AllRitems.find("UI_Layout_ReturnLobyButton")->second.get();
+    ReturnLobyButton->m_RenderItems = { Ritem_ButtonPress };
 }
 
 void GameOverScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -74,6 +81,8 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
     ObjectManager objManager;
     const UINT maxUILayOutObject = (UINT)Geometries["GameOverSceneUIGeo"]->DrawArgs.size();
+
+
     for (auto& Ritem_iter : AllRitems)
     {
         auto& Ritem_name = Ritem_iter.first;
@@ -97,60 +106,129 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         }
         else if (Ritem_iter.first.find("UI") != std::string::npos)
         {
+            if (Ritem_name.find("Press") != std::string::npos) continue;
+
             auto newObj = objManager.CreateUILayOutObject(objCB_index++, m_AllObjects, m_UILayOutObjects, maxUILayOutObject);
             m_ObjRenderLayer[(int)RenderLayer::UILayout_Background].push_back(newObj);
 
             std::string objName = Ritem_iter.first;
             std::vector<RenderItem*> Ritems = { Ritem };
+
             objManager.SetObjectComponent(newObj, objName, Ritems);
 
-            if (objName.find("Background") != std::string::npos) continue;
 
-            auto newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
-            auto text_info = newLayoutTextObj->m_Textinfo.get();
-            newLayoutTextObj->m_Name = "Text" + objName;
-            text_info->m_FontName = L"¸¼Àº °íµñ";
-            text_info->m_TextColor = DirectX::Colors::Blue;
-            auto UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
-            text_info->m_TextPos.x = UI_LayoutPos.x + m_width / 2.0f;
-            text_info->m_TextPos.y = m_height / 2.0f - UI_LayoutPos.y;
+            if (objName.find("GameOverInfo") == std::string::npos) continue;
 
-            if (objName == "UI_Layout_GameOverInfo")        text_info->m_Text = L"Game Over Info\n\nTotal Damage,\nTotal Kill,\nTotal Death,\n etc.";
-            else if (objName == "UI_Layout_GameOverResult") text_info->m_Text = L"Game Over";
-            else if (objName == "UI_Layout_ReturnLoby")     text_info->m_Text = L"Retrun Loby";
+            XMFLOAT3 UI_LayoutPos = Ritem->Geo->DrawArgs[objName].Bounds.Center;
+            XMFLOAT3 UI_LayoutExtents = Ritem->Geo->DrawArgs[objName].Bounds.Extents;
+
+            int TextObjCreatNum = 3;
+            std::vector<Object*> additionalTextObjets;
+
+            Object* newLayoutTextObj = nullptr;
+            TextInfo* text_info = nullptr;
+            for (int i = 0; i < TextObjCreatNum; ++i)
+            {
+                newLayoutTextObj = objManager.CreateTextObject(textBatch_index++, m_AllObjects, m_TextObjects, m_MaxTextObject);
+                text_info = newLayoutTextObj->m_Textinfo.get();
+                newLayoutTextObj->m_Name = "Text" + objName;
+                text_info->m_FontName = L"¸¼Àº °íµñ";
+                text_info->m_TextColor = DirectX::Colors::Yellow;
+                text_info->m_TextPos.x = UI_LayoutPos.x;
+                text_info->m_TextPos.y = UI_LayoutPos.y;
+                text_info->m_TextPos.x += m_width / 2.0f; // offset
+                text_info->m_TextPos.y = m_height / 2.0f - text_info->m_TextPos.y; // offset
+
+                additionalTextObjets.push_back(newLayoutTextObj);
+            }
+
+            additionalTextObjets[0]->m_Name = "TextGameOverInfo_UserName";
+            additionalTextObjets[0]->m_Textinfo->m_TextPos.y = UI_LayoutPos.y + UI_LayoutExtents.y - 21.0f;
+            additionalTextObjets[0]->m_Textinfo->m_TextPos.y *= -1.0f;          // offset
+            additionalTextObjets[0]->m_Textinfo->m_TextPos.y += m_height / 2.0f; // offset
+
+            additionalTextObjets[1]->m_Name = "TextGameOverInfo_UserRank";
+            additionalTextObjets[1]->m_Textinfo->m_TextPos.x = UI_LayoutPos.x + 15.0f;
+            additionalTextObjets[1]->m_Textinfo->m_TextPos.x += m_width / 2.0f; // offset
+            additionalTextObjets[1]->m_Textinfo->m_TextPos.y = UI_LayoutPos.y + UI_LayoutExtents.y - 72.0f;
+            additionalTextObjets[1]->m_Textinfo->m_TextPos.y *= -1.0f;          // offset
+            additionalTextObjets[1]->m_Textinfo->m_TextPos.y += m_height / 2.0f; // offset
+            additionalTextObjets[1]->m_Textinfo->m_FontName = L"¸¼Àº °íµñ(16pt)";
+
+            additionalTextObjets[2]->m_Name = "TextGameOverInfo_TotalScore";
+            additionalTextObjets[2]->m_Textinfo->m_TextPos.y = UI_LayoutPos.y - 42.0f;
+            additionalTextObjets[2]->m_Textinfo->m_TextPos.y *= -1.0f;          // offset
+            additionalTextObjets[2]->m_Textinfo->m_TextPos.y += m_height / 2.0f; // offset
         }
     }
 
     // Create Character Object
     {
-        if (!m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR].empty())
+        const float ConvertModelUnit = 85.0f;
+        const XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
+        const XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
+        std::string objName;
+        aiModelData::aiSkeleton* CharacterSkeleton = nullptr;
+
+        for (int i = 0; i < (int)CHARACTER_TYPE::COUNT; ++i)
         {
-            auto newObj = objManager.CreateCharacterObject(
+            if (m_CharacterRitems[i].empty() == true) continue;
+
+            auto newCharacterObj = objManager.CreateCharacterObject(
                 objCB_index++, skinnedCB_index++,
                 m_AllObjects,
                 m_CharacterObjects, m_MaxCharacterObject,
                 m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newCharacterObj);
 
-            std::string objName = "Warrior Instancing";
+            if (i == (int)CHARACTER_TYPE::WARRIOR)
+            {
+                objName = "Warrior Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Knight 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::BERSERKER)
+            {
+                objName = "Berserker Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Warrior 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::ASSASSIN)
+            {
+                objName = "Assassin Instancing";
+                CharacterSkeleton = ModelSkeletons["Female Warrior 01"].get();
+            }
+            else if (i == (int)CHARACTER_TYPE::PRIEST)
+            {
+                objName = "Priest Instancing";
+                CharacterSkeleton = ModelSkeletons["Male Mage 01"].get();
+            }
 
-            float ConvertModelUnit = 125.0f;
-            XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
-            XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
-            XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
-            objManager.SetObjectComponent(newObj, objName, m_CharacterRitems[(int)CHARACTER_TYPE::WARRIOR],
-                ModelSkeletons["Male Knight 01"].get(),
-                nullptr, &LocalRotationEuler, nullptr,
+            objManager.SetObjectComponent(newCharacterObj, objName,
+                m_CharacterRitems[i], CharacterSkeleton,
+                nullptr, nullptr, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
 
-            auto skeletonInfo = newObj->m_SkeletonInfo.get();
-            auto animInfo = skeletonInfo->m_AnimInfo.get();
-            animInfo->Init();
+            auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
+            auto AnimInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
+            AnimInfo->Init();
             std::set<std::string> AnimNameList; skeletonInfo->m_Skeleton->GetAnimationList_Name(AnimNameList);
-            animInfo->AutoApplyActionFromSkeleton(AnimNameList);
-            animInfo->AnimPlay(aiModelData::AnimActionType::Idle);
-            animInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            AnimInfo->AutoApplyActionFromSkeleton(AnimNameList);
+            if (i == (int)CHARACTER_TYPE::WARRIOR)
+            {
+                AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle);
+            }
+            else
+            {
+                AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+                AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
+            }
+        }
+
+        for (auto& obj : m_CharacterObjects)
+        {
+            if (obj->m_Name.find("Warrior") == std::string::npos)
+                obj->Activated = false;
         }
     }
 
@@ -219,17 +297,24 @@ void GameOverScene::UpdateShadowTransform(CTimer& gt)
 void GameOverScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
     ObjectManager ObjManager;
-    Object* GameOverInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameOverInfo");
+    Object* GameOverInfo_UserNameTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameOverInfo_UserName");
+    Object* GameOverInfo_UserRankTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameOverInfo_UserRank");
+    Object* GameOverInfo_TotalScoreTextObject = ObjManager.FindObjectName(m_TextObjects, "TextGameOverInfo_TotalScore");
 
-    auto& GameOverInfo = GameOverInfoObject->m_Textinfo->m_Text;
+    auto& UserNameRenderTexts = GameOverInfo_UserNameTextObject->m_Textinfo->m_Text;
+    auto& UserRankRenderTexts = GameOverInfo_UserRankTextObject->m_Textinfo->m_Text;
+    auto& TotalScoreRenderTexts = GameOverInfo_TotalScoreTextObject->m_Textinfo->m_Text;
 
-    GameOverInfo  = L"UserName: " + UserInfo_UserName + L"\n";
-    GameOverInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank) + L"\n";
-    GameOverInfo += L"Total Kill: " + std::to_wstring(GameMatchingResult_CountKill) + L"\n";
-    GameOverInfo += L"Total Death: " + std::to_wstring(GameMatchingResult_CountDeath) + L"\n";
-    GameOverInfo += L"Total Assistance: " + std::to_wstring(GameMatchingResult_CountAssistance) + L"\n";
-    GameOverInfo += L"Total Damage: " + std::to_wstring(GameMatchingResult_TotalDamage) + L"\n";
-    GameOverInfo += L"Total Heal: " + std::to_wstring(GameMatchingResult_TotalHeal);
+    if (UserInfo_UserName.empty() == true)
+        UserNameRenderTexts = L"Unknown";
+    else
+        UserNameRenderTexts = UserInfo_UserName;
+    UserRankRenderTexts = std::to_wstring(UserInfo_UserRank);
+    TotalScoreRenderTexts = L"Total Kill: " + std::to_wstring(GameMatchingResult_CountKill) + L"\n";
+    TotalScoreRenderTexts += L"Total Death: " + std::to_wstring(GameMatchingResult_CountDeath) + L"\n";
+    TotalScoreRenderTexts += L"Total Assistance: " + std::to_wstring(GameMatchingResult_CountAssistance) + L"\n";
+    TotalScoreRenderTexts += L"Total Damage: " + std::to_wstring(GameMatchingResult_TotalDamage) + L"\n";
+    TotalScoreRenderTexts += L"Total Heal: " + std::to_wstring(GameMatchingResult_TotalHeal);
 }
 
 void GameOverScene::AnimateLights(CTimer& gt)
@@ -286,6 +371,55 @@ void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
 {
     // Process Return Loby Button
     {
+        if (key_state[VK_LBUTTON] == true)
+        {
+            ObjectManager ObjManager;
+            Object* ReturnLobyButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_ReturnLobyButton");
+
+            auto& ReturnLobyButtonBound = ReturnLobyButton->m_TransformInfo->m_Bound;
+
+            RECT ReturnLobyButtonAreainScreen =
+            {
+                (LONG)(ReturnLobyButtonBound.Center.x - ReturnLobyButtonBound.Extents.x), // left
+                (LONG)(ReturnLobyButtonBound.Center.y + ReturnLobyButtonBound.Extents.y), // top
+                (LONG)(ReturnLobyButtonBound.Center.x + ReturnLobyButtonBound.Extents.x), // right
+                (LONG)(ReturnLobyButtonBound.Center.y - ReturnLobyButtonBound.Extents.y), // bottom
+            };
+
+            float CursorPos_x = oldCursorPos.x - m_width * 0.5f;
+            float CursorPos_y = -(oldCursorPos.y - m_height * 0.5f);
+
+            // Process SelectedCharacter
+            if (PointInRect(CursorPos_x, CursorPos_y, ReturnLobyButtonAreainScreen) == true)
+            {
+                if (ReturnLobyButtonPress == false && ReturnLobyButtonUp == true)
+                {
+                    auto& AllRitems = *m_AllRitemsRef;
+                    auto Ritem_ButtonPress = AllRitems.find("UI_Layout_ReturnLobyButton_Press")->second.get();
+                    ReturnLobyButton->m_RenderItems = { Ritem_ButtonPress };
+
+                    ReturnLobyButtonPress = true;
+                    ReturnLobyButtonUp = false;
+                }
+            }
+        }
+        else
+        {
+            ObjectManager ObjManager;
+            Object* ReturnLobyButton = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_ReturnLobyButton");
+
+            if (ReturnLobyButtonPress == true && ReturnLobyButtonUp == false)
+            {
+                auto& AllRitems = *m_AllRitemsRef;
+                auto Ritem_ButtonPress = AllRitems.find("UI_Layout_ReturnLobyButton")->second.get();
+                ReturnLobyButton->m_RenderItems = { Ritem_ButtonPress };
+
+                ReturnLobyButtonPress = false;
+                ReturnLobyButtonUp = true;
+
+                //OnceTryReturnLoby = true;
+            }
+        }
     }
 
     if (OnceTryReturnLoby == true)
@@ -309,4 +443,36 @@ void GameOverScene::SetMatchStatisticInfo(std::wstring UserName, int UserRank,
     GameMatchingResult_CountAssistance = Count_Assistance;
     GameMatchingResult_TotalDamage = TotalScore_Damage;
     GameMatchingResult_TotalHeal = TotalScore_Heal;
+
+    std::string ActivatedCharacterName;
+    switch (GameMatchingResult_PlayedCharacterType)
+    {
+    case CHARACTER_TYPE::WARRIOR:   ActivatedCharacterName = "Warrior"; break;
+    case CHARACTER_TYPE::BERSERKER: ActivatedCharacterName = "Berserker"; break;
+    case CHARACTER_TYPE::ASSASSIN:  ActivatedCharacterName = "Assassin"; break;
+    case CHARACTER_TYPE::PRIEST:    ActivatedCharacterName = "Priest"; break;
+    case CHARACTER_TYPE::COUNT:
+    case CHARACTER_TYPE::NON:
+    default:
+        throw std::invalid_argument("Unknown Character Type.");
+        break;
+    }
+
+    for (auto& obj : m_CharacterObjects)
+    {
+        auto AnimInfo = obj->m_SkeletonInfo->m_AnimInfo.get();
+
+        if (obj->m_Name.find(ActivatedCharacterName) != std::string::npos)
+        {
+            obj->Activated = true;
+            AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
+            AnimInfo->AnimLoop (aiModelData::AnimActionType::Idle);
+        }
+        else
+        {
+            obj->Activated = false;
+            AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
+            AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle, false);
+        }
+    }
 }
