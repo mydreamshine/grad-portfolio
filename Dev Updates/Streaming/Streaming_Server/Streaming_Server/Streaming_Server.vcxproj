@@ -153,6 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.cpp" />
@@ -187,6 +188,7 @@
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.cpp" />
     <ClCompile Include="..\..\..\Server\Common\csockaddr_in.cpp" />
     <ClCompile Include="..\..\..\Server\Common\NWMODULE.cpp" />
     <ClCompile Include="..\..\..\Server\Common\OVER_EX.cpp" />
@@ -197,6 +199,7 @@
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\DDSLoader.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\PngLoader.h" />
@@ -246,6 +249,7 @@
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Scene.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\stdafx.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Win32Application.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.h" />
     <ClInclude Include="..\..\..\Server\Common\CSOCKADDR_IN.h" />
     <ClInclude Include="..\..\..\Server\Common\NWMODULE.h" />
     <ClInclude Include="..\..\..\Server\Common\OVER_EX.h" />

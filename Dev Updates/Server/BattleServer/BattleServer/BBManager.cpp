@@ -98,7 +98,7 @@ void BBManager::load_config()
     GetPrivateProfileString(L"DMMODE", L"MAX_PLAYER", L"4", buffer, 512, config_path.c_str());
     max_player = std::stoi(buffer);
 
-    GetPrivateProfileString(L"DMMODE", L"PLAY_TIME", L"180.0", buffer, 512, config_path.c_str());
+    GetPrivateProfileString(L"DMMODE", L"PLAYTIME", L"180.0", buffer, 512, config_path.c_str());
     play_time = std::stof(buffer);
 
     GetPrivateProfileString(L"DMMODE", L"WIN_GOAL", L"5", buffer, 512, config_path.c_str());

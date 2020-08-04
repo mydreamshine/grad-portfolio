@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <fstream>
+#include <chrono>
 #include "..\..\Streaming_Server\Streaming_Server\packet_struct.h"
 
 #ifndef CLEANUP_H
@@ -64,6 +65,7 @@ inline void cleanup<SDL_Surface>(SDL_Surface* surf) {
 
 #endif
 
+using namespace std;
 char SDLK2VK(int sdlk) {
 	//Only Process 'LEFT' Special Key.
 	//Notes : VK_NUMPAD_0 and SDLK_BACKQUOTE returns SAME VALUE!!.
@@ -282,6 +284,11 @@ void RecvFunc()
 	UINT needBytes = 4;
 	UINT decodingBytes = 0;
 
+	char title[256];
+	chrono::steady_clock::time_point prev_time, cur_time;
+	prev_time = cur_time = chrono::high_resolution_clock::now();
+
+
 	while (true)
 	{
 		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), MAX_BUFFER_SIZE, 0);
@@ -325,11 +332,17 @@ void RecvFunc()
 			decoder.decode(completeFrame, decodingBytes);
 			AVFrame* frame = decoder.flush(NULL);
 			int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
+			decoder.free_frame(&frame);
 
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
 			SDL_RenderPresent(renderer);
 			canRender = false;
+
+			sprintf(title, "BattleArena / FPS : %.1f", 1.0f / chrono::duration<float>(cur_time - prev_time).count());
+			prev_time = cur_time;
+			cur_time = chrono::high_resolution_clock::now();
+			SDL_SetWindowTitle(window, title);
 		}
 	}
 }

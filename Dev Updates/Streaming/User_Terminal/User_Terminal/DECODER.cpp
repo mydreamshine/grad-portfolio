@@ -6,9 +6,7 @@ DECODER::DECODER()
     if (!pkt)
         exit(1);
 
-    //codec = avcodec_find_decoder_by_name("libx264rgb");
     codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-    //codec = avcodec_find_encoder_by_name("libx264rgb");
     if (!codec) {
         fprintf(stderr, "Codec not found\n");
         exit(1);
@@ -32,11 +30,9 @@ DECODER::DECODER()
     }
 
     frame = av_frame_alloc();
-    CopyFrame = av_frame_alloc();
-    CopyFrame->format = AV_PIX_FMT_YUV420P;
-    CopyFrame->width = 640;
-    CopyFrame->height = 480;
-    av_frame_get_buffer(CopyFrame, 32);
+
+
+
     if (!frame) {
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
@@ -87,6 +83,12 @@ AVFrame* DECODER::flush(void* buffer)
         exit(1);
     }
 
+    CopyFrame = av_frame_alloc();
+    CopyFrame->format = AV_PIX_FMT_YUV420P;
+    CopyFrame->width = 640;
+    CopyFrame->height = 480;
+    av_frame_get_buffer(CopyFrame, 32);
+
     while (ret >= 0) {
         ret = avcodec_receive_frame(c, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
@@ -95,10 +97,13 @@ AVFrame* DECODER::flush(void* buffer)
             fprintf(stderr, "Error during decoding\n");
             exit(1);
         }
-
-        //do something
         av_frame_copy(CopyFrame, frame);
     }
     avcodec_flush_buffers(c);
     return CopyFrame;
+}
+
+void DECODER::free_frame(AVFrame** frame)
+{
+    av_frame_free(frame);
 }

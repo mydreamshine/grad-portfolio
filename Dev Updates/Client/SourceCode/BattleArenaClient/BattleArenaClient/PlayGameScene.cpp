@@ -1323,7 +1323,7 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
                 if (ChattingLayerSliding == false && inputChat.size() > 0)
                 {
                     EventManager eventManager;
-                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, PlayerNameAddInputText);
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_PLAYGMAE_SCENE, PlayerNameAddInputText);
 
                     ChattingList.push_back(PlayerNameAddInputText);
                     ChattingListUpdate = true;

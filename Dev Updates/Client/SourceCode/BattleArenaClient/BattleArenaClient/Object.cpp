@@ -286,11 +286,9 @@ void TransformInfo::SetInterpolatedDestPosition(const DirectX::XMFLOAT3& newPosi
 
 void TransformInfo::InterpolateTransformWorldPosition(CTimer& gt)
 {
-	const float invDeltaTime_factor = 1.0f / 30.0f; // ¼­¹öÀÇ DeltaTime
 	XMVECTOR CURR_WORLD_POS = XMLoadFloat3(&m_WorldPosition);
 	XMVECTOR DEST_WORLD_POS = XMLoadFloat3(&m_InterPolationDestPosition);
-	//CURR_WORLD_POS += (DEST_WORLD_POS - CURR_WORLD_POS) * (gt.GetTimeElapsed() / invDeltaTime_factor);
-	float bias = (gt.GetTimeElapsed() * 180.0f);
+	float bias = (gt.GetTimeElapsed() * 20.0f);
 	bias = (bias > 1.0f) ? 1.0f : bias;
 
 	XMVECTOR dir = XMVectorSubtract(DEST_WORLD_POS, CURR_WORLD_POS);

@@ -28,4 +28,5 @@ public:
 
     void decode(void* buffer, int data_size);
     AVFrame* flush(void* buffer);
+    void free_frame(AVFrame** frame);
 };

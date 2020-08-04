@@ -238,7 +238,7 @@ struct sscs_packet_send_chat_message : packet_inheritance
 {
 	// contents ref.
 	short client_id{0};
-	wchar_t message[chatting_len]{};
+	wchar_t message[chatting_len];
 
 	sscs_packet_send_chat_message()
 	{

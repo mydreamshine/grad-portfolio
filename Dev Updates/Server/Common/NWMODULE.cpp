@@ -124,9 +124,9 @@ void NWMODULE<T>::process_disconnect(SOCKET& socket, PACKET_BUFFER& buffer)
 	}
 
 	buffer.d_packet.clear();
-	buffer.c_lock.lock();
+	/*buffer.c_lock.lock();
 	buffer.c_packet.clear();
-	buffer.c_lock.unlock();
+	buffer.c_lock.unlock();*/
 }
 
 

@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <queue>
+#include <chrono>
 
 #include <vector>
 #include "stdafx.h"
@@ -35,6 +36,9 @@ struct CLIENT {
 	EventProcessor FrameworkEventProcessor;
 	std::queue<std::unique_ptr<packet_inheritance>> sscs_packetList; // Streaming -> Server
 	ENCODER encoder{ SCREEN_WIDTH, SCREEN_HEIGHT, 6000 * 1000, 60 };
+
+	chrono::steady_clock::time_point prev_time;
+	chrono::steady_clock::time_point cur_time;
 };
 
 short server_port;
@@ -233,8 +237,8 @@ void do_worker() {
 			clients[key].GameFramework.OnUpdate(GeneratedEvents);
 			clients[key].GameFramework.OnRender();
 			clients[key].FrameworkEventProcessor.ProcessGeneratedEvents(GeneratedEvents);
-			delete over_ex;
 			PostEvent((int)key, EV_ENCODE);
+			delete over_ex;
 		}
 		break;
 
@@ -246,6 +250,9 @@ void do_worker() {
 			BYTE* Frame = clients[key].GameFramework.GetFrameData();
 			clients[key].encoder.encode((const char*)Frame);
 			SendFramePacket((int)key, Frame);
+			//printf("FPS : %.1f\n", 1.0f / chrono::duration<float>(clients[key].cur_time - clients[key].prev_time).count());
+			clients[key].prev_time = clients[key].cur_time;
+			clients[key].cur_time = chrono::high_resolution_clock::now();
 			PostEvent((int)key, EV_UPDATE);
 			delete over_ex;
 			break;
@@ -369,5 +376,5 @@ int main()
 	closesocket(listenSocket);
 	WSACleanup();
 	delete[] clients;
-	delete[] IdPooler;
+	delete IdPooler;
 }

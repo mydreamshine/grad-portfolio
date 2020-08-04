@@ -128,10 +128,9 @@ void DMRoom::end()
 			};
 
 			send_packet(sockets[player.first], &change_scene_packet, change_scene_packet.size);
-			send_packet(sockets[player.first], &stat_packet, change_scene_packet.size);
+			send_packet(sockets[player.first], &stat_packet, stat_packet.size);
 		}
 	}
-
 	sockets.clear();
 	socket_lock.unlock();
 
