@@ -848,7 +848,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
             PlayButton->m_RenderItems = { Ritem_cancelButton };
             ChangeButton = false;
             CurrButtonIsPlayButton = false;
-            OnceTryGameMatching = true;
         }
         else if (ChangeButton == true && StartMatching == false && OnceTryGameMatching == false)
         {
@@ -861,7 +860,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
 
             ChangeButton = false;
             CurrButtonIsPlayButton = true;
-            OnceTryGameMatching = true;
         }
 
         if (CurrButtonIsPlayButton != true)
@@ -905,8 +903,8 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                 if (inputTextBox.IsEmpty() == false)
                 {
                     std::wstring FullinputTexts = inputTextBox.GetFullinputTexts();
-                    /*EventManager eventManager;
-                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, FullinputTexts);*/
+                    EventManager eventManager;
+                    eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, FullinputTexts);
 
                     // Chatting List Test
                     ChattinglistBox.AddMessage(FullinputTexts);
@@ -975,6 +973,15 @@ void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)
 {
     UserInfo_UserName = UserName;
     UserInfo_UserRank = UserRank;
+
+    std::wstring PlayerNameInputForm;
+    if (UserInfo_UserName.empty() == false)
+        PlayerNameInputForm = UserInfo_UserName + L": ";
+    else
+        PlayerNameInputForm = L"Unknown: ";
+
+    inputTextBox.SetStartInputForm(PlayerNameInputForm);
+    inputTextBox.InitTexts();
 }
 
 void LobyScene::SetChatLog(std::wstring UserName, std::wstring Message)

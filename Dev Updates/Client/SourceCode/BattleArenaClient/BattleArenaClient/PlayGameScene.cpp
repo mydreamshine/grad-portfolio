@@ -811,8 +811,10 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             if (TimeLimit_Sec <= 10)
             {
                 XMFLOAT3 Colors3f; XMStoreFloat3(&Colors3f, TimeLimitTextInfo->m_TextColor);
-                if (Colors3f.x == 1.0f) TimeLimitTextInfo->m_TextColor = DirectX::Colors::White;
-                else TimeLimitTextInfo->m_TextColor = DirectX::Colors::Red;
+                if (Colors3f.y == 1.0f)
+                    TimeLimitTextInfo->m_TextColor = DirectX::Colors::Red;
+                else
+                    TimeLimitTextInfo->m_TextColor = DirectX::Colors::White;
             }
         }
 
@@ -1495,7 +1497,17 @@ void PlayGameScene::SpawnPlayer(
             }
             else
             {
-                Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                if (m_MainPlayer != nullptr)
+                {
+                    // Set Other Player HP Bar Ritem (피아식별용)
+                    OBJECT_PROPENSITY mainPlayerPropensity = m_MainPlayer->m_CharacterObjRef->Propensity;
+                    if (Propensity == mainPlayerPropensity)
+                        Ritems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
+                    else
+                        Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                }
+                else
+                    Ritems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
             }
             objManager.SetObjectComponent(newPlayer->m_HP_BarObjRef[0], "HP Bar Dest - Instancing", Ritems);
             Ritems = { AllRitems["UI_Layout_HPBarIncrease"].get() };
