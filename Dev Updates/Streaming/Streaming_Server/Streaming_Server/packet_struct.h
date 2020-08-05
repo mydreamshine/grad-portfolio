@@ -2,15 +2,12 @@
 #include <wchar.h>
 #include <chrono>
 
-constexpr short LOBBYSERVER_PORT = 15500;
-constexpr short BATTLESERVER_PORT = 15600;
-
 //////////////////// 통신 데이터 타입 + 이벤트 타입(혹은 State Machine) ///////////////////
 enum TSS {
 	TSS_KEYDOWN,
 	TSS_KEYUP,
 	TSS_MOUSEDOWN,
-	TSS_UDP_PORT,
+	TSS_READY_TO_GO,
 	TSS_REQ_RTT,
 
 	SST_TCP_FRAME,
@@ -142,12 +139,12 @@ struct tss_packet_mouse_button_down : packet_inheritance
 		type = TSS_MOUSEDOWN;
 	}
 };
-struct tss_packet_udp_port : packet_inheritance
+struct tss_packet_ready_to_go : packet_inheritance
 {
 	unsigned short port;
-	tss_packet_udp_port(unsigned short port) : port(port) {
-		size = (PACKET_SIZE)sizeof(tss_packet_udp_port);
-		type = TSS_UDP_PORT;
+	tss_packet_ready_to_go(unsigned short port) : port(port) {
+		size = (PACKET_SIZE)sizeof(tss_packet_ready_to_go);
+		type = TSS_READY_TO_GO;
 	}
 };
 struct tss_packet_req_rtt : packet_inheritance

@@ -203,12 +203,12 @@ const int FRAME_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
 
 
 std::wstring config_path{ L".\\TERMINAL_CONFIG.ini" };
-atomic<int> fps;
+atomic<float> fps;
 atomic<int> rtt;
 
 std::wstring server_addr;
 unsigned short server_port;
-unsigned short local_port;
+bool UDP_MODE;
 SOCKET serverSocket;
 SOCKET udpSocket;
 
@@ -240,6 +240,7 @@ void gen_default_config()
 {
 	WritePrivateProfileString(L"TERMINAL", L"SERVER_PORT", L"15700", config_path.c_str());
 	WritePrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", config_path.c_str());
+	WritePrivateProfileString(L"TERMINAL", L"UDP_MODE", L"1", config_path.c_str());
 }
 void InitConfig()
 {
@@ -255,6 +256,9 @@ void InitConfig()
 
 	GetPrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
 	server_addr = std::wstring(buffer);
+
+	GetPrivateProfileString(L"TERMINAL", L"UDP_MODE", L"1", buffer, 512, config_path.c_str());
+	UDP_MODE = std::stoi(buffer);
 	wprintf(L" Done.\n");
 }
 void PostRender(char* frame, int frame_size)
@@ -371,9 +375,9 @@ private:
 };
 void udp_recv_thread()
 {
-
-
-	char* receivedPacket = new char[sizeof(video_packet)];
+	int buf_size = sizeof(video_packet);
+	char* receivedPacket = new char[buf_size];
+	
 	video_packet* packet = reinterpret_cast<video_packet*>(receivedPacket);
 
 	int lastest_render_frame = -1;
@@ -384,12 +388,9 @@ void udp_recv_thread()
 	int from_len = sizeof(from);
 	memset(&from, 0, from_len);
 	
-	tss_packet_udp_port port_packet{ local_port };
-	send(serverSocket, (const char*)&port_packet, port_packet.size, 0);
-
 	while (true)
 	{
-		int retval = recvfrom(udpSocket, reinterpret_cast<char*>(receivedPacket), MAX_BUFFER_SIZE, 0, (struct sockaddr*)&from, &from_len);
+		int retval = recvfrom(udpSocket, reinterpret_cast<char*>(receivedPacket), buf_size, 0, (struct sockaddr*)&from, &from_len);
 		if (retval == 0) {
 			break;
 		}
@@ -473,7 +474,8 @@ void renderer_thread() {
 void event_loop()
 {
 	char title[256];
-	int i_fps, i_rtt;
+	int i_rtt;
+	float f_fps;
 	SDL_Event e;
 	while (true)
 	{
@@ -514,8 +516,8 @@ void event_loop()
 				return;
 				
 			case SDL_USEREVENT:
-				i_fps = fps; i_rtt = rtt;
-				sprintf_s(title, "BattleArena / FPS : %d / Latency : %dms", i_fps, i_rtt);
+				f_fps = fps; i_rtt = rtt;
+				sprintf_s(title, "BattleArena / FPS : %.1f / Latency : %dms", f_fps, i_rtt);
 				SDL_SetWindowTitle(window, title);
 				break;
 
@@ -537,7 +539,7 @@ int main(int, char**) {
 		return 1;
 	}
 
-	window = SDL_CreateWindow("BattleArena", 100, 100, SCREEN_WIDTH,
+	window = SDL_CreateWindow("BattleArena / FPS : 0.0 / Latency : 0ms", 100, 100, SCREEN_WIDTH,
 		SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
 		logSDLError(std::cout, "CreateWindow");
@@ -577,22 +579,27 @@ int main(int, char**) {
 	if (retval == SOCKET_ERROR)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NW ERROR", "SERVER CONNECT FAIL", NULL);
 	threads.emplace_back(tcp_recv_thread);
-
-	getsockname(serverSocket, (sockaddr*)&serverAddr, &serverLen);
-	local_port = ntohs(serverAddr.sin_port) + 1;
-
-	//Setup UDP Channel.
-	SOCKADDR_IN udpAddr;
-	memset(&udpAddr, 0, sizeof(SOCKADDR_IN));
-	udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	udpAddr.sin_family = AF_INET;
-	udpAddr.sin_port = htons(local_port);
-	udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_IP, nullptr, 0, WSA_FLAG_OVERLAPPED);
-	retval = ::bind(udpSocket, reinterpret_cast<const SOCKADDR*>(&udpAddr), sizeof(udpAddr));
-	if (retval == SOCKET_ERROR)
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NW ERROR", "UDP Binding ERROR", NULL);
 	
-	//threads.emplace_back(udp_recv_thread);
+	getsockname(serverSocket, (sockaddr*)&serverAddr, &serverLen);
+	unsigned short local_port = ntohs(serverAddr.sin_port) + 1;
+	
+
+	//Setup UDP.
+	if (UDP_MODE) {
+		SOCKADDR_IN udpAddr;
+		memset(&udpAddr, 0, sizeof(SOCKADDR_IN));
+		udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		udpAddr.sin_family = AF_INET;
+		udpAddr.sin_port = htons(local_port);
+		udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_IP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+		retval = ::bind(udpSocket, reinterpret_cast<const SOCKADDR*>(&udpAddr), sizeof(udpAddr));
+		if (retval == SOCKET_ERROR)
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NW ERROR", "UDP Binding ERROR", NULL);
+		threads.emplace_back(udp_recv_thread);
+	}
+
+	tss_packet_ready_to_go ready_packet{ local_port };
+	send(serverSocket, (const char*)&ready_packet, ready_packet.size, 0);
 
 	event_loop();
 	closesocket(serverSocket);
