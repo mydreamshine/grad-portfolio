@@ -185,6 +185,9 @@ char SDLK2VK(int sdlk) {
     case SDLK_CARET: return '^';
     case SDLK_UNDERSCORE: return '_';
     case SDLK_BACKQUOTE: return '`';
+
+	case SDL_BUTTON_LEFT: return VK_LBUTTON;
+	case SDL_BUTTON_RIGHT: return VK_RBUTTON;
 	}
 	return -1;
 }
@@ -284,14 +287,11 @@ void RecvFunc()
 	UINT savedSize = 0;
 	UINT8* savedPacket = new UINT8[MAX_BUFFER_SIZE];
 	UINT8* savedPointer = savedPacket;
+
 	UINT8* receivedPacket = new UINT8[MAX_BUFFER_SIZE];
 	UINT8* receivedPointer = receivedPacket;
 	UINT needBytes = 4;
 	UINT decodingBytes = 0;
-
-	
-	
-	
 
 	while (true)
 	{
@@ -340,6 +340,10 @@ void RecvFunc()
 			}
 		}
 	}
+
+	delete[] completeFrame;
+	delete[] savedPacket;
+	delete[] receivedPacket;
 }
 
 void event_loop()
@@ -368,23 +372,16 @@ void event_loop()
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
-				if (e.button.button == SDL_BUTTON_LEFT)
+				if (e.button.button == SDL_BUTTON_LEFT || e.button.button == SDL_BUTTON_RIGHT)
 				{
-					POINT oldMouseCursor = { e.motion.x, e.motion.y };
-					tss_packet_mouse_button_down packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_MOUSE_LBUTTON_DOWN;
-					packet.x = oldMouseCursor.x;
-					packet.y = oldMouseCursor.y;
+					tss_packet_mouse_button_down packet{SDLK2VK(e.button.button), e.motion.x, e.motion.y};
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 				}
 				break;
 			case SDL_MOUSEBUTTONUP:
-				if (e.button.button == SDL_BUTTON_LEFT)
+				if (e.button.button == SDL_BUTTON_LEFT || e.button.button == SDL_BUTTON_RIGHT)
 				{
-					tss_packet_mouse_button_up packet;
-					packet.size = sizeof(packet);
-					packet.type = TSS_MOUSE_LBUTTON_UP;
+					tss_packet_keyup packet{SDLK2VK(e.button.button)};
 					send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 				}
 				break;

@@ -6,25 +6,9 @@ constexpr short BATTLESERVER_PORT = 15600;
 
 //////////////////// 통신 데이터 타입 + 이벤트 타입(혹은 State Machine) ///////////////////
 enum TSS {
-	TSS_KEYDOWN_W,
-	TSS_KEYDOWN_S,
-	TSS_KEYDOWN_A,
-	TSS_KEYDOWN_D,
-	TSS_KEYDOWN_F1,
-	TSS_KEYDOWN_F2,
-	TSS_KEYDOWN_F3,
-
-	TSS_KEYUP_W,
-	TSS_KEYUP_S,
-	TSS_KEYUP_A,
-	TSS_KEYUP_D,
-	TSS_KEYUP_F1,
-	TSS_KEYUP_F2,
-	TSS_KEYUP_F3,
 	TSS_KEYDOWN,
 	TSS_KEYUP,
-	TSS_MOUSE_LBUTTON_DOWN,
-	TSS_MOUSE_LBUTTON_UP,
+	TSS_MOUSEDOWN
 };
 
 
@@ -132,14 +116,14 @@ struct tss_packet_mouse_button_down
 {
 	PACKET_SIZE size;
 	PACKET_TYPE type;
+	char key;
+	int x;
+	int y;
 
-	long x;
-	long y;
-};
-struct tss_packet_mouse_button_up
-{
-	PACKET_SIZE size;
-	PACKET_TYPE type;
+	tss_packet_mouse_button_down(char key, int x, int y) : key(key), x(x), y(y) {
+		size = (PACKET_SIZE)sizeof(tss_packet_mouse_button_down);
+		type = TSS_MOUSEDOWN;
+	}
 };
 
 

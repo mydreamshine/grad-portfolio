@@ -128,9 +128,11 @@ void SendFramePacket(int client, BYTE* frame)
 	memcpy(send_over->data() + 4, clients[client].encoder.buffer(), clients[client].encoder.size());
 	WSASend(clients[client].socket, send_over->buffer(), 1, nullptr, 0, send_over->overlapped(), nullptr);
 }
+
 void ProcessPacket(int client, void* packet) 
 {
 	PACKET_TYPE packet_type = reinterpret_cast<packet_inheritance*>(packet)->type;
+
 	switch (packet_type)
 	{
 	case TSS_KEYUP: {
@@ -143,17 +145,13 @@ void ProcessPacket(int client, void* packet)
 		clients[client].GameFramework.OnKeyDown(data->key);
 		break;
 	}
-		
-	case TSS_MOUSE_LBUTTON_DOWN:
-	{
+
+	case TSS_MOUSEDOWN: {
 		tss_packet_mouse_button_down* mouse_button_down_packet = reinterpret_cast<tss_packet_mouse_button_down*>(packet);
-		POINT OldCursorPos = { mouse_button_down_packet->x, mouse_button_down_packet->y };
-		clients[client].GameFramework.OnKeyDown(0x01, &OldCursorPos); // VK_LBUTTON
+		POINT OldCursorPos{ mouse_button_down_packet->x, mouse_button_down_packet->y };
+		clients[client].GameFramework.OnKeyDown(mouse_button_down_packet->key, &OldCursorPos); // VK_LBUTTON
 		break;
 	}
-	case TSS_MOUSE_LBUTTON_UP:
-		clients[client].GameFramework.OnKeyUp(0x01); // VK_LBUTTON
-		break;
 	}
 };
 
