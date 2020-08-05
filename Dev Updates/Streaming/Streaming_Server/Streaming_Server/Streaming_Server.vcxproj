@@ -153,7 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingListBox.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Timer\Timer.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\Util\d3d12\Camera.cpp" />
@@ -178,6 +178,7 @@
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.cpp" />
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\InputTextBox.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.cpp" />
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.cpp" />
@@ -199,7 +200,7 @@
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingListBox.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\DDSLoader.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\ModelLoader.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Common\FileLoader\PngLoader.h" />
@@ -239,6 +240,7 @@
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\FrameResource.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Framework.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\GameOverScene.h" />
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\InputTextBox.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LobyScene.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\LoginScene.h" />
     <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\Object.h" />

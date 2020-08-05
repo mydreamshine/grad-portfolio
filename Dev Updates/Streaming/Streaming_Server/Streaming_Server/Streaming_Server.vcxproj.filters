@@ -180,10 +180,13 @@
     <ClCompile Include="..\..\..\Server\Common\NWMODULE.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.cpp">
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.cpp">
       <Filter>Client\Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.cpp">
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingListBox.cpp">
+      <Filter>Client\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\InputTextBox.cpp">
       <Filter>Client\Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -362,10 +365,13 @@
     <ClInclude Include="..\..\..\Server\Common\NWMODULE.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingList.h">
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.h">
       <Filter>Client\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\WND_MessageBlock.h">
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingListBox.h">
+      <Filter>Client\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\InputTextBox.h">
       <Filter>Client\Header Files</Filter>
     </ClInclude>
   </ItemGroup>

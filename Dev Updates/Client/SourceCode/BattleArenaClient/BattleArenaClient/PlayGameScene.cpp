@@ -66,6 +66,9 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         }
     }
 
+    PlayGameScene::InitPoisonFogObjects();
+
+
     m_LightRotationAngle = 0.0f;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
@@ -540,6 +543,8 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
     m_nTextBatch = (UINT)m_TextObjects.size();
+
+    //PlayGameScene::InitPoisonFogObjects();
 }
 
 void PlayGameScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -1048,6 +1053,34 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
             Transforminfo->m_TexAlpha = texAlpha;
             if (compareFloat(texAlpha, 0.0f) == true)
                 obj->Activated = false;
+        }
+        else if (obj->m_Name.find("PoisonFog") != std::string::npos)
+        {
+            auto Transforminfo = obj->m_TransformInfo.get();
+
+            const float DefaultPoisonGasSize = 200.0f;
+            const float BoundaryPoisonGasSize = 1000.0f;
+            const float InnerPoisonGasSize = 400.0f;
+
+            float MaxScaleScala = InnerPoisonGasSize / DefaultPoisonGasSize;
+            if (obj->m_Name.find("Boundary") != std::string::npos)
+                MaxScaleScala = BoundaryPoisonGasSize / DefaultPoisonGasSize;
+            const float MaxScaleTiming = 2.1f;
+            float ScaleExtIncreaseSign = obj->DeActivatedDecrease; // Scale Increase Sign 대용
+            const float ScaleExtSpeed = ScaleExtIncreaseSign * MaxScaleScala * gt.GetTimeElapsed() / MaxScaleTiming;
+
+            float CurrScaleScala = Transforminfo->GetWorldScale().x;
+            float newScaleScala = MathHelper::Clamp(CurrScaleScala + ScaleExtSpeed, 0.0f, MaxScaleScala);
+
+            float texAlpha = MathHelper::Clamp(newScaleScala / MaxScaleScala, 0.0f, 1.0f);
+
+            Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
+            Transforminfo->m_TexAlpha = texAlpha;
+
+            if (newScaleScala >= MaxScaleScala)
+                obj->DeActivatedDecrease = -1.0f; // Scale Increase Sign 대용
+            else if (newScaleScala <= 0.0f)
+                obj->DeActivatedDecrease = 1.0f; // Scale Increase Sign 대용
         }
     }
 }
@@ -2039,4 +2072,123 @@ void PlayGameScene::SetPlayerHP(int CE_ID, int HP)
 void PlayGameScene::SetInGameTeamScore(unsigned char InGameScore_Team)
 {
     GameInfo_CountTeamScore = InGameScore_Team;
+}
+
+void PlayGameScene::InitPoisonFogObjects()
+{
+    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+    auto& AllRitems = *m_AllRitemsRef;
+    auto& Geometries = *m_GeometriesRef;
+    auto& ModelSkeletons = *m_ModelSkeltonsRef;
+
+    RECT InitDeActPoisonGasArea = { -3423, 4290, 4577, -3710 };
+
+    float InitDeActPoisonGasAreaSize = 8000.0f;
+    float InitPoisonGasAreaSize = 10000.0f;
+    float PoisonGasAreaSubSize = InitPoisonGasAreaSize - InitDeActPoisonGasAreaSize;
+    const float DefaultPoisonGasSize = 200.0f;
+    const float BoundaryPoisonGasSize = 1000.0f;
+    const float InnerPoisonGasSize = 400.0f;
+
+    int TotalGameTimeLimit = 180;
+    float DeActPoisonGasAreaSizeDownInterval = 5;
+    int DeActAreaPoisonGasCount = (int)(TotalGameTimeLimit / DeActPoisonGasAreaSizeDownInterval);
+    float DeActInnerAreaPoisonGasSize = InitDeActPoisonGasAreaSize / DeActAreaPoisonGasCount; // 222.222222...
+
+    // Size 10000x10000
+    RECT InitActPoisonGasArea =
+    {
+        InitDeActPoisonGasArea.left - 1000,
+        InitDeActPoisonGasArea.top + 1000,
+        InitDeActPoisonGasArea.right + 1000,
+        InitDeActPoisonGasArea.bottom - 1000,
+    };
+
+    ObjectManager ObjManager;
+
+    //Left-Top Boundary PoisonGasArea
+    {
+        int maxCol = (int)((PoisonGasAreaSubSize / 2.0f) / BoundaryPoisonGasSize);
+        int maxRow = (int)(InitPoisonGasAreaSize / BoundaryPoisonGasSize);
+        float StartGenLeft = (float)InitActPoisonGasArea.left + (BoundaryPoisonGasSize / 2.0f);
+        float StartGenRight = (float)InitActPoisonGasArea.right - (BoundaryPoisonGasSize / 2.0f);
+        float StartGenTop = (float)InitActPoisonGasArea.top - (BoundaryPoisonGasSize / 2.0f);
+        for (int col = 0; col < maxCol; ++col)
+        {
+            for (int row = 0; row < maxRow; ++row)
+            {
+                for (int i = 0; i < 2; ++i)
+                {
+                    Object* newEffectObject = ObjManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+                    std::string objName = "BoundaryPoisonFog - Instancing";
+                    auto Ritems = { AllRitems["SkillEffect_Poison_Fog_GreenLight"].get() };
+
+                    const float randScale = MathHelper::RandF(0.0f, BoundaryPoisonGasSize / DefaultPoisonGasSize);
+                    XMFLOAT3 newWorldScale = { randScale, randScale, randScale };
+                    XMFLOAT3 newWorldPosition = { 0.0f, 100.0f, 0.0f };
+                    if (i == 0)
+                        newWorldPosition.x = StartGenLeft + BoundaryPoisonGasSize * col;
+                    else
+                        newWorldPosition.x = StartGenRight - BoundaryPoisonGasSize * col;
+                    newWorldPosition.y = 500.0f;
+                    newWorldPosition.z = StartGenTop - BoundaryPoisonGasSize * row;
+
+                    ObjManager.SetObjectComponent(newEffectObject, objName,
+                        Ritems, nullptr,
+                        nullptr, nullptr, nullptr,
+                        &newWorldScale, nullptr, &newWorldPosition);
+                    newEffectObject->m_TransformInfo->UpdateWorldTransform();
+                    newEffectObject->m_TransformInfo->m_nonShadowRender = true;
+                    newEffectObject->m_TransformInfo->m_TexAlpha = randScale / 2.0f;
+
+                    float scale_sign = 1.0f;
+                    if (MathHelper::Rand(0, 1) == 0) scale_sign = -1.0f;
+                    newEffectObject->DeActivatedDecrease = scale_sign; // Scale Increase Sign 대용
+
+                    m_EffectObjects.push_back(newEffectObject);
+                }
+            }
+        }
+    }
+    // Inner PoisonGasArea
+    {
+        int maxCol = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
+        int maxRow = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
+        float StartGenLeft = (float)InitDeActPoisonGasArea.left + (InnerPoisonGasSize / 2.0f);
+        float StartGenRight = (float)InitDeActPoisonGasArea.right - (InnerPoisonGasSize / 2.0f);
+        float StartGenTop = (float)InitDeActPoisonGasArea.top - (InnerPoisonGasSize / 2.0f);
+        float StartGenBottom = (float)InitDeActPoisonGasArea.top - (InnerPoisonGasSize / 2.0f);
+        for (int col = 0; col < maxCol; ++col)
+        {
+            for (int row = 0; row < maxRow; ++row)
+            {
+                Object* newEffectObject = ObjManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+
+                std::string objName = "PoisonFog - Instancing";
+                auto Ritems = { AllRitems["SkillEffect_Poison_Fog_GreenLight"].get() };
+
+                const float randScale = MathHelper::RandF(0.0f, InnerPoisonGasSize / DefaultPoisonGasSize);
+                XMFLOAT3 newWorldScale = { randScale, randScale, randScale };
+                XMFLOAT3 newWorldPosition = { 0.0f, 100.0f, 0.0f };
+                newWorldPosition.x = StartGenLeft + InnerPoisonGasSize * col;
+                newWorldPosition.y = 400.0f;
+                newWorldPosition.z = StartGenTop - InnerPoisonGasSize * row;
+
+                ObjManager.SetObjectComponent(newEffectObject, objName,
+                    Ritems, nullptr,
+                    nullptr, nullptr, nullptr,
+                    &newWorldScale, nullptr, &newWorldPosition);
+                newEffectObject->m_TransformInfo->UpdateWorldTransform();
+                newEffectObject->m_TransformInfo->m_nonShadowRender = true;
+                newEffectObject->m_TransformInfo->m_TexAlpha = randScale / 2.0f;
+
+                float scale_sign = 1.0f;
+                if (MathHelper::Rand(0, 1) == 0) scale_sign = -1.0f;
+                newEffectObject->DeActivatedDecrease = scale_sign; // Scale Increase Sign 대용
+
+                m_EffectObjects.push_back(newEffectObject);
+            }
+        }
+    }
 }

@@ -12,7 +12,7 @@
 #include "Common/FileLoader/SpriteFontLoader.h"
 #include "FrameworkEvent.h"
 
-#define MAX_WORLD_OBJECT 2000
+#define MAX_WORLD_OBJECT 4000
 #define MAX_CHARACTER_OBJECT 100
 
 // rel. Text

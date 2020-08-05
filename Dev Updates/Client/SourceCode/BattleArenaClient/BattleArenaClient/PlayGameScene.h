@@ -77,6 +77,9 @@ public:
     virtual void SetInGameTeamScore(unsigned char InGameScore_Team);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    void InitPoisonFogObjects();
+    void SpawnPoisonFogObject(const RECT& DeActArea);
+
 private:
     const UINT m_MaxWorldObject = MAX_WORLD_OBJECT;
     const UINT m_MaxCharacterObject = MAX_CHARACTER_OBJECT;
