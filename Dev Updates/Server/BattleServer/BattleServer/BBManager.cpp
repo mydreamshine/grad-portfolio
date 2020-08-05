@@ -41,6 +41,10 @@ void BBManager::load_bb()
             grass_bb.emplace_back(tempBox);
             continue;
         }
+        else if (tempName.find("SpawnPoint") != std::string::npos) {
+            spawn_points.emplace_back(tempBox.Center.x, tempBox.Center.y, tempBox.Center.z);
+            continue;
+        }
 
         for (const std::string& target : world_target) {
             if (tempName.find(target) == std::string::npos) continue;
@@ -103,6 +107,15 @@ void BBManager::load_config()
 
     GetPrivateProfileString(L"DMMODE", L"WIN_GOAL", L"5", buffer, 512, config_path.c_str());
     win_goal = std::stoi(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"GAS_DECREASE_TIME", L"9.0", buffer, 512, config_path.c_str());
+    gas_decrease_time = std::stof(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"GAS_DECREASE_WIDTH", L"400", buffer, 512, config_path.c_str());
+    gas_decrease_time = std::stoi(buffer);
+
+    GetPrivateProfileString(L"DMMODE", L"GAS_DECREASE_HEIGHT", L"400", buffer, 512, config_path.c_str());
+    gas_decrease_time = std::stoi(buffer);
 }
 
 BBManager::~BBManager()
@@ -119,4 +132,7 @@ void BBManager::gen_default_config()
     WritePrivateProfileString(L"DMMODE", L"MAX_PLAYER", L"4", config_path.c_str());
     WritePrivateProfileString(L"DMMODE", L"PLAYTIME", L"180.0", config_path.c_str());
     WritePrivateProfileString(L"DMMODE", L"WIN_GOAL", L"5", config_path.c_str());
+    WritePrivateProfileString(L"DMMODE", L"GAS_DECREASE_TIME", L"9.0", config_path.c_str());
+    WritePrivateProfileString(L"DMMODE", L"GAS_DECREASE_WIDTH", L"400", config_path.c_str());
+    WritePrivateProfileString(L"DMMODE", L"GAS_DECREASE_HEIGHT", L"400", config_path.c_str());
 }

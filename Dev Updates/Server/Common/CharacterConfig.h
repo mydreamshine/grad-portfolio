@@ -33,8 +33,6 @@ constexpr float ASSASSIN_MOVEMENT = 380.0f;
 constexpr int ASSASSIN_ATTACK_DAMAGE = 30;
 constexpr float STELTH_DURATION = 7.0f;
 
-constexpr float GAME_TIME_LIMIT = 180.0f;
-constexpr float GAS_DECREASE_TIME = 5.0f;
 constexpr float GAS_EFFECT_TIME = 1.0f;
 constexpr int GAS_DAMAGE = 5;
 

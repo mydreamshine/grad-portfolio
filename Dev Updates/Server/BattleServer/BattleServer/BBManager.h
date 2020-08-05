@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <DirectXCollision.h>
+#include "Vector3d.h"
 
 class BBManager
 {
@@ -22,6 +23,12 @@ public:
     int max_player{ 0 };
     float play_time{ 0 };
     int win_goal{ 0 };
+
+    float gas_decrease_time{0};
+    int gas_decrease_width{ 0 };
+    int gas_decrease_height{ 0 };
+
+    std::vector<Vector3d> spawn_points;
     std::vector<DirectX::BoundingBox> world_bb;
     std::vector<DirectX::BoundingBox> grass_bb;
     std::map <char, DirectX::BoundingBox> character_bb;

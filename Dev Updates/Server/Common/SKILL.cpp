@@ -195,7 +195,10 @@ POISON_GAS::POISON_GAS(DMRoom* world) :
 	effect_time (0),
 	decrease_time (0),
 	cur_state(0),
-	max_state(GAME_TIME_LIMIT / GAS_DECREASE_TIME)
+	max_state(BBManager::instance().play_time / BBManager::instance().gas_decrease_time),
+	GAS_DECREASE_TIME(BBManager::instance().gas_decrease_time),
+	GAS_DECREASE_WIDTH(BBManager::instance().gas_decrease_width),
+	GAS_DECREASE_HEIGHT(BBManager::instance().gas_decrease_height)
 {
 }
 
@@ -209,10 +212,19 @@ void POISON_GAS::update(float elapsedTime)
 	if (decrease_time > GAS_DECREASE_TIME) {
 		decrease_time -= GAS_DECREASE_TIME;
 		if (cur_state++ < max_state) {
-			safe_area.left -= (int)((float)SAFE_AREA_LEFT / (float)max_state);
-			safe_area.top -= (int)((float)SAFE_AREA_TOP / (float)max_state);
-			safe_area.right -= (int)((float)SAFE_AREA_RIGHT / (float)max_state);
-			safe_area.bottom -= (int)((float)SAFE_AREA_BOTTOM / (float)max_state);
+            safe_area.left += GAS_DECREASE_WIDTH;
+            safe_area.right -= GAS_DECREASE_WIDTH;
+            safe_area.top -= GAS_DECREASE_HEIGHT;
+            safe_area.bottom += GAS_DECREASE_HEIGHT;
+
+			if (safe_area.left > safe_area.right) {
+				safe_area.left = (safe_area.left + safe_area.right) / 2;
+				safe_area.right = safe_area.left;
+			}
+			if (safe_area.bottom > safe_area.top) {
+				safe_area.bottom = (safe_area.bottom + safe_area.top) / 2;
+				safe_area.top = safe_area.bottom;
+			}
 
 			csss_packet_update_poison_fog_deact_area packet{
 				safe_area.left,

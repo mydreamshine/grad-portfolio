@@ -63,6 +63,9 @@ bool DMRoom::regist(int uid, SOCKET client, void* buffer)
 
 	//Spawn HERO, Scoreboard and reserve it to event.
 	m_heros[cur_player] = spawn_hero(cur_player, packet->selected_character, cur_player % 2);
+	if (false == BBManager::instance().spawn_points.empty())
+		m_heros[cur_player]->pos = BBManager::instance().spawn_points[cur_player % BBManager::instance().spawn_points.size()];
+
 	char selected_character = (packet->selected_character == (char)CHARACTER_TYPE::NON) ? (char)CHARACTER_TYPE::WARRIOR : packet->selected_character;
 	m_score.emplace(std::make_pair(cur_player, packet->nickname));
 	csss_packet_spawn_player spawn_player{ cur_player, packet->nickname, (int)wcslen(packet->nickname), selected_character,

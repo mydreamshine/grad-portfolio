@@ -91,4 +91,7 @@ private:
 	int max_state;
 	float effect_time;
 	float decrease_time;
+	float GAS_DECREASE_TIME;
+	int GAS_DECREASE_WIDTH;
+	int GAS_DECREASE_HEIGHT;
 };
