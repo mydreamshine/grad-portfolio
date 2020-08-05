@@ -1,5 +1,6 @@
 #pragma once
 #include <wchar.h>
+#include <chrono>
 
 constexpr short LOBBYSERVER_PORT = 15500;
 constexpr short BATTLESERVER_PORT = 15600;
@@ -8,12 +9,17 @@ constexpr short BATTLESERVER_PORT = 15600;
 enum TSS {
 	TSS_KEYDOWN,
 	TSS_KEYUP,
-	TSS_MOUSEDOWN
+	TSS_MOUSEDOWN,
+	TSS_UDP_PORT,
+	TSS_REQ_RTT,
+
+	SST_TCP_FRAME,
 };
 
 
 using PACKET_SIZE = unsigned char;
 using PACKET_TYPE = unsigned char;
+using LPACKET_SIZE = int;
 constexpr int string_len = 32;
 constexpr int chatting_len = 100;
 
@@ -93,13 +99,26 @@ struct packet_inheritance //
 	PACKET_TYPE type;
 };
 
+struct Lpacket_inheritance
+{
+	LPACKET_SIZE size;
+	PACKET_TYPE type;
+};
+struct sst_packet_ack_rtt : Lpacket_inheritance {
+	std::chrono::steady_clock::time_point current_time;
+	sst_packet_ack_rtt(std::chrono::steady_clock::time_point timing) : current_time(timing) {
+		size = (LPACKET_SIZE)sizeof(sst_packet_ack_rtt);
+		type = TSS_REQ_RTT;
+	}
+};
+
 // Terminal -> Streaming Server
 struct tss_packet_keydown : packet_inheritance
 {
 	char key;
 
 	tss_packet_keydown(char key) : key(key) {
-		size = sizeof(tss_packet_keydown);
+		size = (PACKET_SIZE)sizeof(tss_packet_keydown);
 		type = TSS_KEYDOWN;
 	}
 };
@@ -108,14 +127,12 @@ struct tss_packet_keyup : packet_inheritance
 	char key;
 
 	tss_packet_keyup(char key) : key(key) {
-		size = sizeof(tss_packet_keyup);
+		size = (PACKET_SIZE)sizeof(tss_packet_keyup);
 		type = TSS_KEYUP;
 	}
 };
-struct tss_packet_mouse_button_down
+struct tss_packet_mouse_button_down : packet_inheritance
 {
-	PACKET_SIZE size;
-	PACKET_TYPE type;
 	char key;
 	int x;
 	int y;
@@ -125,7 +142,35 @@ struct tss_packet_mouse_button_down
 		type = TSS_MOUSEDOWN;
 	}
 };
+struct tss_packet_udp_port : packet_inheritance
+{
+	unsigned short port;
+	tss_packet_udp_port(unsigned short port) : port(port) {
+		size = (PACKET_SIZE)sizeof(tss_packet_udp_port);
+		type = TSS_UDP_PORT;
+	}
+};
+struct tss_packet_req_rtt : packet_inheritance
+{
+	std::chrono::steady_clock::time_point current_time;
+	tss_packet_req_rtt() : current_time(std::chrono::high_resolution_clock::now()) {
+		size = (PACKET_SIZE)sizeof(tss_packet_req_rtt);
+		type = TSS_REQ_RTT;
+	}
+};
 
+constexpr int PACKET_SPLIT_SIZE = 1024;
+struct video_packet {
+	int frame_number{0};
+	int current_count{0};
+	int total_count{0};
+	int total_size{0};
+	char data[PACKET_SPLIT_SIZE]{0};
+
+	video_packet(int frame_number, int current_count, int total_count, int total_size, void* buffer, int buffer_size) : frame_number(frame_number), current_count(current_count), total_count(total_count), total_size(total_size) {
+		memcpy(data, buffer, buffer_size);
+	}
+};
 
 // Streaming Server -> Contents Server
 struct sscs_packet_try_login : packet_inheritance

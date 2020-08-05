@@ -12,10 +12,10 @@ class OVER_EX
 private:
 	WSAOVERLAPPED over;				///< WSAOVERLAPPED structure.
 	WSABUF wsabuf;					///< WSABUF structure.
-	char* packet;	///< Inner recv buffer.
 	int ev_type;					///< Event type for iocp. can be defined for its own goal.
-
 public:
+	char* packet;	///< Inner recv buffer.
+
 	~OVER_EX();
 	/**
 	@brief Basic Constructor.
