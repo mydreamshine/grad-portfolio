@@ -112,10 +112,10 @@ void BBManager::load_config()
     gas_decrease_time = std::stof(buffer);
 
     GetPrivateProfileString(L"DMMODE", L"GAS_DECREASE_WIDTH", L"400", buffer, 512, config_path.c_str());
-    gas_decrease_time = std::stoi(buffer);
+    gas_decrease_width = std::stoi(buffer);
 
     GetPrivateProfileString(L"DMMODE", L"GAS_DECREASE_HEIGHT", L"400", buffer, 512, config_path.c_str());
-    gas_decrease_time = std::stoi(buffer);
+    gas_decrease_height = std::stoi(buffer);
 }
 
 BBManager::~BBManager()
