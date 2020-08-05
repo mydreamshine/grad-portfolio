@@ -50,15 +50,43 @@ void DBMANAGER::HandleDiagnosticRecord(SQLHANDLE hHandle, SQLSMALLINT hType, RET
 	}
 }
 
-
 int DBMANAGER::get_uid(const wchar_t* id)
 {
 	SQLRETURN retcode;
 	SQLWCHAR query[] = { L"{call get_uid(?)}" };
 	SQLLEN idlen = SQL_NTS;
+
+	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)id, sizeof(wchar_t) * string_len, &idlen);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	SQLINTEGER uid;
+	SQLLEN cuid;
+	SQLBindCol(hstmt, 1, SQL_INTEGER, &uid, sizeof(uid), &cuid);
+	retcode = SQLFetch(hstmt);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+	SQLCloseCursor(hstmt);
+
+	if (retcode == SQL_NO_DATA)
+		return RESULT_NO_ID;
+
+	return uid;
+}
+
+int DBMANAGER::get_uid(const wchar_t* id, const wchar_t* pw)
+{
+	SQLRETURN retcode;
+	SQLWCHAR query[] = { L"{call get_uid_with_pw(?, ?)}" };
+	SQLLEN idlen = SQL_NTS;
 	
 	retcode = SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)id, sizeof(wchar_t) * string_len, &idlen);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
+	retcode = SQLBindParameter(hstmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR, string_len, 0, (void*)pw, sizeof(wchar_t) * string_len, &idlen);
+	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
+
 	retcode = SQLExecDirect(hstmt, query, SQL_NTS);
 	HandleDiagnosticRecord(hstmt, SQL_HANDLE_STMT, retcode);
 

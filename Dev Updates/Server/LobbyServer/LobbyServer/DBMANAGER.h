@@ -31,6 +31,14 @@ public:
 	int get_uid(const wchar_t* id);
 
 	/**
+	@brief get clients uid.
+	@param id clients id.
+	@param pw clients pw.
+	@return clients uid. if there's no id on DB, return -1.
+	*/
+	int get_uid(const wchar_t* id, const wchar_t* pw);
+
+	/**
 	@brief get clients rank.
 	@param uid clients uid.
 	@return clients rank. if there's no uid on DB, return -1.
