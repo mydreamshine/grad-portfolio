@@ -184,10 +184,10 @@
       <Filter>Client\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\ChattingListBox.cpp">
-      <Filter>Client\Header Files</Filter>
+      <Filter>Client\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Client\SourceCode\BattleArenaClient\BattleArenaClient\InputTextBox.cpp">
-      <Filter>Client\Header Files</Filter>
+      <Filter>Client\Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

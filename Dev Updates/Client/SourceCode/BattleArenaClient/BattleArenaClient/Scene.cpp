@@ -47,6 +47,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 {
     for (auto& obj : m_WorldObjects)
     {
+        if (obj->Activated == false) continue;
         auto objInfo = obj->m_TransformInfo.get();
         if (objInfo->NumObjectCBDirty > 0)
         {
@@ -73,6 +74,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
 
     for (auto& obj : m_UILayOutObjects)
     {
+        if (obj->Activated == false) continue;
         auto objInfo = obj->m_TransformInfo.get();
         if (objInfo->NumObjectCBDirty > 0)
         {
