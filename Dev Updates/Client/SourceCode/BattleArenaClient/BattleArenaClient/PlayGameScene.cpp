@@ -619,10 +619,9 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             KillLogText = KillLogList.front();
             KillLogList.pop();
 
-            Object* KillLogLayoutObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_KillLog");
             const float KillLogLayerDefaultWidth = 234.5f;
             const float KillLogTextRenderWidth = 204.5f;
-            auto Font = (*m_FontsRef)[KillLogLayoutObject->m_Textinfo->m_FontName].get();
+            auto Font = (*m_FontsRef)[KillLogTextInfo->m_FontName].get();
             XMFLOAT2 KillLogRenderTextSize = Font->GetStringSize(KillLogText);
 
             if (KillLogRenderTextSize.x > KillLogTextRenderWidth)
@@ -1582,7 +1581,10 @@ void PlayGameScene::SpawnPlayer(
     // Create Player
     {
         auto newPlayer = std::make_unique<Player>();
-        newPlayer->m_Name = L"Player" + Name;
+        if (Name.empty() == true)
+            newPlayer->m_Name = L"Unknown";
+        else
+            newPlayer->m_Name = Name;
         newPlayer->m_CharacterObjRef = newCharacterObj;
 
         if (m_MainPlayer != nullptr)
