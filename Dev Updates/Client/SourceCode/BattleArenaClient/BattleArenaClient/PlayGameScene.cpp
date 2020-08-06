@@ -622,6 +622,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             const float KillLogLayerDefaultWidth = 234.5f;
             const float KillLogTextRenderWidth = 204.5f;
             auto Font = (*m_FontsRef)[KillLogTextInfo->m_FontName].get();
+
             XMFLOAT2 KillLogRenderTextSize = Font->GetStringSize(KillLogText);
 
             if (KillLogRenderTextSize.x > KillLogTextRenderWidth)

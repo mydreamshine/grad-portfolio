@@ -218,6 +218,10 @@ SDL_Renderer* renderer;
 SDL_Texture* streaming_data;
 DECODER decoder;
 
+bool can_Render{ false };
+int decodingBytes;
+char* frame_data;
+
 void error_display(const char* msg, int err_no)
 {
 	WCHAR* lpMsgBuf;
@@ -273,15 +277,38 @@ Uint32 RTTChecker(Uint32 interval, void* param)
 	send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
 	return(interval);
 }
+void DecodePresent(char* buffer, int size) {
+	static chrono::steady_clock::time_point prev_time{ chrono::high_resolution_clock::now() }, cur_time{ chrono::high_resolution_clock::now() };
+	static int update_counter{ 0 };
+	static int update_interval{ 30 };
+	static float elapsedTime{ 0 };
+
+	decoder.decode(buffer, size);
+	AVFrame* frame = decoder.flush(NULL);
+	int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
+	decoder.free_frame(&frame);
+
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
+	SDL_RenderPresent(renderer);
+
+	elapsedTime += chrono::duration<float>(cur_time - prev_time).count();
+	prev_time = cur_time;
+	cur_time = chrono::high_resolution_clock::now();
+	if (++update_counter > update_interval) {
+		update_counter = 0;
+		fps = 1.0f / (elapsedTime / update_interval);
+		elapsedTime = 0.0f;
+	}
+}
 
 void process_tcp_packet(PACKET_TYPE type, void* buffer) {
 	switch (type) {
 	case SST_TCP_FRAME: {
 		Lpacket_inheritance* packet = reinterpret_cast<Lpacket_inheritance*>(buffer);
-		int decodingBytes = packet->size - sizeof(Lpacket_inheritance);
-		char* frame_data = new char[decodingBytes];
+		decodingBytes = packet->size - sizeof(Lpacket_inheritance);
 		memcpy(frame_data, (char*)buffer + sizeof(Lpacket_inheritance), decodingBytes);
-		PostRender(frame_data, decodingBytes);
+		can_Render = true;
 		break;
 	}
 
@@ -306,16 +333,15 @@ void tcp_recv_thread()
 
 	Lpacket_inheritance* packet = reinterpret_cast<Lpacket_inheritance*>(savedPacket);
 	LPACKET_SIZE needBytes = sizeof(LPACKET_SIZE);
-	UINT decodingBytes = 0;
 
 	SDL_AddTimer(1000, RTTChecker, NULL);
-
+	can_Render = false;
 	while (true)
 	{
 		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), FRAME_BUFFER_SIZE, 0);
 		if (retval == 0 || retval == SOCKET_ERROR) 
 			break;
-		
+
 		while (retval > 0) {
 			if (savedSize + retval >= needBytes) {
 				UINT copyBytes = needBytes - savedSize;
@@ -347,6 +373,11 @@ void tcp_recv_thread()
 				receivedPointer = receivedPacket;
 			}
 		}
+
+		if (!UDP_MODE && can_Render) {
+			can_Render = false;
+			DecodePresent(frame_data, decodingBytes);
+		}
 	}
 	delete[] savedPacket;
 	delete[] receivedPacket;
@@ -365,7 +396,7 @@ public:
 		memcpy(frame + PACKET_SPLIT_SIZE * current_count, buffer, PACKET_SPLIT_SIZE);
 		return ++this->current_count == total_count;
 	}
-	const char* data() { return frame; };
+	char* data() { return frame; };
 private:
 	int current_count;
 	int total_count;
@@ -412,9 +443,10 @@ void udp_recv_thread()
 		isComplete = frames[packet->frame_number]->emplace(packet->current_count, packet->data);
 		if (true == isComplete) {
 			//Send Render Events.
-			char* frame_data = new char[packet->total_size];
-			memcpy(frame_data, frames[packet->frame_number]->data(), packet->total_size);
-			PostRender(frame_data, packet->total_size);
+			//char* frame_data = new char[packet->total_size];
+			//memcpy(frame_data, frames[packet->frame_number]->data(), packet->total_size);
+			//PostRender(frame_data, packet->total_size);
+			DecodePresent(frames[packet->frame_number]->data(), packet->total_size);
 
 			//Clear Old Frames.
 			lastest_render_frame = packet->frame_number;
@@ -529,6 +561,7 @@ void event_loop()
 
 }
 int main(int, char**) {
+	frame_data = new char[FRAME_BUFFER_SIZE];
 	InitConfig();
 	vector<thread> threads;
 	renderIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);

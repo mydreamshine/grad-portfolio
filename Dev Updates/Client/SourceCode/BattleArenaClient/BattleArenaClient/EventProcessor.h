@@ -38,9 +38,7 @@ public:
         case FEC_TRY_GAME_MATCHING:
         {
             EVENT_DATA_GAME_MATCHING* EventData = reinterpret_cast<EVENT_DATA_GAME_MATCHING*>(Event.Data.get());
-            newPacket = std::make_unique<sscs_packet_try_game_matching>(
-                m_ClientID,
-                (char)EventData->SelectedCharacter);
+            newPacket = std::make_unique<sscs_packet_try_game_matching>(m_ClientID, (char)EventData->SelectedCharacter);
         }
             break;
         case FEC_SEND_IN_GAME_CHAT:
@@ -109,7 +107,6 @@ public:
             EVENT_DATA_TRY_MATCH_LOGIN* EventData = reinterpret_cast<EVENT_DATA_TRY_MATCH_LOGIN*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_match_login>(m_ClientID, room_id, EventData->character_type,
                 (const wchar_t*)EventData->user_name.c_str());
-            nw_module.connect_battle();
         }
             break;
 
@@ -293,6 +290,7 @@ public:
         case CSSS_SET_MATCH_STATISTIC_INFO:
         {
             auto packetData = reinterpret_cast<csss_packet_send_match_statistic*>(packet);
+            nw_module.disconnect_battle();
             EventManager eventManager;
             eventManager.ReservateEvent_SetMatchStatisticInfo(m_ExternalEvents,
                 packetData->user_name, packetData->user_rank,
