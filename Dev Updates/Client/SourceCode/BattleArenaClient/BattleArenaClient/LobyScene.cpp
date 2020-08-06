@@ -939,19 +939,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
         inputTextBox.ProcessInput(key_state, oldCursorPos, gt, GeneratedEvents);
     }
 
-    //Try matchmaking. e -> enqueue, d -> dequeue.
-    /*if (key_state['E'] == true && StartMatching == false && OnceTryGameMatching == false)
-    {
-        EventManager eventManager;
-        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
-        OnceTryGameMatching = true;
-    }
-    if (key_state['D'] == true && StartMatching == true && OnceTryGameMatching == false)
-    {
-        EventManager eventManager;
-        eventManager.ReservateEvent_TryGameMatching(GeneratedEvents, SelectedCharacterType);
-        OnceTryGameMatching = true;
-    }*/
     if (OnceAccessMatch == true) {
         EventManager eventManager;
         eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);

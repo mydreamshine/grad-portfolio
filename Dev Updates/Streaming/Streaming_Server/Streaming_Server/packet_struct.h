@@ -585,11 +585,11 @@ struct csss_packet_access_match : packet_inheritance
 		size = (PACKET_SIZE)sizeof(csss_packet_access_match);
 		type = CSSS_ACCESS_MATCH;
 	}
-	csss_packet_access_match(int room_id)
+	csss_packet_access_match(int room_id) :
+		room_id(room_id)
 	{
 		size = (PACKET_SIZE)sizeof(csss_packet_access_match);
 		type = CSSS_ACCESS_MATCH;
-		room_id = room_id;
 	}
 };
 

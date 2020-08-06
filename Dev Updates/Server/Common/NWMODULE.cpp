@@ -347,11 +347,11 @@ void NWMODULE<T>::notify_lobby_recv(size_t length)
 		lobby_over.reset();
 		int ret = WSARecv(lobby_socket, lobby_over.buffer(), 1, NULL,
 			&lobby_recv_flag, lobby_over.overlapped(), NULL);
-		if (0 != ret) {
-			int err_no = WSAGetLastError();
-			if (WSA_IO_PENDING != err_no)
-				error_display("WSARecv Error :", err_no);
-		}
+		//if (0 != ret) {
+		//	int err_no = WSAGetLastError();
+		//	if (WSA_IO_PENDING != err_no)
+		//		error_display("WSARecv Error :", err_no);
+		//}
 	}
 }
 
@@ -366,11 +366,11 @@ void NWMODULE<T>::notify_battle_recv(size_t length)
 		battle_over.reset();
 		int ret = WSARecv(battle_socket, battle_over.buffer(), 1, NULL,
 			&battle_recv_flag, battle_over.overlapped(), NULL);
-		if (0 != ret) {
-			int err_no = WSAGetLastError();
-			if (WSA_IO_PENDING != err_no)
-				error_display("WSARecv Error :", err_no);
-		}
+		//if (0 != ret) {
+		//	int err_no = WSAGetLastError();
+		//	if (WSA_IO_PENDING != err_no)
+		//		error_display("WSARecv Error :", err_no);
+		//}
 	}
 }
 
