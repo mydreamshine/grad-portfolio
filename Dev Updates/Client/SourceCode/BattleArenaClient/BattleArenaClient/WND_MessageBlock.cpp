@@ -318,8 +318,7 @@ void WND_MessageBlock::MoveStartIndex_InMessageLines(int IndexOffset, DXTK_FONT*
 	std::wstring newMessageBlock;
 	DirectX::XMFLOAT2 CuttingLineSize = { 0.0f, 0.0f };
 
-	bool FullStackLines = false;
-	while (newFromIndex >= 0)
+	bool OverStackLines = false;
 	{
 		m_MessageBlock.clear();
 		for (int i = newFromIndex; i < (int)m_MessageLines.size(); ++i)
@@ -328,21 +327,36 @@ void WND_MessageBlock::MoveStartIndex_InMessageLines(int IndexOffset, DXTK_FONT*
 			CuttingLineSize = Font->GetStringSize(newMessageBlock);
 			if (CuttingLineSize.y > m_Cutting_Height)
 			{
-				FullStackLines = true;
+				OverStackLines = true;
 				break;
 			}
 			m_MessageBlock += m_MessageLines[i] + L'\n';
 		}
 
-		if (FullStackLines == false) newFromIndex--;
-		else break;
+		if (OverStackLines == true)
+		{
+			m_StartIndex_InMessageLines = newFromIndex;
+
+			if (0 <= m_StartIndex_InMessageLines
+				&& m_StartIndex_InMessageLines < m_MessageLines.size())
+				m_MessageBlock.pop_back(); // erase '\n'
+		}
+		else
+		{
+			// Over Stack이 안되는 경우
+			// 스크롤링이 아래로 움직였을 때
+			// m_MesssageLines가 m_Cutting_Height을 넘지 못하는 수의 줄을 가지고 있거나
+			// 이미 스크롤링의 마지막 아래부분일 경우가 이에 해당된다.
+			// 스크롤링이 위로 움직였을 때
+			// Over Stack이 안되는 경우는
+			// m_MesssageLines가 m_Cutting_Height을 넘지 못하는 수의 줄을 가지고 있는 경우밖에 없다.
+			// 위와 같은 경우를 처리하려면
+			// m_MessageLines의 밑에서부터 OverStackLines가 될 때까지 차례대로 메세지를 쌓아올린다음에
+			// 최종적으로는 쌓아올린 메세지들을 뒤집어서 MessageBlock을 만들어준다.
+			m_MessageBlock.clear();
+			WND_MessageBlock::GenerateMessageBlock(m_MessageLines, Font, m_MessageBlock, SetMessageBlockPosInMessageLines::BOTTOM);
+		}
 	}
-
-	m_StartIndex_InMessageLines = newFromIndex;
-
-	if (0 <= m_StartIndex_InMessageLines
-		&& m_StartIndex_InMessageLines < m_MessageLines.size())
-		m_MessageBlock.pop_back(); // erase '\n'
 }
 
 void WND_MessageBlock::GenerateMessageLines(

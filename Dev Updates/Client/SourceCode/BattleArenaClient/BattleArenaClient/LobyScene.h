@@ -41,8 +41,8 @@ public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
     // UserName, UserRank
     virtual void SetUserInfo(std::wstring UserName, int UserRank);
-    // UserName, Message
-    virtual void SetChatLog(std::wstring UserName, std::wstring Message);
+    // Message
+    virtual void SetChatLog(std::wstring Message);
     // Set match status.
     virtual void SetMatchStatus(bool status);
     // Set match status.

@@ -17,7 +17,7 @@ void GameOverScene::OnInitProperties(CTimer& gt)
 {
     // Init Character Prop.
     {
-        const float ConvertModelUnit = 125.0f;
+        const float ConvertModelUnit = 85.0f;
         XMFLOAT3 WorldScale = { ConvertModelUnit, ConvertModelUnit, ConvertModelUnit };
         XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
         XMFLOAT3 WorldPosition = { 0.0f, 0.0f, 0.0f };
@@ -25,7 +25,7 @@ void GameOverScene::OnInitProperties(CTimer& gt)
 
         for (auto& obj : m_CharacterObjects)
         {
-            obj->Activated = false;
+            obj->RenderActivated = false;
 
             auto transformInfo = obj->m_TransformInfo.get();
 
@@ -208,6 +208,8 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 nullptr, nullptr, nullptr,
                 &WorldScale, &WorldRotationEuler, &WorldPosition);
 
+            newCharacterObj->RenderActivated = false;
+
             auto skeletonInfo = newCharacterObj->m_SkeletonInfo.get();
             auto AnimInfo = newCharacterObj->m_SkeletonInfo->m_AnimInfo.get();
             AnimInfo->Init();
@@ -223,12 +225,6 @@ void GameOverScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                 AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
                 AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
             }
-        }
-
-        for (auto& obj : m_CharacterObjects)
-        {
-            if (obj->m_Name.find("Warrior") == std::string::npos)
-                obj->Activated = false;
         }
     }
 
@@ -417,7 +413,7 @@ void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
                 ReturnLobyButtonPress = false;
                 ReturnLobyButtonUp = true;
 
-                //OnceTryReturnLoby = true;
+                OnceTryReturnLoby = true;
             }
         }
     }
@@ -425,7 +421,9 @@ void GameOverScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
     if (OnceTryReturnLoby == true)
     {
         EventManager eventManger;
-        eventManger.ReservateEvent_TryReturnLoby(GeneratedEvents);
+        //eventManger.ReservateEvent_TryReturnLoby(GeneratedEvents);
+        eventManger.ReservateEvent_ChangeScene(GeneratedEvents, FEP_LOBY_SCENE);
+        OnceTryReturnLoby = false;
     }
 }
 
@@ -464,13 +462,13 @@ void GameOverScene::SetMatchStatisticInfo(std::wstring UserName, int UserRank,
 
         if (obj->m_Name.find(ActivatedCharacterName) != std::string::npos)
         {
-            obj->Activated = true;
+            obj->RenderActivated = true;
             AnimInfo->AnimPlay(aiModelData::AnimActionType::Idle);
             AnimInfo->AnimLoop (aiModelData::AnimActionType::Idle);
         }
         else
         {
-            obj->Activated = false;
+            obj->RenderActivated = false;
             AnimInfo->AnimStop(aiModelData::AnimActionType::Idle);
             AnimInfo->AnimLoop(aiModelData::AnimActionType::Idle, false);
         }

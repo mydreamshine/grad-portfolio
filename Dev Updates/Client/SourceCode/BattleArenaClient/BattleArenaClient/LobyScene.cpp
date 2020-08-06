@@ -897,8 +897,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                 else
                     PlayerNameInputForm = L"Unknown: ";
 
-                ObjectManager ObjManager;
-
                 inputTextBox.SetActivate(false);
                 if (inputTextBox.IsEmpty() == false)
                 {
@@ -907,22 +905,23 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                     eventManager.ReservateEvent_SendChatLog(GeneratedEvents, FEP_LOBY_SCENE, FullinputTexts);
 
                     // Chatting List Test
-                    ChattinglistBox.AddMessage(FullinputTexts);
-                    if (ChattinglistBox.IsSizeChanged() == true)
-                    {
-                        Object* ChattingLogLayerObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingLog");
-                        auto ChattingLogLayerTransform = ChattingLogLayerObject->m_TransformInfo.get();
-                        auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
-                        auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
-                        auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
+                    //ChattinglistBox.AddMessage(FullinputTexts);
+                    //if (ChattinglistBox.IsSizeChanged() == true)
+                    //{
+                    //    ObjectManager ObjManager;
+                    //    Object* ChattingLogLayerObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyChattingLog");
+                    //    auto ChattingLogLayerTransform = ChattingLogLayerObject->m_TransformInfo.get();
+                    //    auto ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+                    //    auto ChattingLogLayerExtents = ChattingLogLayerTransform->m_Bound.Extents;
+                    //    auto ChattingLogRenderTextSize = ChattinglistBox.GetSize();
 
-                        XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
-                        newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y + 30.7f;
-                        newChattingListBoxPos.y += 26.8f;
-                        newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
-                        newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
-                        ChattinglistBox.SetPosition(newChattingListBoxPos);
-                    }
+                    //    XMFLOAT2 newChattingListBoxPos = ChattinglistBox.GetPosition();
+                    //    newChattingListBoxPos.y = ChattingLogLayerPos.y - ChattingLogLayerExtents.y + 30.7f;
+                    //    newChattingListBoxPos.y += 26.8f;
+                    //    newChattingListBoxPos.y += ChattingLogRenderTextSize.y * 0.5f;
+                    //    newChattingListBoxPos.y = m_height / 2.0f - (newChattingListBoxPos.y); // Coord Offset
+                    //    ChattinglistBox.SetPosition(newChattingListBoxPos);
+                    //}
 
                     inputTextBox.SetStartInputForm(PlayerNameInputForm);
                     inputTextBox.InitTexts();
@@ -984,7 +983,7 @@ void LobyScene::SetUserInfo(std::wstring UserName, int UserRank)
     inputTextBox.InitTexts();
 }
 
-void LobyScene::SetChatLog(std::wstring UserName, std::wstring Message)
+void LobyScene::SetChatLog(std::wstring Message)
 {
     ObjectManager ObjManager;
 

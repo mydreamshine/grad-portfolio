@@ -278,14 +278,16 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         UILayerBacground_Meshes["UI_Layout_GameTimeLimit"]          = geoGen.CreateQuad( -60.0f * wnd_x_factor * 1.4f,  340.0f * wnd_y_factor, 100.0f * wnd_x_factor * 1.4f,  48.0f * wnd_y_factor * 1.1f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_Score"]                  = geoGen.CreateQuad(332.5f * wnd_x_factor,  330.0f * wnd_y_factor, 271.3f * wnd_x_factor,  203.0f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_KillLog"]                = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 497.0f * wnd_x_factor,  73.0f * wnd_y_factor, 0.3f);
+        UILayerBacground_Meshes["UI_Layout_FightTextLayer"]         = geoGen.CreateQuad( -150.0f, 40.5f, 300.0f, 81.0f, 0.0f);
+        UILayerBacground_Meshes["UI_Layout_FinishTextLayer"]        = geoGen.CreateQuad( -150.0f, 37.5f, 300.0f, 75.0f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_GameChattingLog"]        = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.02f);
         UILayerBacground_Meshes["UI_Layout_InputBoxCaret"]          = geoGen.CreateQuad(-1.0f, 10.0f, 1.0f, 20.0f, 0.01f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton"]       = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton_alarm"] = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_HPBarDest_Enemy"]        = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_HPBarDest_Allies"]       = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"]          = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.11f);
-        UILayerBacground_Meshes["UI_Layout_HPBarBack"]              = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.12f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest_Enemy"]        = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.01f);
+        UILayerBacground_Meshes["UI_Layout_HPBarDest_Allies"]       = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.01f);
+        UILayerBacground_Meshes["UI_Layout_HPBarIncrease"]          = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.011f);
+        UILayerBacground_Meshes["UI_Layout_HPBarBack"]              = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.012f);
         UILayerBacground_Meshes["UI_Layout_Warrior_InfoLayer"]      = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
         UILayerBacground_Meshes["UI_Layout_Berserker_InfoLayer"]    = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
         UILayerBacground_Meshes["UI_Layout_Assassin_InfoLayer"]     = geoGen.CreateQuad(-176.0f * wnd_x_factor * 1.4f, -174.0f * wnd_y_factor, 352.0f * wnd_x_factor * 1.4f, 160.5f * wnd_y_factor * 1.1f, 0.14f);
@@ -583,6 +585,8 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Layout/TimeLimit_Layer.png",
         m_additionalAssetPath + "UI/Layout/TeamGoalScoreLayer.png",
         m_additionalAssetPath + "UI/Layout/KillLog_Layout.png",
+        m_additionalAssetPath + "UI/Layout/FightTextLayer.png",
+        m_additionalAssetPath + "UI/Layout/FinishTextLayer.png",
         m_additionalAssetPath + "UI/Layout/Warrior_InfoLayer.png",
         m_additionalAssetPath + "UI/Layout/Berserker_InfoLayer.png",
         m_additionalAssetPath + "UI/Layout/Assassin_InfoLayer.png",
@@ -974,6 +978,14 @@ void ResourceManager::BuildRenderItems()
             else if (subMeshName.find("InputBoxCaret") != std::string::npos)
             {
                 SceneRitems[subMeshName]->Mat = m_Materials["caret_white"].get();
+            }
+            else if (subMeshName.find("FightTextLayer") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["FightTextLayer"].get();
+            }
+            else if (subMeshName.find("FinishTextLayer") != std::string::npos)
+            {
+                SceneRitems[subMeshName]->Mat = m_Materials["FinishTextLayer"].get();
             }
             else SceneRitems[subMeshName]->Mat = m_Materials["White_Transparency50"].get();
         }

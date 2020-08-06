@@ -23,8 +23,9 @@ public:
     BYTE* GetFrameData();
 
 public:
+    std::queue<std::unique_ptr<EVENT>> m_SavedEvents;
     virtual void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events);
-    virtual void ProcessEvent(EVENT& Event);
+    virtual void ProcessEvent(std::unique_ptr<EVENT>& Event);
 
 private:
     void LoadPipeline();

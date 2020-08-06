@@ -350,6 +350,12 @@ public:
                 EventManager eventManager;
                 eventManager.ReservateEvent_SpawnEffectObj(m_ExternalEvents, EventData->EffectType, EventData->Position);
             }
+            // Only Reservate From PlayGameScene & GameOverScene
+            else if (Event->Command == FEC_CHANGE_SCENE)
+            {
+                EventManager eventManager;
+                eventManager.ReservateEvent_ChangeScene(m_ExternalEvents, Event->Act_Place);
+            }
             else
             {
                 std::unique_ptr<packet_inheritance> newPacket = nullptr;

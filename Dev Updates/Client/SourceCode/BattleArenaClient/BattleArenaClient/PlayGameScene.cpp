@@ -48,7 +48,6 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     {
         if (obj->m_Name.find("Instancing") != std::string::npos)
         {
-            ObjectManager objManager;
             for (auto& attachedObj : obj->m_Childs)
                 objManager.DeActivateObj(attachedObj);
             objManager.DeActivateObj(obj);
@@ -59,7 +58,6 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     {
         if (obj->m_Name.find("Instancing") != std::string::npos)
         {
-            ObjectManager objManager;
             for (auto& attachedObj : obj->m_Childs)
                 objManager.DeActivateObj(attachedObj);
             objManager.DeActivateObj(obj);
@@ -146,6 +144,18 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         inputTextBox.SetStartInputForm(L"Unknown: ");
         inputTextBox.SetMaxSize(MaxChattingLineWidth, 24.0f);
     }
+
+    GameStart = true;
+    GameOver = false;
+    GameStartUI_ActTimeStack = 0.0f;
+    GameOverUI_ActTimeStack = 0.0f;
+
+    Object* GameStartInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FightTextLayer");
+    Object* GameOverInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FinishTextLayer");
+    GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
+    GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
+    GameStartInfoUIObject->RenderActivated = false;
+    GameOverInfoUIObject->RenderActivated = false;
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -224,6 +234,11 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
 
             int TextObjCreatNum = 1;
 
+            if (Ritem_name.find("FightTextLayer") != std::string::npos
+                || Ritem_name.find("FinishTextLayer") != std::string::npos)
+            {
+                continue;
+            }
             if (Ritem_name.find("PopUpButton") != std::string::npos)
             {
                 newObj->m_Name = "UI_Layout_GameChattingPopUpButton";
@@ -485,6 +500,11 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     ChattinglistBox.SetLineTabCharacter(L':');
     ChattinglistBox.SetMaxSize(MaxChattingLineWidth, MaxChattingLineHeight);
 
+    Object* GameStartInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FightTextLayer");
+    Object* GameOverInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FinishTextLayer");
+    GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
+    GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
+
 
     // Create DeActive Objects
     {
@@ -543,8 +563,6 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
     m_nSKinnedCB = (UINT)m_CharacterObjects.size();
     m_nTextBatch = (UINT)m_TextObjects.size();
-
-    //PlayGameScene::InitPoisonFogObjects();
 }
 
 void PlayGameScene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
@@ -592,6 +610,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
     {
         auto KillLogTextInfo = KillLogObject->m_Textinfo.get();
         auto& KillLogText = KillLogTextInfo->m_Text;
+        XMFLOAT3 KillLogLayerScale = { 1.0f, 1.0f, 1.0f };
 
         if (KillLogList.empty() != true && KillLogSlidingStart == false)
         {
@@ -599,6 +618,15 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             KillLogSlidingInit = true;
             KillLogText = KillLogList.front();
             KillLogList.pop();
+
+            Object* KillLogLayoutObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_KillLog");
+            const float KillLogLayerDefaultWidth = 234.5f;
+            const float KillLogTextRenderWidth = 204.5f;
+            auto Font = (*m_FontsRef)[KillLogLayoutObject->m_Textinfo->m_FontName].get();
+            XMFLOAT2 KillLogRenderTextSize = Font->GetStringSize(KillLogText);
+
+            if (KillLogRenderTextSize.x > KillLogTextRenderWidth)
+                KillLogLayerScale.x += KillLogRenderTextSize.x / KillLogLayerDefaultWidth;
         }
 
         if (KillLogSlidingInit == true)
@@ -611,6 +639,7 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
 
             XMFLOAT3 KillLogLayoutPos = { -(m_width / 2.0f) - KillLogLayoutBound.Extents.x * 2.0f, m_height / 4.0f + KillLogLayoutBound.Extents.y, 0.0f };
             KillLogLayoutObject->m_TransformInfo->SetWorldPosition(KillLogLayoutPos);
+            KillLogLayoutObject->m_TransformInfo->SetWorldScale(KillLogLayerScale);
             KillLogLayoutObject->m_TransformInfo->UpdateWorldTransform();
 
             KillLogLayoutPos = KillLogLayoutTransformInfo->GetWorldPosition();
@@ -844,6 +873,56 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
         Team_ScoreText = std::to_wstring(GameInfo_CountTeamScore) + L"/";
         Team_ScoreText += std::to_wstring(MaxTeamScore);
     }
+
+    // Update GameStart Text UI
+    if (GameStart == true)
+    {
+        Object* GameStartInfoUIObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FightTextLayer");
+
+        if (GameStartUI_ActTimeStack >= GameStartUI_ActTimeLimit)
+        {
+            GameStart = false;
+            GameStartInfoUIObject->RenderActivated = false;
+        }
+        else
+        {
+            GameStartInfoUIObject->RenderActivated = true;
+            GameStartUI_ActTimeStack += gt.GetTimeElapsed();
+
+            if (GameStartUI_ActTimeStack <= 0.6f)
+                GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = GameStartUI_ActTimeStack / 0.6f;
+            else if (0.6f <= GameStartUI_ActTimeStack && GameStartUI_ActTimeStack <= 1.2f)
+                GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = 1.0f;
+            else if (1.2f <= GameStartUI_ActTimeStack && GameStartUI_ActTimeStack <= GameStartUI_ActTimeLimit)
+                GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = (0.6f - (GameStartUI_ActTimeStack - 1.2f)) / (GameStartUI_ActTimeLimit - 1.2f);
+        }
+    }
+
+    // Update GameOver Text UI
+    if (GameOver == true)
+    {
+        Object* GameOverInfoUIObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FinishTextLayer");
+        GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
+
+        if (GameOverUI_ActTimeStack >= GameOverUI_ActTimeLimit)
+        {
+            EventManager eventManager;
+            eventManager.ReservateEvent_ChangeScene(GeneratedEvents, FEP_GAMEOVER_SCENE);
+            GameOverInfoUIObject->RenderActivated = false;
+        }
+        else
+        {
+            GameOverInfoUIObject->RenderActivated = true;
+            GameOverUI_ActTimeStack += gt.GetTimeElapsed();
+
+            if (GameOverUI_ActTimeStack <= 1.0f)
+                GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = GameOverUI_ActTimeStack / 1.0f;
+            else if (1.0f <= GameOverUI_ActTimeStack && GameOverUI_ActTimeStack <= 2.0f)
+                GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 1.0f;
+            else if (2.0f <= GameOverUI_ActTimeStack && GameOverUI_ActTimeStack <= GameOverUI_ActTimeLimit)
+                GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = (1.0f - (GameOverUI_ActTimeStack - 2.0f)) / (GameOverUI_ActTimeLimit - 2.0f);
+        }
+    }
 }
 
 void PlayGameScene::AnimateLights(CTimer& gt)
@@ -1052,10 +1131,21 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
             if (compareFloat(texAlpha, 0.0f) == true)
-                obj->Activated = false;
+            {
+                auto exceptObj = std::find_if(m_EffectObjects.begin(), m_EffectObjects.end(), [&](Object* findObj)
+                    {
+                        return (findObj->m_CE_ID == obj->m_CE_ID);
+                    });
+                if (exceptObj != m_EffectObjects.end()) m_EffectObjects.erase(exceptObj);
+
+                ObjectManager ObjManager;
+                ObjManager.DeActivateObj(obj);
+            }
         }
         else if (obj->m_Name.find("PoisonFog") != std::string::npos)
         {
+            if (obj->RenderActivated == false) continue;
+
             auto Transforminfo = obj->m_TransformInfo.get();
 
             const float DefaultPoisonGasSize = 200.0f;
@@ -1065,7 +1155,7 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
             float MaxScaleScala = InnerPoisonGasSize / DefaultPoisonGasSize;
             if (obj->m_Name.find("Boundary") != std::string::npos)
                 MaxScaleScala = BoundaryPoisonGasSize / DefaultPoisonGasSize;
-            const float MaxScaleTiming = 2.1f;
+            const float MaxScaleTiming = 0.8f;
             float ScaleExtIncreaseSign = obj->DeActivatedDecrease; // Scale Increase Sign 대용
             const float ScaleExtSpeed = ScaleExtIncreaseSign * MaxScaleScala * gt.GetTimeElapsed() / MaxScaleTiming;
 
@@ -1124,6 +1214,8 @@ void PlayGameScene::RotateBillboardObjects(Camera* MainCamera, std::vector<Objec
 
 void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
 {
+    if (GameOver == true) return;
+
     bool UI_Click = false;
 
     // Process Chat
@@ -1522,10 +1614,12 @@ void PlayGameScene::SpawnPlayer(
                     auto otherPlayer = Player_iter.second.get();
                     auto otherPlayerPropensity = otherPlayer->m_CharacterObjRef->Propensity;
                     auto& otherPlayerHPBarRitems = otherPlayer->m_HP_BarObjRef[0]->m_RenderItems;
+                    auto& otherPlayerMainPropensity = otherPlayer->MainPlayerPropensity;
                     if (otherPlayerPropensity == mainPlayerPropensity)
                         otherPlayerHPBarRitems = { AllRitems["UI_Layout_HPBarDest_Allies"].get() };
                     else
                         otherPlayerHPBarRitems = { AllRitems["UI_Layout_HPBarDest_Enemy"].get() };
+                    otherPlayerMainPropensity = mainPlayerPropensity;
                 }
             }
             else
@@ -1958,6 +2052,7 @@ void PlayGameScene::SetPlayerState(int CE_ID, PLAYER_STATE PlayerState)
 void PlayGameScene::UpdateDeActPoisonGasArea(RECT deActPoisonGasArea)
 {
     DeActPoisonGasArea = deActPoisonGasArea;
+    PlayGameScene::SpawnPoisonFogObject(DeActPoisonGasArea);
 }
 
 void PlayGameScene::DeActivateObject(int CE_ID)
@@ -2106,7 +2201,7 @@ void PlayGameScene::InitPoisonFogObjects()
 
     ObjectManager ObjManager;
 
-    //Left-Top Boundary PoisonGasArea
+    //Left-Right Boundary PoisonGasArea
     {
         int maxCol = (int)((PoisonGasAreaSubSize / 2.0f) / BoundaryPoisonGasSize);
         int maxRow = (int)(InitPoisonGasAreaSize / BoundaryPoisonGasSize);
@@ -2153,8 +2248,16 @@ void PlayGameScene::InitPoisonFogObjects()
     }
     // Inner PoisonGasArea
     {
+        for (auto PoisonGasObjects_Row : PoisonGasObjects_inDeActArea)
+            PoisonGasObjects_Row.clear();
+        PoisonGasObjects_inDeActArea.clear();
+
         int maxCol = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
         int maxRow = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
+        PoisonGasObjects_inDeActArea.resize((size_t)maxRow);
+        for (auto& PoisonGasObjects_Row : PoisonGasObjects_inDeActArea)
+            PoisonGasObjects_Row.resize((size_t)maxCol);
+
         float StartGenLeft = (float)InitDeActPoisonGasArea.left + (InnerPoisonGasSize / 2.0f);
         float StartGenRight = (float)InitDeActPoisonGasArea.right - (InnerPoisonGasSize / 2.0f);
         float StartGenTop = (float)InitDeActPoisonGasArea.top - (InnerPoisonGasSize / 2.0f);
@@ -2182,12 +2285,56 @@ void PlayGameScene::InitPoisonFogObjects()
                 newEffectObject->m_TransformInfo->UpdateWorldTransform();
                 newEffectObject->m_TransformInfo->m_nonShadowRender = true;
                 newEffectObject->m_TransformInfo->m_TexAlpha = randScale / 2.0f;
+                newEffectObject->RenderActivated = false;
 
                 float scale_sign = 1.0f;
                 if (MathHelper::Rand(0, 1) == 0) scale_sign = -1.0f;
                 newEffectObject->DeActivatedDecrease = scale_sign; // Scale Increase Sign 대용
 
                 m_EffectObjects.push_back(newEffectObject);
+                PoisonGasObjects_inDeActArea[row][col] = newEffectObject;
+            }
+        }
+    }
+
+    PlayGameScene::SpawnPoisonFogObject(DeActPoisonGasArea);
+}
+
+void PlayGameScene::SpawnPoisonFogObject(const RECT& DeActArea)
+{
+    const RECT InitDeActPoisonGasArea = { -3423, 4290, 4577, -3710 };
+    const float InitDeActPoisonGasAreaSize = 8000.0f;
+    const float DefaultPoisonGasSize = 200.0f;
+    const float InnerPoisonGasSize = 400.0f;
+
+    RECT RemainDeActPoisonGasArea = DeActArea;
+
+    // Test Reduced DeActPoisonArea
+    /*{
+        int ReducedCount = 6;
+        RemainDeActPoisonGasArea.left +=   (int)InnerPoisonGasSize * ReducedCount;
+        RemainDeActPoisonGasArea.top -=    (int)InnerPoisonGasSize * ReducedCount;
+        RemainDeActPoisonGasArea.right -=  (int)InnerPoisonGasSize * ReducedCount;
+        RemainDeActPoisonGasArea.bottom += (int)InnerPoisonGasSize * ReducedCount;
+    }*/
+
+    int maxCol = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
+    int maxRow = (int)(InitDeActPoisonGasAreaSize / InnerPoisonGasSize);
+    float StartGenLeft = (float)InitDeActPoisonGasArea.left + (InnerPoisonGasSize / 2.0f);
+    float StartGenRight = (float)InitDeActPoisonGasArea.right - (InnerPoisonGasSize / 2.0f);
+    float StartGenTop = (float)InitDeActPoisonGasArea.top - (InnerPoisonGasSize / 2.0f);
+    float StartGenBottom = (float)InitDeActPoisonGasArea.top - (InnerPoisonGasSize / 2.0f);
+    for (int col = 0; col < maxCol; ++col)
+    {
+        for (int row = 0; row < maxRow; ++row)
+        {
+            float ActPos_x = StartGenLeft + InnerPoisonGasSize * col;
+            float ActPos_z = StartGenTop - InnerPoisonGasSize * row;
+            if (ActPos_x <= RemainDeActPoisonGasArea.left || RemainDeActPoisonGasArea.right <= ActPos_x
+                || ActPos_z >= RemainDeActPoisonGasArea.top || RemainDeActPoisonGasArea.bottom >= ActPos_z)
+            {
+                // Activate 대용 (Activate를 false하면 FindDeactiveWorldObject()에서 인식해버린다)
+                PoisonGasObjects_inDeActArea[row][col]->RenderActivated = true;
             }
         }
     }

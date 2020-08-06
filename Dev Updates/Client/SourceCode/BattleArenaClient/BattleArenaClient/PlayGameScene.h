@@ -75,6 +75,11 @@ public:
     virtual void SetPlayerHP(int CE_ID, int HP);
     // In Game Team Score (Team's Total Kill)
     virtual void SetInGameTeamScore(unsigned char InGameScore_Team);
+
+    // Set Game Over State to PlayGameScene
+    virtual void SetGameOver() { GameOver = true; }
+    // Get GameOver State to PlayGameScene
+    virtual bool GetGameOverState(bool& isSetted) { isSetted = true;  return GameOver; }
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     void InitPoisonFogObjects();
@@ -122,6 +127,17 @@ private:
     bool ChattingLayerActivate = false;
     bool ChattingLayerSliding = false;
     const float ChattingLayerSlidingActionEndTime = 0.5f;
+
+private:
+    std::vector<std::vector<Object*>> PoisonGasObjects_inDeActArea;
+
+private:
+    bool GameStart = false;
+    bool GameOver = false;
+    const float GameStartUI_ActTimeLimit = 1.8f;
+    const float GameOverUI_ActTimeLimit = 3.0f;
+    float GameStartUI_ActTimeStack = 0.0f;
+    float GameOverUI_ActTimeStack = 0.0f;
 
 private:
     /// 런타임 중에 VK_LEFT, RIGHT, UP, DOWN 키와,

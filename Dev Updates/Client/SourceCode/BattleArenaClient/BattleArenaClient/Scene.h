@@ -116,6 +116,10 @@ public:
     // In Game Team Score (Team's Total Kill)
     virtual void SetInGameTeamScore(unsigned char InGameScore_Team) {}
 
+    // Set GameOver State to PlayGameScene
+    virtual void SetGameOver() {}
+    // Get GameOver State to PlayGameScene
+    virtual bool GetGameOverState(bool& isSetted) { isSetted = false;  return false; }
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 

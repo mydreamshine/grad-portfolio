@@ -12,7 +12,7 @@
 #include "Common/FileLoader/SpriteFontLoader.h"
 #include "FrameworkEvent.h"
 
-#define MAX_WORLD_OBJECT 4000
+#define MAX_WORLD_OBJECT 2600
 #define MAX_CHARACTER_OBJECT 100
 
 // rel. Text
@@ -222,6 +222,7 @@ struct Object
 	std::vector<RenderItem*> m_RenderItems;
 
 	bool Activated = false;
+	bool RenderActivated = true;
 	bool SelfDeActivated = false;
 	float DeActivatedTime = 0.0f;
 	float DeActivatedDecrease = 0.0f;
@@ -533,6 +534,7 @@ public:
 		obj->m_Childs.clear();
 		obj->m_RenderItems.clear();
 		obj->Activated = false;
+		obj->RenderActivated = true;
 		obj->SelfDeActivated = false;
 		obj->DeActivatedTime = 0.0f;
 		obj->DeActivatedDecrease = 0.0f;

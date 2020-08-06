@@ -58,7 +58,7 @@ private:
 
 private:
 	std::wstring m_StartInputForm;
-    size_t m_MaxInputText = 128;
+    size_t m_MaxInputText = 100;
     std::wstring m_RenderableTexts;
 
 private:

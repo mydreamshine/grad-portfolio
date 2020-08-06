@@ -52,5 +52,5 @@ private:
 
 public:
     virtual void ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events) = 0;
-    virtual void ProcessEvent(EVENT& Event) = 0;
+    virtual void ProcessEvent(std::unique_ptr<EVENT>& Event) = 0;
 };

@@ -54,56 +54,79 @@ void Framework::ProcessEvents(std::queue<std::unique_ptr<EVENT>>& Events)
     {
         Event = std::move(Events.front());
         Events.pop();
-        Framework::ProcessEvent(*Event);
+        Framework::ProcessEvent(Event);
         Event = nullptr;
     }
 }
 
-void Framework::ProcessEvent(EVENT& Event)
+void Framework::ProcessEvent(std::unique_ptr<EVENT>& Event)
 {
     Scene* Event_Act_Place = nullptr;
-    if      (Event.Act_Place == FEP_LOGIN_SCENE)    Event_Act_Place = m_Scenes["LoginScene"].get();
-    else if (Event.Act_Place == FEP_LOBY_SCENE)     Event_Act_Place = m_Scenes["LobyScene"].get();
-    else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) Event_Act_Place = m_Scenes["PlayGameScene"].get();
-    else if (Event.Act_Place == FEP_GAMEOVER_SCENE) Event_Act_Place = m_Scenes["GameOverScene"].get();
+    if      (Event->Act_Place == FEP_LOGIN_SCENE)    Event_Act_Place = m_Scenes["LoginScene"].get();
+    else if (Event->Act_Place == FEP_LOBY_SCENE)     Event_Act_Place = m_Scenes["LobyScene"].get();
+    else if (Event->Act_Place == FEP_PLAYGMAE_SCENE) Event_Act_Place = m_Scenes["PlayGameScene"].get();
+    else if (Event->Act_Place == FEP_GAMEOVER_SCENE) Event_Act_Place = m_Scenes["GameOverScene"].get();
     else
     {
         MessageBox(NULL, L"Unknown Event Actvation Place.", L"Event Error", MB_OK);
         while (true);
     }
 
-    switch (Event.Command)
+    switch (Event->Command)
     {
     case FEC_CHANGE_SCENE:
     {
-        if (Event.Act_Place == FEP_LOGIN_SCENE)         m_CurrSceneName = "LoginScene";
-        else if (Event.Act_Place == FEP_LOBY_SCENE)     m_CurrSceneName = "LobyScene";
-        else if (Event.Act_Place == FEP_PLAYGMAE_SCENE) m_CurrSceneName = "PlayGameScene";
-        else if (Event.Act_Place == FEP_GAMEOVER_SCENE) m_CurrSceneName = "GameOverScene";
-        m_CurrScene = m_Scenes[m_CurrSceneName].get();
-        m_CurrScene->OnInitProperties(m_Timer);
+        bool InitScene = true;
+        if (Event->Act_Place == FEP_LOGIN_SCENE)         m_CurrSceneName = "LoginScene";
+        else if (Event->Act_Place == FEP_LOBY_SCENE)     m_CurrSceneName = "LobyScene";
+        else if (Event->Act_Place == FEP_PLAYGMAE_SCENE) m_CurrSceneName = "PlayGameScene";
+        else if (Event->Act_Place == FEP_GAMEOVER_SCENE)
+        {
+            bool GameOverStateSetted = false;
+            if (m_CurrSceneName == "PlayGameScene" && m_CurrScene->GetGameOverState(GameOverStateSetted) == false)
+            {
+                m_CurrScene->SetGameOver();
+                InitScene = false;
+            }
+            else
+                m_CurrSceneName = "GameOverScene";
+        }
+        if (InitScene == true)
+        {
+            m_CurrScene = m_Scenes[m_CurrSceneName].get();
+            m_CurrScene->OnInitProperties(m_Timer);
+
+            std::unique_ptr<EVENT> pEvent = nullptr;
+            while (m_SavedEvents.empty() == false)
+            {
+                pEvent = std::move(m_SavedEvents.front());
+                m_SavedEvents.pop();
+                Framework::ProcessEvent(pEvent);
+                pEvent = nullptr;
+            }
+        }
     }
     break;
     case FEC_SPAWN_PLAYER:
     {
-        EVENT_DATA_PLAYER_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_SPAWN_INFO*>(Event.Data.get());
-        Event_Act_Place->SpawnPlayer(Event.Act_Object,
+        EVENT_DATA_PLAYER_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_SPAWN_INFO*>(Event->Data.get());
+        Event_Act_Place->SpawnPlayer(Event->Act_Object,
             EventData->Name, EventData->CharacterType, EventData->IsMainCharacter, EventData->Propensity,
             EventData->Scale, EventData->RotationEuler, EventData->Position);
     }
     break;
     case FEC_SPAWN_NORMAL_ATTACK_OBJ:
     {
-        EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO*>(Event.Data.get());
-        Event_Act_Place->SpawnNormalAttackObject(Event.Act_Object,
+        EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_NORMAL_ATTACK_OBJ_SPAWN_INFO*>(Event->Data.get());
+        Event_Act_Place->SpawnNormalAttackObject(Event->Act_Object,
             EventData->AttackOrder, EventData->Propensity,
             EventData->Scale, EventData->RotationEuler, EventData->Position);
     }
     break;
     case FEC_SPAWN_SKILL_OBJ:
     {
-        EVENT_DATA_SKILL_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_SKILL_OBJ_SPAWN_INFO*>(Event.Data.get());
-        Event_Act_Place->SpawnSkillObject(Event.Act_Object,
+        EVENT_DATA_SKILL_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_SKILL_OBJ_SPAWN_INFO*>(Event->Data.get());
+        Event_Act_Place->SpawnSkillObject(Event->Act_Object,
             EventData->SkillType, EventData->Propensity,
             EventData->Scale, EventData->RotationEuler, EventData->Position);
     }
@@ -111,89 +134,96 @@ void Framework::ProcessEvent(EVENT& Event)
     case FEC_SPAWN_PICKING_EFFECT_OBJ:
     case FEC_SPAWN_EFFECT_OBJ:
     {
-        EVENT_DATA_EFFECT_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_EFFECT_OBJ_SPAWN_INFO*>(Event.Data.get());
+        EVENT_DATA_EFFECT_OBJ_SPAWN_INFO* EventData = reinterpret_cast<EVENT_DATA_EFFECT_OBJ_SPAWN_INFO*>(Event->Data.get());
         Event_Act_Place->SpawnEffectObjects(EventData->EffectType, EventData->Position);
     }
     break;
     case FEC_SET_TRANSFORM_WORLD_OBJECT:
     {
-        EVENT_DATA_OBJ_TRANSFORM* EventData = reinterpret_cast<EVENT_DATA_OBJ_TRANSFORM*>(Event.Data.get());
-        Event_Act_Place->SetObjectTransform(Event.Act_Object,
+        EVENT_DATA_OBJ_TRANSFORM* EventData = reinterpret_cast<EVENT_DATA_OBJ_TRANSFORM*>(Event->Data.get());
+        Event_Act_Place->SetObjectTransform(Event->Act_Object,
             EventData->Scale, EventData->RotationEuler, EventData->Position);
     }
     break;
     case FEC_SET_CHARACTER_MOTION:
     {
-        EVENT_DATA_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_CHARACTER_MOTION_INFO*>(Event.Data.get());
-        Event_Act_Place->SetCharacterMotion(Event.Act_Object,
+        EVENT_DATA_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_CHARACTER_MOTION_INFO*>(Event->Data.get());
+        Event_Act_Place->SetCharacterMotion(Event->Act_Object,
             EventData->MotionType, EventData->MotionSpeed, EventData->SkillMotionType);
     }
     break;
     case FEC_SET_PLAYER_STATE:
     {
-        EVENT_DATA_PLAYER_STATE_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_STATE_INFO*>(Event.Data.get());
-        Event_Act_Place->SetPlayerState(Event.Act_Object, EventData->PlayerState);
+        EVENT_DATA_PLAYER_STATE_INFO* EventData = reinterpret_cast<EVENT_DATA_PLAYER_STATE_INFO*>(Event->Data.get());
+        Event_Act_Place->SetPlayerState(Event->Act_Object, EventData->PlayerState);
     }
     break;
     case FEC_UPDATE_POISON_FOG_DEACT_AREA:
     {
-        EVENT_DATA_POISON_FOG_DEACT_AREA* EventData = reinterpret_cast<EVENT_DATA_POISON_FOG_DEACT_AREA*>(Event.Data.get());
+        EVENT_DATA_POISON_FOG_DEACT_AREA* EventData = reinterpret_cast<EVENT_DATA_POISON_FOG_DEACT_AREA*>(Event->Data.get());
         Event_Act_Place->UpdateDeActPoisonGasArea(EventData->Area);
     }
     break;
     case FEC_DEACTIVATE_OBJ:
     {
-        Event_Act_Place->DeActivateObject(Event.Act_Object);
+        Event_Act_Place->DeActivateObject(Event->Act_Object);
     }
     break;
     case FEC_SET_USER_INFO:
     {
-        EVENT_DATA_USER_INFO* EventData = reinterpret_cast<EVENT_DATA_USER_INFO*>(Event.Data.get());
+        EVENT_DATA_USER_INFO* EventData = reinterpret_cast<EVENT_DATA_USER_INFO*>(Event->Data.get());
         Event_Act_Place->SetUserInfo(EventData->UserName, EventData->UserRank);
     }
     break;
     case FEC_SET_KDA_SCORE:
     {
-        EVENT_DATA_KDA_SCORE* EventData = reinterpret_cast<EVENT_DATA_KDA_SCORE*>(Event.Data.get());
+        EVENT_DATA_KDA_SCORE* EventData = reinterpret_cast<EVENT_DATA_KDA_SCORE*>(Event->Data.get());
         Event_Act_Place->SetKDAScore(EventData->Count_Kill, EventData->Count_Death, EventData->Count_Assistance);
     }
     break;
     case FEC_SET_KILL_LOG:
     {
-        EVENT_DATA_KILL_LOG* EventData = reinterpret_cast<EVENT_DATA_KILL_LOG*>(Event.Data.get());
+        EVENT_DATA_KILL_LOG* EventData = reinterpret_cast<EVENT_DATA_KILL_LOG*>(Event->Data.get());
         Event_Act_Place->SetKillLog(EventData->kill_player_id, EventData->death_player_id);
     }
     break;
     case FEC_SET_CHAT_LOG:
     {
-        EVENT_DATA_CHAT_LOG* EventData = reinterpret_cast<EVENT_DATA_CHAT_LOG*>(Event.Data.get());
+        EVENT_DATA_CHAT_LOG* EventData = reinterpret_cast<EVENT_DATA_CHAT_LOG*>(Event->Data.get());
         Event_Act_Place->SetChatLog(EventData->Message);
     }
     break;
     case FEC_SET_GAME_PLAY_TIME_LIMIT:
     {
-        EVENT_DATA_GAME_PLAY_TIME_LIMIT* EventData = reinterpret_cast<EVENT_DATA_GAME_PLAY_TIME_LIMIT*>(Event.Data.get());
+        EVENT_DATA_GAME_PLAY_TIME_LIMIT* EventData = reinterpret_cast<EVENT_DATA_GAME_PLAY_TIME_LIMIT*>(Event->Data.get());
         Event_Act_Place->SetGamePlayTimeLimit(EventData->Sec);
     }
     break;
     case FEC_SET_PLAYER_HP:
     {
-        EVENT_DATA_PLAYER_HP* EventData = reinterpret_cast<EVENT_DATA_PLAYER_HP*>(Event.Data.get());
-        Event_Act_Place->SetPlayerHP(Event.Act_Object, EventData->HP);
+        EVENT_DATA_PLAYER_HP* EventData = reinterpret_cast<EVENT_DATA_PLAYER_HP*>(Event->Data.get());
+        Event_Act_Place->SetPlayerHP(Event->Act_Object, EventData->HP);
     }
     break;
     case FEC_SET_MATCH_STATISTIC_INFO:
     {
-        EVENT_DATA_MATCH_STATISTIC_INFO* EventData = reinterpret_cast<EVENT_DATA_MATCH_STATISTIC_INFO*>(Event.Data.get());
-        Event_Act_Place->SetMatchStatisticInfo(EventData->UserName, EventData->UserRank,
-            EventData->Count_Kill, EventData->Count_Death, EventData->Count_Assistance,
-            EventData->TotalScore_Damage, EventData->TotalScore_Heal,
-            EventData->PlayedCharacterType);
+        if (m_CurrSceneName == "PlayGameScene")
+        {
+            m_SavedEvents.push(std::move(Event));
+        }
+        else
+        {
+            EVENT_DATA_MATCH_STATISTIC_INFO* EventData = reinterpret_cast<EVENT_DATA_MATCH_STATISTIC_INFO*>(Event->Data.get());
+            Event_Act_Place->SetMatchStatisticInfo(EventData->UserName, EventData->UserRank,
+                EventData->Count_Kill, EventData->Count_Death, EventData->Count_Assistance,
+                EventData->TotalScore_Damage, EventData->TotalScore_Heal,
+                EventData->PlayedCharacterType);
+        }
     }
     break;
     case FEC_SET_IN_GAME_TEAM_SCORE:
     {
-        EVENT_DATA_IN_GAME_TEAM_SCORE* EventData = reinterpret_cast<EVENT_DATA_IN_GAME_TEAM_SCORE*>(Event.Data.get());
+        EVENT_DATA_IN_GAME_TEAM_SCORE* EventData = reinterpret_cast<EVENT_DATA_IN_GAME_TEAM_SCORE*>(Event->Data.get());
         Event_Act_Place->SetInGameTeamScore(EventData->InGameScore_Team);
     }
     break;
@@ -212,7 +242,7 @@ void Framework::ProcessEvent(EVENT& Event)
     break;
     case FEC_ACCESS_MATCH:
     {
-        EVENT_DATA_ACCESS_MATCH* EventData = reinterpret_cast<EVENT_DATA_ACCESS_MATCH*>(Event.Data.get());
+        EVENT_DATA_ACCESS_MATCH* EventData = reinterpret_cast<EVENT_DATA_ACCESS_MATCH*>(Event->Data.get());
         LobyScene* loby = reinterpret_cast<LobyScene*>(Event_Act_Place);
         loby->SetAccessMatch(true);
     }
@@ -853,8 +883,8 @@ void Framework::BuildScene(ResourceManager* ExternalResource)
         m_nTextBatch += scene->m_nTextBatch;
     }
 
-    m_CurrSceneName = "LobyScene";
-    m_CurrScene = m_Scenes["LobyScene"].get();
+    m_CurrSceneName = "LoginScene";
+    m_CurrScene = m_Scenes["LoginScene"].get();
 }
 
 void Framework::BuildFontSpriteBatchs()
@@ -1073,6 +1103,7 @@ void Framework::DrawObjRenderLayer(ID3D12GraphicsCommandList* cmdList, const std
     for (auto& obj : ObjLayer)
     {
         if (obj->Activated == false) continue;
+        if (obj->RenderActivated == false) continue;
         if (obj->m_Name == "SpawnStageGround") continue;
         if (obj->m_Name.find("Background") != std::string::npos) continue;
         UINT ObjCBIndex = obj->m_TransformInfo->ObjCBIndex;
