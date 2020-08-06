@@ -1022,7 +1022,6 @@ void ResourceManager::BuildRenderItems()
     // Build GameOverScene RenderItem
     {
         auto& SceneRitems = m_AllRitems[(int)RenderTargetScene::GameOverScene];
-
         ResourceManager::BuildRenderItem(SceneRitems, m_Geometries["GameOverSceneUIGeo"].get());
         for (auto& subMesh_iter : m_Geometries["GameOverSceneUIGeo"]->DrawArgs)
         {
@@ -1052,7 +1051,7 @@ void ResourceManager::BuildRenderItems()
     // 캐릭터 렌더아이템에 대해선 각 Scene별로 중복을 허용한다.
     // (Scene별로 렌더아이템 리스트 가용성을 위해.)
     {
-        auto& LobySceneRitems     = m_AllRitems[(int)RenderTargetScene::LobyScene];
+        auto& LobySceneRitems = m_AllRitems[(int)RenderTargetScene::LobyScene];
         auto& PlayGameSceneRitems = m_AllRitems[(int)RenderTargetScene::PlayGameScene];
         auto& GameOverSceneRitems = m_AllRitems[(int)RenderTargetScene::GameOverScene];
 
@@ -1230,6 +1229,8 @@ void ResourceManager::BuildRenderItems()
                 else if (subMeshName.find("Necklace 11") != std::string::npos)
                     subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
                 else if (subMeshName.find("Pauldron 12") != std::string::npos)
+                    subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
+                else if (subMeshName.find("Pauldron 14") != std::string::npos)
                     subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
                 else if (subMeshName.find("Orb (1)") != std::string::npos)
                     subMeshMat[0] = subMeshMat[1] = subMeshMat[2] = m_Materials["LS Red Gold"].get();
