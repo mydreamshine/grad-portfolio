@@ -130,6 +130,11 @@ public:
             m_ClientID = packetData->client_id;
         }
             break;
+
+        case CSSS_LOGIN_FAIL:
+            nw_module.disconnect_lobby();
+            break;
+
         case CSSS_MATCH_LOGIN_OK:
         {
             auto packetData = reinterpret_cast<csss_packet_login_ok*>(packet);

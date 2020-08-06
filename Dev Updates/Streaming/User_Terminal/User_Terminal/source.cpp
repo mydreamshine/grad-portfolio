@@ -6,7 +6,11 @@
 #include <thread>
 #include <fstream>
 #include <chrono>
+#include <map>
+#include <vector>
+#include <atomic>
 #include "..\..\Streaming_Server\Streaming_Server\packet_struct.h"
+#include "..\..\..\Server\Common\OVER_EX.h"
 
 #ifndef CLEANUP_H
 #define CLEANUP_H
@@ -195,17 +199,20 @@ char SDLK2VK(int sdlk) {
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 const int FRAME_DATA_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
-const int MAX_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
+const int FRAME_BUFFER_SIZE = FRAME_DATA_SIZE * 3;
 
-int STREMING_RENDER_EVENT = 0;
 
 std::wstring config_path{ L".\\TERMINAL_CONFIG.ini" };
-char title[256];
-chrono::steady_clock::time_point prev_time, cur_time;
+atomic<float> fps;
+atomic<int> rtt;
 
-short server_port;
 std::wstring server_addr;
+unsigned short server_port;
+bool UDP_MODE;
 SOCKET serverSocket;
+SOCKET udpSocket;
+
+HANDLE renderIOCP;
 SDL_Window* window;
 SDL_Renderer* renderer;
 SDL_Texture* streaming_data;
@@ -233,6 +240,7 @@ void gen_default_config()
 {
 	WritePrivateProfileString(L"TERMINAL", L"SERVER_PORT", L"15700", config_path.c_str());
 	WritePrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", config_path.c_str());
+	WritePrivateProfileString(L"TERMINAL", L"UDP_MODE", L"1", config_path.c_str());
 }
 void InitConfig()
 {
@@ -248,54 +256,63 @@ void InitConfig()
 
 	GetPrivateProfileString(L"TERMINAL", L"SERVER_ADDR", L"127.0.0.1", buffer, 512, config_path.c_str());
 	server_addr = std::wstring(buffer);
+
+	GetPrivateProfileString(L"TERMINAL", L"UDP_MODE", L"1", buffer, 512, config_path.c_str());
+	UDP_MODE = std::stoi(buffer);
 	wprintf(L" Done.\n");
 }
-
-SDL_Texture* loadTexture(const std::string& file, SDL_Renderer* ren) {
-	//Initialize to nullptr to avoid dangling pointer issues
-	SDL_Texture* texture = nullptr;
-	//Load the image
-	SDL_Surface* loadedImage = SDL_LoadBMP(file.c_str());
-	//If the loading went ok, convert to texture and return the texture
-	if (loadedImage != nullptr) {
-		texture = SDL_CreateTextureFromSurface(ren, loadedImage);
-		SDL_FreeSurface(loadedImage);
-		//Make sure converting went ok too
-		if (texture == nullptr) {
-			logSDLError(std::cout, "CreateTextureFromSurface");
-		}
-	}
-	else {
-		logSDLError(std::cout, "LoadBMP");
-	}
-	return texture;
-}
-void renderTexture(SDL_Texture* tex, SDL_Renderer* ren, int x, int y) {
-	//Setup the destination rectangle to be at the position we want
-	SDL_Rect dst;
-	dst.x = x;
-	dst.y = y;
-	//Query the texture to get its width and height to use
-	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
-	SDL_RenderCopy(ren, tex, NULL, &dst);
-}
-void RecvFunc()
+void PostRender(char* frame, int frame_size)
 {
-	bool canRender = false;
-	UINT8* completeFrame = new UINT8[FRAME_DATA_SIZE];
+	OVER_EX* over_ex = new OVER_EX{ 0 };
+	over_ex->packet = frame;
+	PostQueuedCompletionStatus(renderIOCP, 1, frame_size, over_ex->overlapped());
+}
+Uint32 RTTChecker(Uint32 interval, void* param)
+{
+	tss_packet_req_rtt packet{};
+	send(serverSocket, reinterpret_cast<const char*>(&packet), packet.size, 0);
+	return(interval);
+}
 
+void process_tcp_packet(PACKET_TYPE type, void* buffer) {
+	switch (type) {
+	case SST_TCP_FRAME: {
+		Lpacket_inheritance* packet = reinterpret_cast<Lpacket_inheritance*>(buffer);
+		int decodingBytes = packet->size - sizeof(Lpacket_inheritance);
+		char* frame_data = new char[decodingBytes];
+		memcpy(frame_data, (char*)buffer + sizeof(Lpacket_inheritance), decodingBytes);
+		PostRender(frame_data, decodingBytes);
+		break;
+	}
+
+	case TSS_REQ_RTT: {
+		sst_packet_ack_rtt* ack_packet = reinterpret_cast<sst_packet_ack_rtt*>(buffer);
+		rtt = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - ack_packet->current_time).count() / 2;
+		SDL_Event e;
+		e.type = SDL_USEREVENT;
+		SDL_PushEvent(&e);
+		break;
+	}
+	}
+}
+void tcp_recv_thread()
+{
 	UINT savedSize = 0;
-	UINT8* savedPacket = new UINT8[MAX_BUFFER_SIZE];
+	UINT8* savedPacket = new UINT8[FRAME_BUFFER_SIZE];
 	UINT8* savedPointer = savedPacket;
 
-	UINT8* receivedPacket = new UINT8[MAX_BUFFER_SIZE];
+	UINT8* receivedPacket = new UINT8[FRAME_BUFFER_SIZE];
 	UINT8* receivedPointer = receivedPacket;
-	UINT needBytes = 4;
+
+	Lpacket_inheritance* packet = reinterpret_cast<Lpacket_inheritance*>(savedPacket);
+	LPACKET_SIZE needBytes = sizeof(LPACKET_SIZE);
 	UINT decodingBytes = 0;
+
+	SDL_AddTimer(1000, RTTChecker, NULL);
 
 	while (true)
 	{
-		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), MAX_BUFFER_SIZE, 0);
+		int retval = recv(serverSocket, reinterpret_cast<char*>(receivedPacket), FRAME_BUFFER_SIZE, 0);
 		if (retval == 0 || retval == SOCKET_ERROR) 
 			break;
 		
@@ -304,23 +321,14 @@ void RecvFunc()
 				UINT copyBytes = needBytes - savedSize;
 				memcpy(savedPointer, receivedPointer, copyBytes);
 
-				if (needBytes == 4) {
-					needBytes = *reinterpret_cast<int*>(savedPacket);
+				if (needBytes == sizeof(LPACKET_SIZE)) {
+					needBytes = *reinterpret_cast<LPACKET_SIZE*>(savedPacket);
 					continue;
 				}
 				else {
 					//Process Packet
-					canRender = true;
-					memcpy(completeFrame, savedPacket, needBytes);
-					decodingBytes = needBytes;
-					char* frame_data = new char[decodingBytes];
-					memcpy(frame_data, completeFrame, decodingBytes);
-					SDL_Event render_event;
-					render_event.type = STREMING_RENDER_EVENT;
-					render_event.user.code = decodingBytes;
-					render_event.user.data1 = frame_data;
-					SDL_PushEvent(&render_event);
-					needBytes = 4;
+					process_tcp_packet(packet->type, savedPacket);
+					needBytes = sizeof(LPACKET_SIZE);
 				}
 
 				retval -= copyBytes;
@@ -340,16 +348,134 @@ void RecvFunc()
 			}
 		}
 	}
-
-	delete[] completeFrame;
 	delete[] savedPacket;
 	delete[] receivedPacket;
 }
 
+class FRAME_CONTAINER {
+public:
+	FRAME_CONTAINER(int total_count, int total_size) : current_count(0), total_count(total_count), total_size(total_size), checker(total_count, false) {
+		frame = new char[total_count * PACKET_SPLIT_SIZE];
+	};
+	~FRAME_CONTAINER() { delete[] frame; };
+
+	bool emplace(int current_count, void* buffer) {
+		if (true == checker[current_count]) return false;
+		checker[current_count] = true;
+		memcpy(frame + PACKET_SPLIT_SIZE * current_count, buffer, PACKET_SPLIT_SIZE);
+		return ++this->current_count == total_count;
+	}
+	const char* data() { return frame; };
+private:
+	int current_count;
+	int total_count;
+	int total_size;
+	vector<bool> checker;
+	char* frame;
+};
+void udp_recv_thread()
+{
+	int buf_size = sizeof(video_packet);
+	char* receivedPacket = new char[buf_size];
+	
+	video_packet* packet = reinterpret_cast<video_packet*>(receivedPacket);
+
+	int lastest_render_frame = -1;
+	map<int, FRAME_CONTAINER*> frames;
+	bool isComplete = false;
+
+	SOCKADDR_IN from;
+	int from_len = sizeof(from);
+	memset(&from, 0, from_len);
+	
+	while (true)
+	{
+		int retval = recvfrom(udpSocket, reinterpret_cast<char*>(receivedPacket), buf_size, 0, (struct sockaddr*)&from, &from_len);
+		if (retval == 0) {
+			break;
+		}
+		else if (retval == SOCKET_ERROR) {
+			int error_no = WSAGetLastError();
+			if (error_no == WSAEFAULT)
+				continue;
+			else
+				break;
+		}
+		
+		if (lastest_render_frame >= packet->frame_number) continue;
+		if (packet->total_count == 0) continue;
+
+		if (frames.count(packet->frame_number) == 0) {
+			frames[packet->frame_number] = new FRAME_CONTAINER{ packet->total_count, packet->total_size };
+		}
+
+		isComplete = frames[packet->frame_number]->emplace(packet->current_count, packet->data);
+		if (true == isComplete) {
+			//Send Render Events.
+			char* frame_data = new char[packet->total_size];
+			memcpy(frame_data, frames[packet->frame_number]->data(), packet->total_size);
+			PostRender(frame_data, packet->total_size);
+
+			//Clear Old Frames.
+			lastest_render_frame = packet->frame_number;
+			for (auto i = frames.begin(); i != frames.end();) {
+				if (lastest_render_frame >= i->first) {
+					delete i->second;
+					frames.erase(i++);
+				}
+				else ++i;
+			}
+		}
+	}
+
+	for (auto i = frames.begin(); i != frames.end();) {
+			delete i->second;
+			frames.erase(i++);
+	}
+	delete[] receivedPacket;
+}
+
+void renderer_thread() {
+	DWORD num_byte;
+	ULONGLONG key;
+	PULONG_PTR p_key = &key;
+	WSAOVERLAPPED* p_over;
+
+	chrono::steady_clock::time_point prev_time, cur_time;
+	prev_time = cur_time = chrono::high_resolution_clock::now();
+	int update_counter {0};
+	int update_interval{ 30 };
+	float elapsedTime  {0};
+	while (true)
+	{
+		GetQueuedCompletionStatus(renderIOCP, &num_byte, p_key, &p_over, INFINITE);
+		OVER_EX* over_ex = reinterpret_cast<OVER_EX*> (p_over);
+
+        decoder.decode(over_ex->data(), key);
+        AVFrame* frame = decoder.flush(NULL);
+        int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
+        decoder.free_frame(&frame);
+
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
+        SDL_RenderPresent(renderer);
+
+		elapsedTime += chrono::duration<float>(cur_time - prev_time).count();
+		prev_time = cur_time;
+		cur_time = chrono::high_resolution_clock::now();
+		if (++update_counter > update_interval) {
+			update_counter = 0;
+			fps = 1.0f / (elapsedTime / update_interval);
+			elapsedTime = 0.0f;
+		}
+		delete over_ex;
+	}
+}
 void event_loop()
 {
-	prev_time = cur_time = chrono::high_resolution_clock::now();
-
+	char title[256];
+	int i_rtt;
+	float f_fps;
 	SDL_Event e;
 	while (true)
 	{
@@ -388,24 +514,14 @@ void event_loop()
 
 			case SDL_QUIT:
 				return;
+				
+			case SDL_USEREVENT:
+				f_fps = fps; i_rtt = rtt;
+				sprintf_s(title, "BattleArena / FPS : %.1f / Latency : %dms", f_fps, i_rtt);
+				SDL_SetWindowTitle(window, title);
+				break;
 
 			default:
-				if (e.type == STREMING_RENDER_EVENT) {
-						decoder.decode(e.user.data1, e.user.code);
-						AVFrame* frame = decoder.flush(NULL);
-						delete e.user.data1;
-						int ret = SDL_UpdateYUVTexture(streaming_data, NULL, frame->data[0], frame->linesize[0], frame->data[1], frame->linesize[1], frame->data[2], frame->linesize[2]);
-						decoder.free_frame(&frame);
-
-						SDL_RenderClear(renderer);
-						SDL_RenderCopy(renderer, streaming_data, NULL, NULL);
-						SDL_RenderPresent(renderer);
-
-						sprintf(title, "BattleArena / FPS : %.1f", 1.0f / chrono::duration<float>(cur_time - prev_time).count());
-						prev_time = cur_time;
-						cur_time = chrono::high_resolution_clock::now();
-						SDL_SetWindowTitle(window, title);
-				}
 				break;
 			}
 		}
@@ -414,16 +530,16 @@ void event_loop()
 }
 int main(int, char**) {
 	InitConfig();
+	vector<thread> threads;
+	renderIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
+	threads.emplace_back(renderer_thread);
 
-	WSADATA wsa;
-	WSAStartup(MAKEWORD(2, 2), &wsa);
-
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+	if (SDL_Init(SDL_INIT_TIMER || SDL_INIT_VIDEO) != 0) {
 		logSDLError(std::cout, "SDL_Init");
 		return 1;
 	}
 
-	window = SDL_CreateWindow("BattleArena", 100, 100, SCREEN_WIDTH,
+	window = SDL_CreateWindow("BattleArena / FPS : 0.0 / Latency : 0ms", 100, 100, SCREEN_WIDTH,
 		SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
 		logSDLError(std::cout, "CreateWindow");
@@ -439,15 +555,15 @@ int main(int, char**) {
 		SDL_Quit();
 		return 1;
 	}
-
 	streaming_data = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-
 	if (streaming_data == nullptr) {
 		cleanup(streaming_data);
 		SDL_Quit();
 		return 1;
 	}
 
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
 	serverSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	if (serverSocket == INVALID_SOCKET)
 		error_display("WSASocket()", WSAGetLastError());
@@ -457,26 +573,44 @@ int main(int, char**) {
 	InetPton(AF_INET, server_addr.c_str(), reinterpret_cast<PVOID>(&serverAddr.sin_addr));
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(server_port);
+	int serverLen = sizeof(serverAddr);
 
 	int retval = connect(serverSocket, reinterpret_cast<SOCKADDR*>(&serverAddr), sizeof(SOCKADDR_IN));
-	if (retval != SOCKET_ERROR)
-		printf("연결 성공");
+	if (retval == SOCKET_ERROR)
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NW ERROR", "SERVER CONNECT FAIL", NULL);
+	threads.emplace_back(tcp_recv_thread);
+	
+	getsockname(serverSocket, (sockaddr*)&serverAddr, &serverLen);
+	unsigned short local_port = ntohs(serverAddr.sin_port) + 1;
+	
 
-	STREMING_RENDER_EVENT = SDL_RegisterEvents(1);
-	std::thread recvThread{ RecvFunc };
+	//Setup UDP.
+	if (UDP_MODE) {
+		SOCKADDR_IN udpAddr;
+		memset(&udpAddr, 0, sizeof(SOCKADDR_IN));
+		udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		udpAddr.sin_family = AF_INET;
+		udpAddr.sin_port = htons(local_port);
+		udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_IP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+		retval = ::bind(udpSocket, reinterpret_cast<const SOCKADDR*>(&udpAddr), sizeof(udpAddr));
+		if (retval == SOCKET_ERROR)
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NW ERROR", "UDP Binding ERROR", NULL);
+		threads.emplace_back(udp_recv_thread);
+	}
+
+	tss_packet_ready_to_go ready_packet{ local_port };
+	send(serverSocket, (const char*)&ready_packet, ready_packet.size, 0);
 
 	event_loop();
 	closesocket(serverSocket);
+	closesocket(udpSocket);
+	threads.back().~thread();
 	WSACleanup();
-
-	recvThread.join();
 
 	SDL_DestroyTexture(streaming_data);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
-	SDL_Quit();
 
-	
-	
+	SDL_Quit();
 	return 0;
 }

@@ -397,7 +397,7 @@ namespace BattleArena {
 	void LOBBYSERVER::process_packet_login(int client, void* buffer)
 	{
 		sscs_packet_try_login* packet = reinterpret_cast<sscs_packet_try_login*>(buffer);
-		int uid = DBManager.get_uid(packet->id);
+		int uid = DBManager.get_uid(packet->id, packet->password);
 
 		if (uid == RESULT_NO_ID) {
 			csss_packet_login_fail packet{};

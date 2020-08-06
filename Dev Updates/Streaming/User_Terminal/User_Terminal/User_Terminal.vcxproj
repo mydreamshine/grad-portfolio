@@ -144,10 +144,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Server\Common\OVER_EX.cpp" />
     <ClCompile Include="DECODER.cpp" />
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Server\Common\OVER_EX.h" />
     <ClInclude Include="..\..\Streaming_Server\Streaming_Server\packet_struct.h" />
     <ClInclude Include="DECODER.h" />
   </ItemGroup>
