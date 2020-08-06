@@ -280,8 +280,8 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         UILayerBacground_Meshes["UI_Layout_KillLog"]                = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f, 0.0f * wnd_y_factor, 497.0f * wnd_x_factor,  73.0f * wnd_y_factor, 0.3f);
         UILayerBacground_Meshes["UI_Layout_FightTextLayer"]         = geoGen.CreateQuad( -150.0f, 40.5f, 300.0f, 81.0f, 0.0f);
         UILayerBacground_Meshes["UI_Layout_FinishTextLayer"]        = geoGen.CreateQuad( -150.0f, 37.5f, 300.0f, 75.0f, 0.0f);
-        UILayerBacground_Meshes["UI_Layout_GameChattingLog"]        = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.02f);
-        UILayerBacground_Meshes["UI_Layout_InputBoxCaret"]          = geoGen.CreateQuad(-1.0f, 10.0f, 1.0f, 20.0f, 0.01f);
+        UILayerBacground_Meshes["UI_Layout_GameChattingLog"]        = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 410.0f * wnd_x_factor, 402.0f * wnd_y_factor, 0.001f);
+        UILayerBacground_Meshes["UI_Layout_InputBoxCaret"]          = geoGen.CreateQuad(-1.0f, 10.0f, 1.0f, 20.0f, 0.001f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton"]       = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_GameChattingPopUpButton_alarm"] = geoGen.CreateQuad(0.0f * wnd_x_factor, 0.0f * wnd_y_factor, 102.8f * wnd_x_factor, 87.7f * wnd_y_factor, 0.0f);
         UILayerBacground_Meshes["UI_Layout_HPBarDest_Enemy"]        = geoGen.CreateQuad(   0.0f * wnd_x_factor * 1.4f,    0.0f * wnd_y_factor, 110.0f * wnd_x_factor * 1.4f,  25.0f * wnd_y_factor * 1.1f, 0.01f);
