@@ -16,7 +16,7 @@
 #include "..\..\Common\CSOCKADDR_IN.h"
 #include "..\..\Common\OVER_EX.h"
 
-#define BATTLE_OFFLINE
+//#define BATTLE_OFFLINE
 #define FRIEND_OFFLINE
 
 namespace BattleArena {

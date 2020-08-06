@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <DirectXCollision.h>
-#include "Vector3d.h"
+#include "..\Server\Common\Vector3d.h"
 
 class BBManager
 {

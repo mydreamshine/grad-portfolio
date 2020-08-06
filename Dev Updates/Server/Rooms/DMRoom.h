@@ -1,11 +1,10 @@
 #pragma once
 #include "ROOM.h"
-#include "PACKET_VECTOR.h"
 #include <mutex>
 #include <map>
 #include <set>
-
 #include <DirectXCollision.h>
+#include "..\Common\PACKET_VECTOR.h"
 #include "..\Common\HERO.h"
 #include "..\Common\SKILL.h"
 #include "..\Common\SCOREBOARD.h"

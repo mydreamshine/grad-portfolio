@@ -9,14 +9,13 @@
 #include <chrono>
 #include <queue>
 
-#include "csockaddr_in.h"
-#include "EVENT.h"
-#include "OVER_EX.h"
-#include "CLIENT.h"
+#include "..\Server\Common\CSOCKADDR_IN.h"
+#include "..\Server\Common\EVENT.h"
+#include "..\Server\Common\OVER_EX.h"
+#include "..\Server\Common\CLIENT.h"
+#include "..\Server\Rooms\DMRoom.h"
 
-#include "DMRoom.h"
-
-#define TEST_FIELD
+//#define TEST_FIELD
 
 namespace BattleArena {
 	constexpr auto RECV_BUF_SIZE = 512;

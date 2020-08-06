@@ -1,6 +1,6 @@
 #include "DMRoom.h"
-#include "CLIENT.h"
-#include "CharacterConfig.h"
+#include "..\Common\CLIENT.h"
+#include "..\Common\CharacterConfig.h"
 
 DMRoom::DMRoom() :
 	max_player(BBManager::instance().max_player),

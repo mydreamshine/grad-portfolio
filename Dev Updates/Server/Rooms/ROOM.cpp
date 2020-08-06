@@ -1,5 +1,5 @@
 #include "ROOM.h"
-#include "CLIENT.h"
+#include "..\Common\CLIENT.h"
 constexpr int EV_SEND = 1;
 ROOM::~ROOM() {};
 
