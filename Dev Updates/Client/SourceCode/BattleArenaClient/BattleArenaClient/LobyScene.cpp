@@ -921,7 +921,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                 else
                     PlayerNameInputForm = L"Unknown: ";
 
-                inputTextBox.SetActivate(false);
                 if (inputTextBox.IsEmpty() == false)
                 {
                     std::wstring FullinputTexts = inputTextBox.GetFullinputTexts();

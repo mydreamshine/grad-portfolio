@@ -1,0 +1,18 @@
+01 Head 01 - LS Brown Gold
+02 Torso 07 - MS Purple Gold
+03 Bottom 06 - MS Purple Gold
+04 Feet 02 - LS Brown Gold
+05 Hand 01 - LS Brown Gold
+06 Belt 10 - MS Red Gold
+Necklace 11 - LS Red Gold
+Pauldron 12 - LS Red Gold
+Pauldron 12_1 - LS Red Gold
+Orb (1) - LS Red Gold
+Orb (1)_1 - LS Red Gold
+Staff_04 - LS Red Gold
+Beard 02 - Hair Grey
+Brow 07 - Hair Grey
+Eyes 05 - Hair Black
+Hair Male 04 - Hair Grey
+Headband 03 - LS Red Gold
+Mouth 03 - LS Brown Silver

@@ -64,9 +64,6 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         }
     }
 
-    PlayGameScene::InitPoisonFogObjects();
-
-
     m_LightRotationAngle = 0.0f;
 
     XMFLOAT3 EyePosition = { 0.0f, 0.0f, -1.0f };
@@ -83,6 +80,7 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     TimeLimitIntervalTimeStack = 0.0f;
 
     DeActPoisonGasArea = { -3423, 4290, 4577, -3710 };
+    PlayGameScene::InitPoisonFogObjects();
 
     while (KillLogList.empty() != true) KillLogList.pop();
     KillLogSlidingStart = false;
@@ -150,8 +148,10 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     GameStartUI_ActTimeStack = 0.0f;
     GameOverUI_ActTimeStack = 0.0f;
 
+    Object* TimeLimitObject = objManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameTimeLimit");
     Object* GameStartInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FightTextLayer");
     Object* GameOverInfoUIObject = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_FinishTextLayer");
+    TimeLimitObject->m_Textinfo->m_TextColor = DirectX::Colors::White;
     GameStartInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
     GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
     GameStartInfoUIObject->RenderActivated = false;

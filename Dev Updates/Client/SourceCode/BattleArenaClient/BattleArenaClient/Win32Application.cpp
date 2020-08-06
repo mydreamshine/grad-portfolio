@@ -65,6 +65,9 @@ int Win32Application::Run(int nCmdShow)
         }
     }
 
+    m_eventProcessor.disconnect();
+    m_eventProcessor.Destroy();
+
     // Return this part of the WM_QUIT message to Windows.
     return static_cast<char>(msg.wParam);
 }

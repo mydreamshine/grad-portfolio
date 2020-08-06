@@ -1,0 +1,18 @@
+01 Head 01 - LS Brown Gold
+02 Torso 16 - LS Red Gold
+03 Bottom 02 - LS White Gold
+04 Feet 04 - LS Red Gold
+05 Hand 01 - LS Brown Gold
+06 Belt 05 - LS Red Gold
+Poleyn 01 - LS Red Gold
+Poleyn 01_1 - LS Red Gold
+Necklace 08 - LS Red Gold
+Pauldron 01 - LS Brown Gold
+Pauldron 01_1 - LS Red Gold
+Shield_02 - LS Red Gold
+Brow 01 - Hair Red
+Eyes 02  - Hair Black
+Hair Male 09 - Hair Red
+Mouth 03 - LS Brown Silver
+Bracer 05 - LS Brown Gold
+Sword_02 - LS Red Gold

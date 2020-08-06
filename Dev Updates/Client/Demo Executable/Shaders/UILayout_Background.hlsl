@@ -17,6 +17,7 @@ PSInput VS(VSInput vin)
     PSInput vout = (PSInput)0.0f;
 
 	float4 PosW = float4(vin.position, 1.0f);
+	PosW = mul(PosW, gWorld);
 
 	/*PosW.x = PosW.x - gRenderTargetSize.x / 2;
 	PosW.y = PosW.y - gRenderTargetSize.y / 2;*/
