@@ -625,7 +625,11 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
             XMFLOAT2 KillLogRenderTextSize = Font->GetStringSize(KillLogText);
 
             if (KillLogRenderTextSize.x > KillLogTextRenderWidth)
-                KillLogLayerScale.x += KillLogRenderTextSize.x / KillLogLayerDefaultWidth;
+                KillLogLayerScale.x += (KillLogRenderTextSize.x / 2.0f) / KillLogLayerDefaultWidth;
+
+            Object* KillLogLayoutObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_KillLog");
+            KillLogLayoutObject->m_TransformInfo->SetWorldScale(KillLogLayerScale);
+            KillLogLayoutObject->m_TransformInfo->UpdateWorldTransform();
         }
 
         if (KillLogSlidingInit == true)
@@ -1124,22 +1128,13 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
             float newScaleScala = MathHelper::Clamp(CurrScaleScala + ScaleExtSpeed, 0.0f, MaxScaleScala);
 
             float texAlpha = 1.0f;
-            if (CurrScaleScala >= MaxScaleScala * 0.5f)
+            if (newScaleScala >= MaxScaleScala * 0.5f)
                 texAlpha = MathHelper::Clamp(1.0f - (newScaleScala - MaxScaleScala * 0.5f) / (MaxScaleScala * 0.5f), 0.0f, 1.0f);
 
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
-            if (compareFloat(texAlpha, 0.0f) == true)
-            {
-                auto exceptObj = std::find_if(m_EffectObjects.begin(), m_EffectObjects.end(), [&](Object* findObj)
-                    {
-                        return (findObj->m_CE_ID == obj->m_CE_ID);
-                    });
-                if (exceptObj != m_EffectObjects.end()) m_EffectObjects.erase(exceptObj);
-
-                ObjectManager ObjManager;
-                ObjManager.DeActivateObj(obj);
-            }
+            if (texAlpha <= 0.1f)
+                obj->RenderActivated = false;
         }
         else if (obj->m_Name.find("PoisonFog") != std::string::npos)
         {
