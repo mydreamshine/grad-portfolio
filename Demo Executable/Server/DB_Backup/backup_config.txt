@@ -1,0 +1,2 @@
+BACKUP_DIR:  C:\Program Files\Microsoft SQL Server\MSAS15.MSSQLSERVER\OLAP\Backup
+ODBC NAME:  BattleArena

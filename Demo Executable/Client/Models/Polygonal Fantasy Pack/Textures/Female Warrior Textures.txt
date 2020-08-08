@@ -1,0 +1,19 @@
+01 Head 01 - DS Brown Gold
+02 Torso 20 - DS White Gold
+03 Bottom 11 - DS Red Gold
+04 Feet 06 - DS White Gold
+05 Hand 03 - DS Brown Gold
+06 Belt 03 - DS Red Gold
+Poleyn 07 - LS Red Gold
+Poleyn 07_1 - LS Red Gold
+Necklace 06 - LS Purple Gold
+Bracer 06 - LS Brown Gold
+Bracer 06_1 - LS Brown Gold
+Dagger 03 - LS Red Gold
+Dagger 03_1 - LS Red Gold
+Brow 05 - Hair Grey
+Eyes 01 - Hair Black
+Hair Female 12 - Hair Grey
+Headband 06 - LS Red Gold
+Mouth 02 - DS Brown Silver
+Pauldron 07 - LS White Gold

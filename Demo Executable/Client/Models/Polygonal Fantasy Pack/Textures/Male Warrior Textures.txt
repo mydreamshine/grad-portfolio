@@ -1,0 +1,16 @@
+01 Head 01 - DS Brown Gold
+02 Torso 12 - DS Blue Silver
+03 Bottom 07 - DS Blue Silver
+04 Feet 06 - DS Brown Silver
+05 Hand 01 - DS Brown Gold
+06 Belt 04 - DS Blue Silver
+Poleyn 02 - LS Blue Silver
+Poleyn 02_1 - LS Blue Silver
+Bracer 04 - LS Grey Silver
+Pauldron 03 - LS Blue Silver
+Axe_03 - LS Blue Silver
+Beard 08 - Hair Black
+Brow 03 - Hair Black
+Eyes 02 - Hair Black
+Helmet 02 - LS White Silver
+Mouth 06 - DS Brown Silver
