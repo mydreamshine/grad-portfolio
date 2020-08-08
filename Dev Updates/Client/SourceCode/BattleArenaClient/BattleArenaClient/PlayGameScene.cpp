@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PlayGameScene.h"
 
+#include <algorithm>
+
 using namespace aiModelData;
 
 PlayGameScene::~PlayGameScene()
@@ -42,6 +44,20 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
                 objManager.DeActivateObj(attachedObj);
             objManager.DeActivateObj(obj);
         }
+    }
+
+
+    // SpawnSkillObject()에서 HealAreaObject에 관한 FindDeactivateObject()를 호출하게 되는데
+    // 이때 CheckRenderAct 파라미터에 의해 오브젝트의 RenderActivated를 기준으로
+    // 비활성된 오브젝트를 색출하게 된다.
+    // 그러나 HealAreaObject들은 HealAreaObject이기 이전에 WorldObject이기도 하기에
+    // 위에 Instancing 비활성화 구문에 의해 RenderActivated가 true로 바뀌게 되어버린다.
+    // RenderActivated를 기준으로 한 FindDeactivateObject()를 지키기 위해
+    // 아래와 같이 HealAreaObject들에 한해서 RenderActivated를 false로 변경해준다.
+    for (auto& obj : m_HealAreaObjects)
+    {
+        obj->Activated = true;
+        obj->RenderActivated = false;
     }
 
     for (auto& obj : m_UILayOutObjects)
@@ -168,6 +184,7 @@ void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_ma
     PlayGameScene::AnimateEffectObjectsTransform(gt);
     PlayGameScene::AnimateCharacterRenderEffect(gt);
     Scene::OnUpdate(frame_resource, shadow_map, key_state, oldCursorPos, ClientRect, gt, GeneratedEvents);
+    PlayGameScene::ProcessObjectCollision(gt, GeneratedEvents);
 }
 
 void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBatch_index)
@@ -428,7 +445,8 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
         else
         {
             auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
+            if (Ritem_name.find("Grass") == std::string::npos)
+                m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
             std::string objName = Ritem_iter.first;
 
             if (objName.find("SpawnStageGround") != std::string::npos)
@@ -459,6 +477,11 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
                     // ShadowMap의 해상도보다 m_SceneBounds.Radius가 크면
                     // BackBuffer에 맵핑되는 그림자의 해상도가 상대적으로 떨어지게 된다.
                     m_SceneBounds.Radius = (float)SIZE_ShadowMap * 2;
+                }
+                else if (objName.find("Grass") != std::string::npos)
+                {
+                    m_GrassObstacleObjects.push_back(newObj);
+                    m_ObjRenderLayer[(int)RenderLayer::Transparent_depth].push_back(newObj);
                 }
             }
         }
@@ -506,6 +529,20 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
 
 
+    // Depth enable Transparency Render Layer에 Heal Area Object를 미리 만들어준다
+    for(UINT i = 0; i < m_MaxHealAreaObject; ++i)
+    {
+        auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+        m_ObjRenderLayer[(int)RenderLayer::Transparent_depth].push_back(newObj);
+        // Object Component(Transform, Ritems, ObjectName, etc.)는 Heal Area를 스폰할 때 지정해주고
+        // 이 부분에선 RenderLayer만 지정해준다.
+        // 단, Heal Area를 스폰할 때 FindObject를 WorldObjects가 아닌 HealAreaObjects에서 해준다.
+
+        m_HealAreaObjects.push_back(newObj);
+        // m_HealAreaObjects는 빌드할 때를 제외하고는 clear하지 않는다.
+        // (각각의 오브젝트가 DeActivate 것과는 별개.)
+    }
+
     // Create DeActive Objects
     {
         // SkinnedCB를 지닌(Skeleton이 있는) 오브젝트를 생성하면
@@ -526,14 +563,14 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             // 이처럼 한꺼번에 많은 오브젝트를 만들 경우에는
             // 각 오브젝트의 Activate 여부를 오브젝트들을 다 만들고 나서 결정해줘야 한다.
             //newObj->Activated = false;
-            m_ObjRenderLayer[(int)RenderLayer::SkinnedOpaque].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::SkinnedTransparent].push_back(newObj);
         }
 
         const UINT nDeAcativateWorldObj = m_MaxWorldObject - (UINT)m_WorldObjects.size();
         for (UINT i = 0; i < nDeAcativateWorldObj; ++i)
         {
             auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-            m_ObjRenderLayer[(int)RenderLayer::Opaque].push_back(newObj);
+            m_ObjRenderLayer[(int)RenderLayer::Transparent].push_back(newObj);
         }
 
         const UINT nDeActivateUILayoutObj = m_MaxUILayoutObject - (UINT)m_UILayOutObjects.size();
@@ -558,6 +595,17 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
             m_UILayOutObjects[i]->Activated = false;
         for (UINT i = m_MaxTextObject - nDeActivateTextObj; i < m_MaxTextObject; ++i)
             m_TextObjects[i]->Activated = false;
+    }
+
+    // Render Deactivate HealAreaObjects
+    {
+        // Deactivate를 하면 FindDeactivateObject()에 의해 색출이 되기 때문에
+        // RenderActivated만 비활성화 해준다.
+        // (m_HealAreaObjects 중 비활성화된 오브젝트를 찾으려면
+        //  FindDeactivateObject() 파라미터에 CheckRenderAct를 넣어주면
+        //  오브젝트의 Activated가 아닌 RenderActivated를 기준으로 찾게 된다.
+        for (UINT i = 0; i < m_MaxHealAreaObject; ++i)
+            m_HealAreaObjects[i]->RenderActivated = false;
     }
 
     m_nObjCB = (UINT)m_WorldObjects.size() + (UINT)m_UILayOutObjects.size();
@@ -804,10 +852,10 @@ void PlayGameScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>
                     float MaxCoolTime = 0.0f;
                     switch (CharacterType)
                     {
-                    case CHARACTER_TYPE::WARRIOR:   MaxCoolTime = 4.0f; break;
-                    case CHARACTER_TYPE::BERSERKER: MaxCoolTime = 10.0f; break;
+                    case CHARACTER_TYPE::WARRIOR:   MaxCoolTime = 5.0f; break;
+                    case CHARACTER_TYPE::BERSERKER: MaxCoolTime = 11.0f; break;
                     case CHARACTER_TYPE::ASSASSIN:  MaxCoolTime = 12.0f; break;
-                    case CHARACTER_TYPE::PRIEST:    MaxCoolTime = 12.0f; break;
+                    case CHARACTER_TYPE::PRIEST:    MaxCoolTime = 13.0f; break;
                     }
                     MaxCoolTime -= 1.0f;
 
@@ -1116,6 +1164,8 @@ void PlayGameScene::AnimateEffectObjectsTransform(CTimer& gt)
 
             Transforminfo->SetWorldScale({ newScaleScala, newScaleScala, newScaleScala });
             Transforminfo->m_TexAlpha = texAlpha;
+            if (texAlpha <= 0.07f)
+                obj->RenderActivated = false;
         }
         else if (obj->m_Name.find("StealthFog") != std::string::npos)
         {
@@ -1186,6 +1236,37 @@ void PlayGameScene::UpdateUITransformAs(CTimer& gt, Camera* MainCamera, std::uno
     for (auto& Player_iter : Players)
     {
         auto player = Player_iter.second.get();
+        if (m_MainPlayer != nullptr)
+        {
+            if(player != m_MainPlayer)
+            {
+                ObjectManager objManager;
+                Object* CharacterInfoLayer = objManager.FindObjectName(m_UILayOutObjects, "CharacterInfoLayer");
+                auto& MainPlayerCharacterInfoLayerBound = CharacterInfoLayer->m_TransformInfo->m_Bound;
+                auto& PlayerHP_BarBound = player->m_HP_BarObjRef[0]->m_TransformInfo->m_Bound;
+                RECT MainPlayerCharacterInfoLayerRect =
+                {
+                    (LONG)(MainPlayerCharacterInfoLayerBound.Center.x - MainPlayerCharacterInfoLayerBound.Extents.x), // left
+                    (LONG)(MainPlayerCharacterInfoLayerBound.Center.y + MainPlayerCharacterInfoLayerBound.Extents.y), // top
+                    (LONG)(MainPlayerCharacterInfoLayerBound.Center.x + MainPlayerCharacterInfoLayerBound.Extents.x), // right
+                    (LONG)(MainPlayerCharacterInfoLayerBound.Center.y - MainPlayerCharacterInfoLayerBound.Extents.y), // bottom
+                };
+                RECT PlayerHP_BarRect =
+                {
+                    (LONG)(PlayerHP_BarBound.Center.x - PlayerHP_BarBound.Extents.x), // left
+                    (LONG)(PlayerHP_BarBound.Center.y + PlayerHP_BarBound.Extents.y), // top
+                    (LONG)(PlayerHP_BarBound.Center.x + PlayerHP_BarBound.Extents.x), // right
+                    (LONG)(PlayerHP_BarBound.Center.y - PlayerHP_BarBound.Extents.y), // bottom
+                };
+                if (IntersectRect_(MainPlayerCharacterInfoLayerRect, PlayerHP_BarRect) == true)
+                    player->SetHP_BarActivate(false);
+                else
+                {
+                    if(player->m_CharacterObjRef->PlayerState != PLAYER_STATE::ACT_STEALTH)
+                        player->SetHP_BarActivate(true);
+                }
+            }
+        }
         player->UpdateUITransform(MainCamera, ViewPort, gt);
     }
 }
@@ -1456,6 +1537,90 @@ void PlayGameScene::ProcessInput(const bool key_state[], const POINT& oldCursorP
     {
         CD3DX12_VIEWPORT ViewPort((float)m_ClientRect.left, (float)m_ClientRect.top, (float)m_ClientRect.right, (float)m_ClientRect.bottom);
         m_MainPlayer->ProcessInput(key_state, oldCursorPos, ViewPort, gt, m_GroundObj, GeneratedEvents);
+    }
+}
+
+void PlayGameScene::ProcessObjectCollision(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents)
+{
+    if (m_MainPlayer == nullptr) return;
+    Player* TeamPlayer = nullptr;
+
+    for (auto& player_iter : m_Players)
+    {
+        auto player = player_iter.second.get();
+        if (player == m_MainPlayer) continue;
+        if (m_MainPlayer->m_CharacterObjRef->Propensity == player->m_CharacterObjRef->Propensity)
+        {
+            TeamPlayer = player;
+            break;
+        }
+    }
+
+    auto MainPlayerCharacterBound = m_MainPlayer->m_CharacterObjRef->m_TransformInfo->m_Bound;
+    MainPlayerCharacterBound.Extents.x += 200.0f;
+    MainPlayerCharacterBound.Extents.z += 200.0f;
+
+    BoundingBox TeamPlayerCharacterBound;
+    if (TeamPlayer != nullptr)
+    {
+        TeamPlayerCharacterBound = (TeamPlayer->m_CharacterObjRef->m_TransformInfo->m_Bound);
+        TeamPlayerCharacterBound.Extents.x += 200.0f;
+        TeamPlayerCharacterBound.Extents.z += 200.0f;
+    }
+
+    float newTexAlpha = 1.0f;
+    for (auto obj : m_GrassObstacleObjects)
+    {
+        auto GrassObstacleTransformInfo = obj->m_TransformInfo.get();
+        auto& GrassObstacleBound = GrassObstacleTransformInfo->m_Bound;
+
+        newTexAlpha = 1.0f;
+        if (MainPlayerCharacterBound.Intersects(GrassObstacleBound) == true)
+            newTexAlpha = 0.3f;
+        else if (TeamPlayer != nullptr)
+        {
+            if (TeamPlayerCharacterBound.Intersects(GrassObstacleBound) == true)
+                newTexAlpha = 0.3f;
+        }
+
+        GrassObstacleTransformInfo->m_TexAlpha = newTexAlpha;
+    }
+
+
+    for (auto& player_iter : m_Players)
+    {
+        auto otherPlayer = player_iter.second.get();
+        if (m_MainPlayer->m_CharacterObjRef->Propensity == otherPlayer->m_CharacterObjRef->Propensity)
+            continue;
+
+        auto otherPlayerTransformInfo = otherPlayer->m_CharacterObjRef->m_TransformInfo.get();
+        auto& otherPlayerBound = otherPlayerTransformInfo->m_Bound;
+
+        if (otherPlayer->m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_STEALTH)
+        {
+            if (MainPlayerCharacterBound.Intersects(otherPlayerBound) == true)
+            {
+                otherPlayer->SetHP_BarActivate(true);
+                
+                otherPlayerTransformInfo->m_TexAlpha = otherPlayer->StealthAlpha;
+                otherPlayerTransformInfo->m_nonShadowRender = false;
+                continue;
+            }
+            else if (TeamPlayer != nullptr)
+            {
+                if (TeamPlayerCharacterBound.Intersects(otherPlayerBound) == true)
+                {
+                    otherPlayer->SetHP_BarActivate(true);
+                    otherPlayerTransformInfo->m_TexAlpha = otherPlayer->StealthAlpha;
+                    otherPlayerTransformInfo->m_nonShadowRender = false;
+                    continue;
+                }
+            }
+
+            otherPlayer->SetHP_BarActivate(false);
+            otherPlayerTransformInfo->m_TexAlpha = 0.0f;
+            otherPlayerTransformInfo->m_nonShadowRender = true;
+        }
     }
 }
 
@@ -1778,11 +1943,20 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
 
     ObjectManager objManager;
-    Object* newSkillObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+    Object* newSkillObj = nullptr;
+    if (SkillType == SKILL_TYPE::HOLY_AREA)
+    {
+        newSkillObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_HealAreaObjects, m_MaxHealAreaObject, true);
+        newSkillObj->Activated = true;
+        newSkillObj->RenderActivated = true;
+    }
+    else
+        newSkillObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
 
     if (newSkillObj == nullptr)
     {
-        MessageBox(NULL, L"No skill objects available in the world object list.", L"Object Generate Warning", MB_OK);
+        MessageBox(NULL, L"No skill objects available in the world object list.", L"Object Generate Error", MB_OK);
+        throw std::invalid_argument("Object Generate Error");
         return;
     }
 
@@ -1820,7 +1994,8 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
             for (int i = 0; i < 20; ++i)
             {
                 Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-                newSkillEffectObj->m_CE_ID = New_CE_ID;
+                //newSkillEffectObj->m_CE_ID = New_CE_ID;
+                newSkillEffectObj->m_Sub_CE_ID = New_CE_ID; // Controlled Object의 CE_ID 중복 방지
 
                 objName = "HolyCross - Instancing";
                 Ritems = { AllRitems["SkillEffect_Heal_Cross_GreenLight"].get() };
@@ -1840,9 +2015,13 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
                     &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
                 newSkillObj->m_TransformInfo->UpdateWorldTransform();
                 newSkillEffectObj->m_TransformInfo->m_nonShadowRender = true;
+                newSkillEffectObj->RenderActivated = true;
 
                 newSkillObj->m_Childs.push_back(newSkillEffectObj);
                 newSkillEffectObj->m_Parent = newSkillObj;
+
+                newSkillEffectObj->SelfDeActivated = true;
+                newSkillEffectObj->DeActivatedDecrease = 14.0f; // HolyArea CoolTime: 13.0f
 
                 m_BillboardObjects.push_back(newSkillEffectObj);
                 m_EffectObjects.push_back(newSkillEffectObj);
@@ -1879,7 +2058,8 @@ void PlayGameScene::SpawnSkillObject(int New_CE_ID,
             for (int i = 0; i < 2; ++i)
             {
                 Object* newSkillEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-                newSkillEffectObj->m_CE_ID = New_CE_ID;
+                //newSkillEffectObj->m_CE_ID = New_CE_ID;
+                newSkillEffectObj->m_Sub_CE_ID = New_CE_ID; // Controlled Object의 CE_ID 중복 방지
 
                 objName = "StealthFog - Instancing";
                 Ritems = { AllRitems["SkillEffect_Smoke_BlueLight"].get() };
@@ -2066,7 +2246,7 @@ void PlayGameScene::DeActivateObject(int CE_ID)
         {
             auto exceptObj = std::find_if(m_BillboardObjects.begin(), m_BillboardObjects.end(), [&](Object* obj)
                 {
-                    return (obj->m_CE_ID == CE_ID);
+                    return (obj->m_Sub_CE_ID == CE_ID); // Controlled Object의 CE_ID 중복 방지를 위해 HP로 대체
                 });
             if (exceptObj != m_BillboardObjects.end()) m_BillboardObjects.erase(exceptObj);
             else break;
@@ -2076,19 +2256,52 @@ void PlayGameScene::DeActivateObject(int CE_ID)
         {
             auto exceptObj = std::find_if(m_EffectObjects.begin(), m_EffectObjects.end(), [&](Object* obj)
                 {
-                    return (obj->m_CE_ID == CE_ID);
+                    return (obj->m_Sub_CE_ID == CE_ID); // Controlled Object의 CE_ID 중복 방지를 위해 HP로 대체
                 });
             if (exceptObj != m_EffectObjects.end()) m_EffectObjects.erase(exceptObj);
             else break;
         }
 
         ObjectManager ObjManager;
-        Object* ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
-        if (ControledObj != nullptr)
+        Object* ControledObj = ObjManager.FindObjectCE_ID(m_HealAreaObjects, CE_ID);
+        if (ControledObj == nullptr)
+            ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
+
+        if (ControledObj == nullptr) return;
+
+        //while (ControledObj != nullptr)
         {
-            for (auto& child_obj : ControledObj->m_Childs)
-                ObjManager.DeActivateObj(child_obj);
-            ObjManager.DeActivateObj(ControledObj);
+            if (ControledObj->m_Parent != nullptr)
+            {
+                Object* DeactivatedChild = ControledObj;
+                ControledObj = ControledObj->m_Parent;
+                ObjManager.DeActivateObj(DeactivatedChild);
+            }
+
+            if (ControledObj == nullptr)
+                std::invalid_argument("ControledObj missed ref");
+
+            if (ControledObj != nullptr)
+            {
+                std::string objName = ControledObj->m_Name;
+                for (auto& child_obj : ControledObj->m_Childs)
+                    ObjManager.DeActivateObj(child_obj);
+                ObjManager.DeActivateObj(ControledObj);
+
+                // HealArea에 한해서 FindDeactivateObject 기준이 RenderActivated이므로
+                // HealArea의 RenderActivated를 다음과 같이 false인 상태로 바꿔 놓는다.
+                {
+                    if (objName.find("Holy") != std::string::npos)
+                    {
+                        // 다른 Spawn 메소드에서 FindDeactivateObject()에 의해 색출되지 않도록
+                        // 아래와 같이 Activated는 true, RenderActivated는 false로 지정해준다.
+                        ControledObj->Activated = true;
+                        ControledObj->RenderActivated = false;
+                    }
+                }
+            }
+
+            //ControledObj = ObjManager.FindObjectCE_ID(m_WorldObjects, CE_ID);
         }
     }
 }

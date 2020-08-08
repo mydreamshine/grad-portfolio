@@ -231,6 +231,7 @@ struct Object
 	// Control Element ID
 	// 오브젝트를 컨트롤하기 위한 고유 식별자
 	int m_CE_ID = 0xFFFFFFFF;
+	int m_Sub_CE_ID = 0xFFFFFFFF;
 
 	OBJECT_PROPENSITY Propensity = OBJECT_PROPENSITY::NON;
 	CHARACTER_TYPE    CharacterType = CHARACTER_TYPE::NON;
@@ -251,13 +252,18 @@ private:
 	Object* FindDeactiveObject(
 		std::vector<std::unique_ptr<Object>>& GenDestList,
 		std::vector<Object*>& SearchList,
-		const UINT GenerateMaximum, OBJ_TYPE objType = OBJ_TYPE::nonCharacterObj )
+		const UINT GenerateMaximum, OBJ_TYPE objType = OBJ_TYPE::nonCharacterObj, bool CheckRenderAct = false )
 	{
 		Object* retObj = nullptr;
 
 		for (auto& obj : SearchList)
 		{
-			if (obj->Activated == false)
+			bool CheckAct = false;
+			if (CheckRenderAct == true)
+				CheckAct = obj->RenderActivated;
+			else
+				CheckAct = obj->Activated;
+			if (CheckAct == false)
 			{
 				if (objType == OBJ_TYPE::nonCharacterObj && obj->m_SkeletonInfo != nullptr)
 					continue;
@@ -265,6 +271,7 @@ private:
 					continue;
 
 				obj->Activated = true;
+				if (CheckRenderAct == true) obj->RenderActivated = true;
 				retObj = obj;
 				break;
 			}
@@ -317,7 +324,8 @@ public:
 		std::vector<Object*>& CharacterObjects,
 		const UINT MaxCharacterObj,
 		std::vector<Object*>& WorldObjects,
-		const UINT MaxWorldObj)
+		const UINT MaxWorldObj,
+		bool CheckRenderAct = false)
 	{
 		Object* retObj = nullptr;
 
@@ -333,7 +341,7 @@ public:
 
 		if (retObj == nullptr && CharacterObjects.size() < MaxCharacterObj)
 		{
-			retObj = ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::CharacterObj);
+			retObj = ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::CharacterObj, CheckRenderAct);
 			if (retObj != nullptr) CharacterObjects.push_back(retObj);
 		}
 
@@ -343,25 +351,28 @@ public:
 	Object* FindDeactiveWorldObject(
 		std::vector<std::unique_ptr<Object>>& AllObjects,
 		std::vector<Object*>& WorldObjects,
-		const UINT MaxWorldObj)
+		const UINT MaxWorldObj,
+		bool CheckRenderAct = false)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::nonCharacterObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, WorldObjects, MaxWorldObj, OBJ_TYPE::nonCharacterObj, CheckRenderAct);
 	}
 
 	Object* FindDeactiveUILayOutObject(
 		std::vector<std::unique_ptr<Object>>& AllObjects,
 		std::vector<Object*>& UILayOutObjects,
-		const UINT MaxUILayOutObj)
+		const UINT MaxUILayOutObj,
+		bool CheckRenderAct = false)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, UILayOutObjects, MaxUILayOutObj, OBJ_TYPE::nonCharacterObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, UILayOutObjects, MaxUILayOutObj, OBJ_TYPE::nonCharacterObj, CheckRenderAct);
 	}
 
 	Object* FindDeactiveTextObject(
 		std::vector<std::unique_ptr<Object>>& AllObjects,
 		std::vector<Object*>& TextObjects,
-		const UINT MaxTextObj)
+		const UINT MaxTextObj,
+		bool CheckRenderAct = false)
 	{
-		return ObjectManager::FindDeactiveObject(AllObjects, TextObjects, MaxTextObj, OBJ_TYPE::nonCharacterObj);
+		return ObjectManager::FindDeactiveObject(AllObjects, TextObjects, MaxTextObj, OBJ_TYPE::nonCharacterObj, CheckRenderAct);
 	}
 
 	bool SetAttaching(Object* Source, Object* Dest, const std::string& AttachingTargetBoneName)
@@ -529,12 +540,12 @@ public:
 	void DeActivateObj(Object* obj)
 	{
 		if (obj == nullptr) return;
+		obj->m_CE_ID = 0xFFFFFFFF;
+		obj->m_Sub_CE_ID = 0xFFFFFFFF;
 		obj->m_Name.clear();
 		obj->m_Parent = nullptr;
 		obj->m_Childs.clear();
 		obj->m_RenderItems.clear();
-		obj->Activated = false;
-		obj->RenderActivated = true;
 		obj->SelfDeActivated = false;
 		obj->DeActivatedTime = 0.0f;
 		obj->DeActivatedDecrease = 0.0f;
@@ -545,5 +556,7 @@ public:
 			obj->m_SkeletonInfo->Init();
 		if (obj->m_Textinfo != nullptr)
 			obj->m_Textinfo->Init();
+		obj->RenderActivated = true;
+		obj->Activated = false;
 	}
 };
