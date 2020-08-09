@@ -159,6 +159,7 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         inputTextBox.SetFont((*m_FontsRef)[L"맑은 고딕"].get());
         inputTextBox.SetStartInputForm(L"Unknown: ");
         inputTextBox.SetMaxSize(MaxChattingLineWidth, 24.0f);
+        inputTextBox.InitTexts();
     }
 
     GameStart = true;
@@ -542,7 +543,7 @@ void PlayGameScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& te
     for(UINT i = 0; i < m_MaxHealAreaObject; ++i)
     {
         auto newObj = objManager.CreateWorldObject(objCB_index++, m_AllObjects, m_WorldObjects, m_MaxWorldObject);
-        m_ObjRenderLayer[(int)RenderLayer::Transparent_depth].push_back(newObj);
+        m_ObjRenderLayer[(int)RenderLayer::Transparent_back].push_back(newObj);
         // Object Component(Transform, Ritems, ObjectName, etc.)는 Heal Area를 스폰할 때 지정해주고
         // 이 부분에선 RenderLayer만 지정해준다.
         // 단, Heal Area를 스폰할 때 FindObject를 WorldObjects가 아닌 HealAreaObjects에서 해준다.
@@ -2261,7 +2262,7 @@ void PlayGameScene::DeActivateObject(int CE_ID)
         {
             auto exceptObj = std::find_if(m_BillboardObjects.begin(), m_BillboardObjects.end(), [&](Object* obj)
                 {
-                    return (obj->m_Sub_CE_ID == CE_ID); // Controlled Object의 CE_ID 중복 방지를 위해 HP로 대체
+                    return (obj->m_Sub_CE_ID == CE_ID || obj->m_CE_ID == CE_ID);
                 });
             if (exceptObj != m_BillboardObjects.end()) m_BillboardObjects.erase(exceptObj);
             else break;

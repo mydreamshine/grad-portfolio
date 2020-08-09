@@ -92,7 +92,8 @@ enum class RenderLayer : int
 {
     Opaque = 0,
     SkinnedOpaque,
-    Transparent_depth,
+    Transparent_depth,  // depth enable
+    Transparent_back,   // depth disable
     Transparent,        // depth disable
     SkinnedTransparent, // depth enable
     UILayout_Background, // support Transparency

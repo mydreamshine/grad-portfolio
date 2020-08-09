@@ -770,9 +770,18 @@ void Framework::BuildPSOs()
     //
     D3D12_GRAPHICS_PIPELINE_STATE_DESC depathable_transparent_PsoDesc = opaquePsoDesc;
     depathable_transparent_PsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-    depathable_transparent_PsoDesc.DepthStencilState.DepthEnable = FALSE;
+    depathable_transparent_PsoDesc.DepthStencilState.DepthEnable = TRUE;
     //transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&depathable_transparent_PsoDesc, IID_PPV_ARGS(&m_PSOs["transparent_depth"])));
+
+    //
+    // PSO for back transparent objects
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC back_transparent_PsoDesc = opaquePsoDesc;
+    back_transparent_PsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+    back_transparent_PsoDesc.DepthStencilState.DepthEnable = FALSE;
+    //transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&back_transparent_PsoDesc, IID_PPV_ARGS(&m_PSOs["transparent_back"])));
 
     //
     // PSO for transparent objects
@@ -1272,6 +1281,10 @@ void Framework::DrawSceneToBackBuffer()
     m_commandList->SetPipelineState(m_PSOs["transparent_depth"].Get());
     auto& DepathableTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent_depth);
     DrawObjRenderLayer(m_commandList.Get(), DepathableTransparencyObjRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["transparent_back"].Get());
+    auto& BackTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent_back);
+    DrawObjRenderLayer(m_commandList.Get(), BackTransparencyObjRenderLayer);
 
     // skinned transparent is depth enable
     m_commandList->SetPipelineState(m_PSOs["skinnedTransparent"].Get());

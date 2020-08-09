@@ -18,6 +18,8 @@ void ChattingListBox::Init(
 	m_MaxChattingLog = newMaxChattingLog;
 	m_ChattingMessageList.clear();
 
+	if (m_TextRenderObj != nullptr)
+		m_TextRenderObj->m_Textinfo->m_Text.clear();
 	m_TextRenderObj = newTextRenderObj;
 }
 
