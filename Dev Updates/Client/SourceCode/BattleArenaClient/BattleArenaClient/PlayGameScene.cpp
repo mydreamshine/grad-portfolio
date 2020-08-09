@@ -129,21 +129,23 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
 
         const float SlidingDistance = -fabsf((-319.0f) - (-(m_width / 2.0f) - ChattingLogLayerBound.Extents.x * 2));
 
-        XMFLOAT3 ChattingLogLayerPos = ChattingLogLayerTransform->GetWorldPosition();
+        XMFLOAT3 ChattingLogLayerPos = { -319.0f, 191.66f, 0.0f };
         ChattingLogLayerPos.x += SlidingDistance;
-        XMFLOAT3 ChattingLogPopUpButtonPos = ChattingLogPopUpButtonTransform->GetWorldPosition();
+        XMFLOAT3 ChattingLogPopUpButtonPos = { -120.0f, 89.33f, 0.0f };
         ChattingLogPopUpButtonPos.x += SlidingDistance;
-        XMFLOAT3 InputChatCaretPos = InputChatCaretTransform->GetWorldPosition();
-        InputChatCaretPos.x += SlidingDistance;
+        XMFLOAT3 InputChatCaretPos = { 0.0f, 0.0f, 0.0f };
+        InputChatCaretPos.x = ChattingLogLayerPos.x + 15.2f;
 
         ChattingLogLayerTransform->SetWorldPosition(ChattingLogLayerPos);
         ChattingLogLayerTransform->UpdateWorldTransform();
         ChattingLogPopUpButtonTransform->SetWorldPosition(ChattingLogPopUpButtonPos);
         ChattingLogPopUpButtonTransform->UpdateWorldTransform();
+        ChattingLogTextPosition.x = ChattingLogLayerPos.x + 15.2f;
+        ChattingLogTextPosition.x += m_width / 2.0f; // Coord Offset
+        ChattingLogInputTextPosition.x = ChattingLogLayerPos.x + 15.2f;
+        ChattingLogInputTextPosition.x += m_width / 2.0f; // Coord Offset
         InputChatCaretTransform->SetWorldPosition(InputChatCaretPos);
         InputChatCaretTransform->UpdateWorldTransform();
-        ChattingLogTextPosition.x += SlidingDistance;
-        ChattingLogInputTextPosition.x += SlidingDistance;
 
         ChattinglistBox.Init();
         ChattinglistBox.SetTextRenderObj(ChattingLogTextObject);
@@ -172,6 +174,13 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
     GameOverInfoUIObject->m_TransformInfo->m_TexAlpha = 0.0f;
     GameStartInfoUIObject->RenderActivated = false;
     GameOverInfoUIObject->RenderActivated = false;
+
+
+    Object* CharacterInfoLayer_Skill_Icon_Fade = objManager.FindObjectName(m_UILayOutObjects, "UI_Layout_Skill_Icon_Fade");
+    Object* CharacterInfoLayer_SkillCoolTime = objManager.FindObjectName(m_TextObjects, "TextCharacterInfoLayer_SkillCoolTime");
+    CharacterInfoLayer_Skill_Icon_Fade->m_TransformInfo->SetWorldScale({ 1.0f, 0.0f, 1.0f });
+    CharacterInfoLayer_Skill_Icon_Fade->m_TransformInfo->UpdateWorldTransform();
+    CharacterInfoLayer_SkillCoolTime->m_Textinfo->m_Text.clear();
 }
 
 void PlayGameScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -2120,6 +2129,12 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
 
     ObjectManager objManager;
+    XMFLOAT3 LocalScale = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 LocalPosition = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 WorldScale = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 WorldPosition = Position;
 
     switch (EffectType)
     {
@@ -2143,8 +2158,8 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
         std::vector<RenderItem*> Ritems = { AllRitems["PickingEffect_CrossTarget"].get() };
         objManager.SetObjectComponent(newEffectObj, objName,
             Ritems, nullptr,
-            nullptr, nullptr, nullptr,
-            nullptr, nullptr, &Position);
+            &LocalScale, &LocalRotationEuler, &LocalPosition,
+            &WorldScale, &WorldRotationEuler, &Position);
         newEffectObj->m_TransformInfo->m_nonShadowRender = true;
         newEffectObj->DeActivatedTime = 1.0f;
         newEffectObj->DeActivatedDecrease = 1.0f;

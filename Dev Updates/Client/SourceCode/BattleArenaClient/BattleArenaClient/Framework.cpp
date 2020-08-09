@@ -105,6 +105,8 @@ void Framework::ProcessEvent(std::unique_ptr<EVENT>& Event)
                 pEvent = nullptr;
             }
         }
+        for (int i = 0; i < 256; ++i)
+            m_KeyState[i] = false;
     }
     break;
     case FEC_SPAWN_PLAYER:
@@ -279,6 +281,12 @@ void Framework::OnInitAllSceneProperties()
 
     m_CurrSceneName = "LoginScene";
     m_CurrScene = m_Scenes["LoginScene"].get();
+
+    for (int i = 0; i < 256; ++i)
+        m_KeyState[i] = false;
+
+    while (m_SavedEvents.empty() == false)
+        m_SavedEvents.pop();
 }
 
 // Load the rendering pipeline dependencies.
