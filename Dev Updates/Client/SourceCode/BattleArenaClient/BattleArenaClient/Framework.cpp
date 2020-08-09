@@ -276,6 +276,9 @@ void Framework::OnInitAllSceneProperties()
         auto scene = scene_iter.second.get();
         scene->OnInitProperties(m_Timer);
     }
+
+    m_CurrSceneName = "LoginScene";
+    m_CurrScene = m_Scenes["LoginScene"].get();
 }
 
 // Load the rendering pipeline dependencies.
