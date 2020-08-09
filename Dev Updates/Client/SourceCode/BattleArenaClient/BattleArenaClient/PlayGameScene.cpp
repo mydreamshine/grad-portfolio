@@ -2120,6 +2120,12 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
     auto& ModelSkeletons = *m_ModelSkeltonsRef;
 
     ObjectManager objManager;
+    XMFLOAT3 LocalScale = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 LocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 LocalPosition = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 WorldScale = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 WorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 WorldPosition = Position;
 
     switch (EffectType)
     {
@@ -2143,8 +2149,8 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
         std::vector<RenderItem*> Ritems = { AllRitems["PickingEffect_CrossTarget"].get() };
         objManager.SetObjectComponent(newEffectObj, objName,
             Ritems, nullptr,
-            nullptr, nullptr, nullptr,
-            nullptr, nullptr, &Position);
+            &LocalScale, &LocalRotationEuler, &LocalPosition,
+            &WorldScale, &WorldRotationEuler, &Position);
         newEffectObj->m_TransformInfo->m_nonShadowRender = true;
         newEffectObj->DeActivatedTime = 1.0f;
         newEffectObj->DeActivatedDecrease = 1.0f;

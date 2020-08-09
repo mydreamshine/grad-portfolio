@@ -350,20 +350,20 @@ void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
                 inputTextBox_ID.SetActivate(true);
                 inputTextBox_Password.SetActivate(false);
 
-if (inputTextBox_ID.GetFullinputTexts().size() == 0)
-{
-    ID_RenderTextObject->m_Textinfo->m_Text.clear();
-    ID_RenderTextObject->m_Textinfo->m_TextColor = XMVectorSet(38.0f / 255.0f, 38.0f / 255.0f, 38.0f / 255.0f, 1.0f);
-}
-
-if (inputTextBox_Password.GetFullinputTexts().size() == 0)
-{
-    Password_RenderTextObject->m_Textinfo->m_Text = L"Password";
-    Password_RenderTextObject->m_Textinfo->m_TextColor = XMVectorSet(127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 1.0f);
-}
-
-ID_InputBoxSelected = true;
-InputBoxSelected = true;
+            if (inputTextBox_ID.GetFullinputTexts().size() == 0)
+            {
+                ID_RenderTextObject->m_Textinfo->m_Text.clear();
+                ID_RenderTextObject->m_Textinfo->m_TextColor = XMVectorSet(38.0f / 255.0f, 38.0f / 255.0f, 38.0f / 255.0f, 1.0f);
+            }
+            
+            if (inputTextBox_Password.GetFullinputTexts().size() == 0)
+            {
+                Password_RenderTextObject->m_Textinfo->m_Text = L"Password";
+                Password_RenderTextObject->m_Textinfo->m_TextColor = XMVectorSet(127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 1.0f);
+            }
+            
+            ID_InputBoxSelected = true;
+            InputBoxSelected = true;
             }
             else if (PointInRect(CursorPos_x, CursorPos_y, Password_InputBoxLayerAreainScreen) == true && ID_InputBoxSelected == true)
             {

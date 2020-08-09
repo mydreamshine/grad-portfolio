@@ -279,6 +279,9 @@ void Framework::OnInitAllSceneProperties()
 
     m_CurrSceneName = "LoginScene";
     m_CurrScene = m_Scenes["LoginScene"].get();
+
+    for (int i = 0; i < 256; ++i)
+        m_KeyState[i] = false;
 }
 
 // Load the rendering pipeline dependencies.
