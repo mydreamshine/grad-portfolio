@@ -130,8 +130,13 @@ void DMRoom::end()
 				m_heros[player.first]->character_type
 			};
 
-			send_packet(sockets[player.first], &change_scene_packet, change_scene_packet.size);
-			send_packet(sockets[player.first], &stat_packet, stat_packet.size);
+			/*send_packet(sockets[player.first], &change_scene_packet, change_scene_packet.size);
+			send_packet(sockets[player.first], &stat_packet, stat_packet.size);*/
+
+			PACKET_VECTOR pv;
+			pv.emplace_back(&change_scene_packet, change_scene_packet.size);
+			pv.emplace_back(&stat_packet, stat_packet.size);
+			send_packet(sockets[player.first], pv.data, pv.len);
 		}
 	}
 	sockets.clear();
