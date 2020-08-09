@@ -81,6 +81,7 @@ private:
 	void process_done_character_motion(void* packet);
 	void process_activate_anim_notify(void* packet);
 	void process_chat(void* packet);
+	void process_return_lobby(void* packet);
 
 	friend HERO;
 	friend WARRIOR;
