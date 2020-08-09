@@ -47,6 +47,9 @@ private:
     InputTextBox inputTextBox_ID;
     InputTextBox inputTextBox_Password;
 
+    bool LoginEnterKeyPress = false;
+    bool LoginEnterKeyUp = true;
+
     bool LoginButtonPress = false;
     bool LoginButtonUp = true;
 

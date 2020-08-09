@@ -66,6 +66,9 @@ void LoginScene::OnInitProperties(CTimer& gt)
             m_BackgroundLayers.push_back(Ritem);
     }
 
+    LoginEnterKeyPress = false;
+    LoginEnterKeyUp = true;
+
     LoginButtonPress = false;
     LoginButtonUp = true;
 
@@ -451,23 +454,34 @@ void LoginScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos,
 
     // Process Login Enter Key
     {
-        if (key_state[VK_RETURN] && OnceSendLogin == false)
+        if (key_state[VK_RETURN])
         {
-            std::wstring id = inputTextBox_ID.GetFullinputTexts();
-            std::wstring pw = inputTextBox_Password.GetFullinputTexts();
-
-            if (id.size() > 0 && pw.size() > 0)
+            if (LoginEnterKeyPress == false && LoginEnterKeyUp == true)
             {
-                inputTextBox_ID.InitTexts();
-                inputTextBox_Password.InitTexts();
-
-                EventManager eventManager;
-                eventManager.ReservateEvent_TryLogin(GeneratedEvents, id, pw);
+                LoginEnterKeyPress = true;
+                LoginEnterKeyUp = false;
             }
-
-            OnceSendLogin = true;
         }
-        else OnceSendLogin = false;
+        else
+        {
+            if (LoginEnterKeyPress == true && LoginEnterKeyUp == false)
+            {
+                std::wstring id = inputTextBox_ID.GetFullinputTexts();
+                std::wstring pw = inputTextBox_Password.GetFullinputTexts();
+
+                if (id.size() > 0 && pw.size() > 0)
+                {
+                    inputTextBox_ID.InitTexts();
+                    inputTextBox_Password.InitTexts();
+
+                    EventManager eventManager;
+                    eventManager.ReservateEvent_TryLogin(GeneratedEvents, id, pw);
+                }
+
+                LoginEnterKeyPress = false;
+                LoginEnterKeyUp = true;
+            }
+        }
     }
 
     // Process Login Button
