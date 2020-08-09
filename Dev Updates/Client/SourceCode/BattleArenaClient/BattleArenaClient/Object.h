@@ -556,6 +556,12 @@ public:
 			obj->m_SkeletonInfo->Init();
 		if (obj->m_Textinfo != nullptr)
 			obj->m_Textinfo->Init();
+
+		obj->Propensity = OBJECT_PROPENSITY::NON;
+		obj->CharacterType = CHARACTER_TYPE::NON;
+		obj->PlayerState = PLAYER_STATE::NON;
+		obj->HP = 100;
+
 		obj->RenderActivated = true;
 		obj->Activated = false;
 	}
