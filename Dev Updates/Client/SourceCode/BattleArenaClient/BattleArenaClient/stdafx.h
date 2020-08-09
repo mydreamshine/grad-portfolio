@@ -59,3 +59,12 @@ inline bool PointInRect(float x, float y, RECT Rect)
     if (y < Rect.bottom) return false;
     return true;
 }
+
+inline bool IntersectRect_(const RECT& source1, const RECT& source2)
+{
+    if (source1.left > source2.right) return false;
+    if (source1.top < source2.bottom) return false;
+    if (source1.right < source2.left) return false;
+    if (source1.bottom > source2.top) return false;
+    return true;
+}

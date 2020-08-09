@@ -164,6 +164,19 @@ void NWMODULE<T>::send_packet(packet_inheritance* packet)
 	}
 }
 
+template<class T>
+void NWMODULE<T>::destroy()
+{
+	// SD_BOTH(2): Shutdown both send and receive operations.
+	closesocket(lobby_socket);
+	closesocket(battle_socket);
+
+	for (int i = 0; i < threads.size(); ++i)
+		threads[i].join();
+	threads.clear();
+	WSACleanup();
+}
+
 template <class T>
 void NWMODULE<T>::RecvLobbyThread()
 {
@@ -172,7 +185,10 @@ void NWMODULE<T>::RecvLobbyThread()
 	{
 		received_size = recv(lobby_socket, lobby_over.data(), MAX_BUFFER_SIZE, 0);
 		if (received_size == SOCKET_ERROR)
+		{
 			error_display("RECV ERROR ", WSAGetLastError());
+			return;
+		}
 		if (received_size == 0) {
 			cout << "[Connection Closed]" << endl;
 			return;

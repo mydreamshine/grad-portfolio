@@ -1,0 +1,6 @@
+Attack Action - Standing Melee Attack Horizontal (73Frames)
+Dieing Action - Sword And Shield Death (total 99Frames)
+Idle Action - Standing Idle Looking Ver. 2 (total 204Frames)
+Impact Action - Standing React Large From Right (total 30Frames)
+SkillPose Action - Sword And Shield Power Up (total 60Frames)
+Walk Action - Standing Run Forward (total 26Frames)

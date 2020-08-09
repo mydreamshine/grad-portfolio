@@ -43,9 +43,6 @@ private:
     std::vector<RenderItem*> m_BackgroundLayers;
 
 private:
-    std::wstring IDText;
-    std::wstring PasswordText;
-
     const float InputBoxMaxWidth = 120.0f;
     InputTextBox inputTextBox_ID;
     InputTextBox inputTextBox_Password;
@@ -55,6 +52,7 @@ private:
 
     bool ID_InputBoxSelected = false;
     bool InputBoxSelected = false;
+    bool InputBoxSelectChange = false;
 
     bool BackgroundLayeT1IsFront = true;
     bool BackgroundLayerTransforming = false;

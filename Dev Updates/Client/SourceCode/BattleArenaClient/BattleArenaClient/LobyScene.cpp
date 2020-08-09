@@ -144,6 +144,10 @@ void LobyScene::OnInitProperties(CTimer& gt)
 
     OnceAccessMatch = false;
     OnceAccessBattleDirectly = false;
+
+    Object* MatchingInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_GameStartButton");
+    auto TextInfo = MatchingInfoObject->m_Textinfo.get();
+    TextInfo->m_Text.clear();
 }
 
 void LobyScene::OnUpdate(FrameResource* frame_resource, ShadowMap* shadow_map,
@@ -250,9 +254,9 @@ void LobyScene::BuildObjects(int& objCB_index, int& skinnedCB_index, int& textBa
             else if (objName == "UI_Layout_LobyUserInfo")
             {
                 text_info->m_Text = L"NickName:\nRank:";
-                text_info->m_TextPos.x = (UI_LayoutPos.x - UI_LayoutExtents.x) + 8.0f;
+                text_info->m_TextPos.x = UI_LayoutPos.x;
                 text_info->m_TextPos.x += m_width / 2.0f;
-                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::LEFT;
+                text_info->m_TextPivot = DXTK_FONT::TEXT_PIVOT::CENTER;
                 text_info->m_TextColor = DirectX::Colors::Blue;
             }
             else if (objName == "UI_Layout_LobyCharacterDescrition")
@@ -433,15 +437,35 @@ void LobyScene::UpdateTextInfo(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& G
 {
     ObjectManager ObjManager;
     Object* UserInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyUserInfo");
+    Object* UserInfoLayerObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_LobyUserInfo");
     Object* CharacterInfoObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterDescrition");
     Object* SelectedCharacterNameObject = ObjManager.FindObjectName(m_TextObjects, "TextUI_Layout_LobyCharacterName");
 
     // Update Input Box Caret
     inputTextBox.Update(gt, (float)m_width, (float)m_height);
 
-    auto& UserInfo = UserInfoObject->m_Textinfo->m_Text;
-    UserInfo = L"UserName: " + UserInfo_UserName + L'\n';
-    UserInfo += L"UserRank: " + std::to_wstring(UserInfo_UserRank);
+    // Update User Info Text
+    {
+        auto UserInfoTextInfo = UserInfoObject->m_Textinfo.get();
+        {
+            const float UserInfoLayerDefaultWidth = 175.0f;
+            const float UserInfoTextRenderWidth = 155.0f;
+
+            XMFLOAT3 UserInfoLayerScale = { 1.0f, 1.0f, 1.0f };
+            auto Font = (*m_FontsRef)[UserInfoTextInfo->m_FontName].get();
+
+            XMFLOAT2 UserNameRenderTextSize = Font->GetStringSize(L"UserName: " + UserInfo_UserName);
+            XMFLOAT2 UserRankRenderTextSize = Font->GetStringSize(L"UserRank: " + std::to_wstring(UserInfo_UserRank));
+            float UserInfoRenderTextMaxSize = max(UserNameRenderTextSize.x, UserRankRenderTextSize.x);
+            if (UserInfoRenderTextMaxSize > UserInfoTextRenderWidth)
+                UserInfoLayerScale.x += (UserInfoRenderTextMaxSize / 2.0f) / UserInfoLayerDefaultWidth;
+            UserInfoLayerObject->m_TransformInfo->SetWorldScale(UserInfoLayerScale);
+        }
+
+        auto& UserInfoRenderText = UserInfoTextInfo->m_Text;
+        UserInfoRenderText = L"UserName: " + UserInfo_UserName + L'\n';
+        UserInfoRenderText += L"UserRank: " + std::to_wstring(UserInfo_UserRank);
+    }
 
     auto& CharacterInfo = CharacterInfoObject->m_Textinfo->m_Text;
     auto& SelectedCharacterName = SelectedCharacterNameObject->m_Textinfo->m_Text;
@@ -897,7 +921,6 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
                 else
                     PlayerNameInputForm = L"Unknown: ";
 
-                inputTextBox.SetActivate(false);
                 if (inputTextBox.IsEmpty() == false)
                 {
                     std::wstring FullinputTexts = inputTextBox.GetFullinputTexts();
@@ -946,11 +969,11 @@ void LobyScene::ProcessInput(const bool key_state[], const POINT& oldCursorPos, 
     }
 
     //TestFunc. - Access battle directly.
-    if (key_state['Q'] == true && OnceAccessBattleDirectly == false) {
+    /*if (key_state['Q'] == true && OnceAccessBattleDirectly == false) {
         EventManager eventManager;
         eventManager.ReservateEvent_TryMatchLogin(GeneratedEvents, UserInfo_UserName, (char)SelectedCharacterType);
         OnceAccessBattleDirectly = true;
-    }
+    }*/
 }
 
 

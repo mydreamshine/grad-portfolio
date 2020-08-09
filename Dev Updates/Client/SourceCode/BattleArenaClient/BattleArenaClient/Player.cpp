@@ -38,12 +38,18 @@ void Player::SetState(PLAYER_STATE PlayerState)
 	auto TransformInfo = m_CharacterObjRef->m_TransformInfo.get();
 
 	if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_SEMI_INVINCIBILITY)
+	{
 		semi_invincivilityRenderBlinkEffectTimeStack = 0.0f;
+		TransformInfo->m_nonShadowRender = false;
+	}
 	else if (m_CharacterObjRef->PlayerState == PLAYER_STATE::ACT_STEALTH)
 	{
-		if(MainPlayerPropensity == OBJECT_PROPENSITY::NON
+		if (MainPlayerPropensity == OBJECT_PROPENSITY::NON
 			|| m_CharacterObjRef->Propensity == MainPlayerPropensity)
+		{
 			TransformInfo->m_TexAlpha = StealthAlpha;
+			TransformInfo->m_nonShadowRender = false;
+		}
 		else
 		{
 			TransformInfo->m_TexAlpha = 0.0f;
@@ -96,14 +102,14 @@ void Player::SetHP_BarActivate(bool state)
 		TextInfo->m_Text.clear();
 
 		for (auto& HP_bar_e : m_HP_BarObjRef)
-			HP_bar_e->Activated = false;
+			HP_bar_e->RenderActivated = false;
 	}
 	else
 	{
 		if (HP_BarAcitvate != state)
 		{
 			for (auto& HP_bar_e : m_HP_BarObjRef)
-				HP_bar_e->Activated = true;
+				HP_bar_e->RenderActivated = true;
 
 			CHARACTER_TYPE CharacterType = m_CharacterObjRef->CharacterType;
 			auto TextInfo = m_CharacterInfoTextObjRef->m_Textinfo.get();

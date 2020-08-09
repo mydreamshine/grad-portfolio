@@ -93,6 +93,11 @@ public:
 	*/
 	void send_packet(packet_inheritance* packet);
 
+	/**
+	@brief all tasks kill
+	*/
+	void destroy();
+
 
 #ifndef NO_BASIC_FUNCTION
 	/**

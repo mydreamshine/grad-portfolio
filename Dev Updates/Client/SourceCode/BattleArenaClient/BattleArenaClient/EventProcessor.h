@@ -10,8 +10,8 @@ constexpr int CLIENT_BUFFER_SIZE = 1024;
 class EventProcessor
 {
 public:
-    std::queue<std::unique_ptr<EVENT>>& GetExternalEvents() { 
-        return m_ExternalEvents; 
+    std::queue<std::unique_ptr<EVENT>>& GetExternalEvents() {
+        return m_ExternalEvents;
     }
 
     void EventToPacket(std::unique_ptr<packet_inheritance>& newPacket, EVENT& Event)
@@ -26,13 +26,13 @@ public:
                 (const wchar_t*)EventData->Password.c_str(), (int)EventData->Password.size());
             nw_module.connect_lobby();
         }
-            break;
+        break;
 
         case FEC_GET_USER_INFO:
         {
             newPacket = std::make_unique<sscs_packet_request_user_info>(m_ClientID);
         }
-            break;
+        break;
 
 
         case FEC_TRY_GAME_MATCHING:
@@ -40,7 +40,7 @@ public:
             EVENT_DATA_GAME_MATCHING* EventData = reinterpret_cast<EVENT_DATA_GAME_MATCHING*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_game_matching>(m_ClientID, (char)EventData->SelectedCharacter);
         }
-            break;
+        break;
         case FEC_SEND_IN_GAME_CHAT:
         case FEC_SEND_IN_LOBY_CHAT:
         {
@@ -51,7 +51,7 @@ public:
             if (Event.Command == FEC_SEND_IN_GAME_CHAT)newPacket->type = SSCS_SEND_IN_GAME_CHAT;
             else if (Event.Command == FEC_SEND_IN_LOBY_CHAT)newPacket->type = SSCS_SEND_IN_LOBY_CHAT;
         }
-            break;
+        break;
         case FEC_TRY_MOVE_CHARACTER:
         {
             EVENT_DATA_MOVE_INFO* EventData = reinterpret_cast<EVENT_DATA_MOVE_INFO*>(Event.Data.get());
@@ -59,12 +59,12 @@ public:
                 m_MatchID,
                 EventData->MoveDirection_Yaw_angle);
         }
-            break;
+        break;
         case FEC_TRY_MOVESTOP_CHARACTER:
         {
             newPacket = std::make_unique<sscs_packet_try_movestop_character>(m_MatchID);
         }
-            break;
+        break;
         case FEC_TRY_NORMAL_ATTACK:
         {
             EVENT_DATA_NORMAL_ATTACK_INFO* EventData = reinterpret_cast<EVENT_DATA_NORMAL_ATTACK_INFO*>(Event.Data.get());
@@ -72,7 +72,7 @@ public:
                 m_MatchID,
                 EventData->Character_Yaw_angle);
         }
-            break;
+        break;
         case FEC_TRY_USE_SKILL:
         {
             EVENT_DATA_SKILL_USE_INFO* EventData = reinterpret_cast<EVENT_DATA_SKILL_USE_INFO*>(Event.Data.get());
@@ -80,7 +80,7 @@ public:
                 m_MatchID,
                 EventData->Character_Yaw_angle);
         }
-            break;
+        break;
         case FEC_DONE_CHARACTER_MOTION:
         {
             EVENT_DATA_DONE_CHARACTER_MOTION_INFO* EventData = reinterpret_cast<EVENT_DATA_DONE_CHARACTER_MOTION_INFO*>(Event.Data.get());
@@ -88,7 +88,7 @@ public:
                 m_MatchID,
                 (char)EventData->MotionType);
         }
-            break;
+        break;
         case FEC_ACTIVATE_ANIM_NOTIFY:
         {
             EVENT_DATA_ACT_ANIM_NOTIFY* EventData = reinterpret_cast<EVENT_DATA_ACT_ANIM_NOTIFY*>(Event.Data.get());
@@ -96,19 +96,19 @@ public:
                 m_MatchID,
                 (char)EventData->AnimNotifyType);
         }
-            break;
+        break;
         case FEC_TRY_RETURN_LOBY:
         {
             newPacket = std::make_unique<sscs_try_return_lobby>(m_MatchID);
         }
-            break;
+        break;
 
         case FEC_TRY_MATCH_LOGIN: {
             EVENT_DATA_TRY_MATCH_LOGIN* EventData = reinterpret_cast<EVENT_DATA_TRY_MATCH_LOGIN*>(Event.Data.get());
             newPacket = std::make_unique<sscs_packet_try_match_login>(m_ClientID, room_id, EventData->character_type,
                 (const wchar_t*)EventData->user_name.c_str());
         }
-            break;
+                                break;
 
         default:
             MessageBox(NULL, L"Unknown Event Command.", L"Event Error", MB_OK);
@@ -126,7 +126,7 @@ public:
             auto packetData = reinterpret_cast<csss_packet_login_ok*>(packet);
             m_ClientID = packetData->client_id;
         }
-            break;
+        break;
 
         case CSSS_LOGIN_FAIL:
             nw_module.disconnect_lobby();
@@ -363,7 +363,7 @@ public:
             {
                 std::unique_ptr<packet_inheritance> newPacket = nullptr;
                 EventProcessor::EventToPacket(newPacket, *Event);
-                if (newPacket != nullptr) 
+                if (newPacket != nullptr)
                     nw_module.send_packet(newPacket.get());
             }
             Event = nullptr;
@@ -383,6 +383,11 @@ public:
     void disconnect() {
         nw_module.disconnect_lobby();
         nw_module.disconnect_battle();
+    }
+
+    void Destroy()
+    {
+        nw_module.destroy();
     }
 
     NWMODULE<EventProcessor> nw_module{ *this, CLIENT_BUFFER_SIZE };

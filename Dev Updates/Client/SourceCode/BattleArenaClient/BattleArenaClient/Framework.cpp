@@ -276,6 +276,9 @@ void Framework::OnInitAllSceneProperties()
         auto scene = scene_iter.second.get();
         scene->OnInitProperties(m_Timer);
     }
+
+    m_CurrSceneName = "LoginScene";
+    m_CurrScene = m_Scenes["LoginScene"].get();
 }
 
 // Load the rendering pipeline dependencies.
@@ -755,11 +758,21 @@ void Framework::BuildPSOs()
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&m_PSOs["skinnedOpaque"])));
 
     //
+    // PSO for depth processing transparent objects
+    //
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC depathable_transparent_PsoDesc = opaquePsoDesc;
+    depathable_transparent_PsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+    depathable_transparent_PsoDesc.DepthStencilState.DepthEnable = FALSE;
+    //transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&depathable_transparent_PsoDesc, IID_PPV_ARGS(&m_PSOs["transparent_depth"])));
+
+    //
     // PSO for transparent objects
     //
     D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentPsoDesc = opaquePsoDesc;
     transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-    transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    transparentPsoDesc.DepthStencilState.DepthEnable = FALSE;
+    //transparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&m_PSOs["transparent"])));
 
     //
@@ -767,7 +780,8 @@ void Framework::BuildPSOs()
     //
     D3D12_GRAPHICS_PIPELINE_STATE_DESC SkinnedTransparentPsoDesc = opaquePsoDesc;
     SkinnedTransparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-    SkinnedTransparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    //SkinnedTransparentPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    transparentPsoDesc.DepthStencilState.DepthEnable = FALSE;
     SkinnedTransparentPsoDesc.InputLayout = { m_SkinnedInputLayout.data(), (UINT)m_SkinnedInputLayout.size() };
     SkinnedTransparentPsoDesc.VS =
     {
@@ -965,7 +979,7 @@ void Framework::OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RE
 {
     m_Timer.Tick(0.0f);
 
-    if (m_KeyState[VK_F1] == true)
+    /*if (m_KeyState[VK_F1] == true)
     {
         m_CurrSceneName = "LoginScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
@@ -988,7 +1002,7 @@ void Framework::OnUpdate(std::queue<std::unique_ptr<EVENT>>& GeneratedEvents, RE
         m_CurrSceneName = "GameOverScene";
         m_CurrScene = m_Scenes[m_CurrSceneName].get();
         m_CurrScene->OnInitProperties(m_Timer);
-    }
+    }*/
 
     RECT ClientRect;
     if (pClientRect != nullptr) ClientRect = *pClientRect;
@@ -1205,6 +1219,18 @@ void Framework::DrawSceneToShadowMap()
     Framework::ExcludeNonShadowRenderObjects(OnlySkinnedOpaqueObjRenderLayer, SkinnedOpaqueObjRenderLayer);
     DrawObjRenderLayer(m_commandList.Get(), OnlySkinnedOpaqueObjRenderLayer);
 
+    m_commandList->SetPipelineState(m_PSOs["skinnedShadow_opaque"].Get());
+    auto& SkinnedTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedTransparent);
+    std::vector<Object*> OnlySkinnedTransparencyRenderLayer;
+    Framework::ExcludeNonShadowRenderObjects(OnlySkinnedTransparencyRenderLayer, SkinnedTransparencyObjRenderLayer);
+    DrawObjRenderLayer(m_commandList.Get(), OnlySkinnedTransparencyRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["shadow_opaque"].Get());
+    auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);
+    std::vector<Object*> OnlyTransparencyRenderLayer;
+    Framework::ExcludeNonShadowRenderObjects(OnlyTransparencyRenderLayer, TransparencyObjRenderLayer);
+    DrawObjRenderLayer(m_commandList.Get(), OnlyTransparencyRenderLayer);
+
     // Change back to GENERIC_READ so we can read the texture in a shader.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap->Resource(),
         D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -1227,19 +1253,6 @@ void Framework::DrawSceneToBackBuffer()
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(),
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-    // Skinned 오브젝트의 Alpha블렌딩 Layer Depth를 정렬하기 위해
-    // 아래와 같이 다른 투명 오브젝트를 렌더링하기 전에
-    // 미리 한번 Skinned 오브젝트를 렌더링해준다.
-    m_commandList->SetPipelineState(m_PSOs["skinnedOpaque"].Get());
-    auto& SkinnedOpaqueObjRenderLayer_ = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
-    vector<Object*> ExcludeTransparentObjects;
-    for (auto& obj : SkinnedOpaqueObjRenderLayer_)
-    {
-        if (obj->m_TransformInfo->m_TexAlpha == 1.0f)
-            ExcludeTransparentObjects.push_back(obj);
-    }
-    DrawObjRenderLayer(m_commandList.Get(), ExcludeTransparentObjects);
-
     m_commandList->SetPipelineState(m_PSOs["opaque"].Get());
     auto& OpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Opaque);
     DrawObjRenderLayer(m_commandList.Get(), OpaqueObjRenderLayer);
@@ -1248,13 +1261,18 @@ void Framework::DrawSceneToBackBuffer()
     auto& SkinnedOpaqueObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedOpaque);
     DrawObjRenderLayer(m_commandList.Get(), SkinnedOpaqueObjRenderLayer);
 
-    m_commandList->SetPipelineState(m_PSOs["transparent"].Get());
-    auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);
-    DrawObjRenderLayer(m_commandList.Get(), TransparencyObjRenderLayer);
+    m_commandList->SetPipelineState(m_PSOs["transparent_depth"].Get());
+    auto& DepathableTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent_depth);
+    DrawObjRenderLayer(m_commandList.Get(), DepathableTransparencyObjRenderLayer);
 
+    // skinned transparent is depth enable
     m_commandList->SetPipelineState(m_PSOs["skinnedTransparent"].Get());
     auto& SkinnedTransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::SkinnedTransparent);
     DrawObjRenderLayer(m_commandList.Get(), SkinnedTransparencyObjRenderLayer);
+
+    m_commandList->SetPipelineState(m_PSOs["transparent"].Get());
+    auto& TransparencyObjRenderLayer = m_CurrScene->GetObjRenderLayer(RenderLayer::Transparent);
+    DrawObjRenderLayer(m_commandList.Get(), TransparencyObjRenderLayer);
 
     // UI render.
     DrawSceneToUI();

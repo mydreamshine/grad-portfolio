@@ -1,0 +1,6 @@
+Name: NormalAttackGrid_Warrior, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 163.000000 0.000000 100.000000)
+Name: NormalAttackGrid_Berserkr, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 163.000000 0.000000 100.000000)
+Name: NormalAttackGrid_Assassin, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 25.000000 0.000000 163.000000)
+Name: NormalAttackGrid_Priest, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 50.000000 0.000000 163.000000)
+Name: SkillGrid_SwordWave, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 163.000000 0.000000 100.000000)
+Name: SkillGrid_HealArea, Center: ( 0.000000 0.000000 0.000000), Exetents: ( 1000.000000 0.000000 1000.000000)

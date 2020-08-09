@@ -1,0 +1,6 @@
+Attac Action - Standing 1H Magic Attack 02 (total 67Frames)
+Dieing Action - Standing Death Backward 01 (total 77Frames)
+Idle Action - Standing Idle 02 (157Frames)
+Impact Action - Standing React Small From Front (total 23Frames)
+SkillPose Action - Standing 2H Magic Area Attack 02 (total 66Frames)
+Walk Action - Standing Run Forward (total 26Frames)

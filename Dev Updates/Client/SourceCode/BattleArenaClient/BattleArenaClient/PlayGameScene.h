@@ -41,6 +41,7 @@ public:
 
 public:
     virtual void ProcessInput(const bool key_state[], const POINT& oldCursorPos, CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
+    void ProcessObjectCollision(CTimer& gt, std::queue<std::unique_ptr<EVENT>>& GeneratedEvents);
 
 public:
     ///////////////////////////////////////////////////////////////////////////////// Processing Events /////////////////////////////////////////////////////////////////////////////////
@@ -100,6 +101,10 @@ private:
 
     std::vector<Object*> m_BillboardObjects;
     std::vector<Object*> m_EffectObjects;
+    std::vector<Object*> m_GrassObstacleObjects;
+
+    const UINT m_MaxHealAreaObject = MAX_CHARACTER_OBJECT;
+    std::vector<Object*> m_HealAreaObjects; // depth enable transparency objects
 
     int GameInfo_CountKill = 0;
     int GameInfo_CountDeath = 0;
