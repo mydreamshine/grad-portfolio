@@ -81,12 +81,22 @@ bool DMRoom::regist(int uid, SOCKET client, void* buffer)
 
 void DMRoom::disconnect(SOCKET client)
 {
+	short disconnect_player = -1;
 	socket_lock.lock();
-	--player_num;
-	short disconnect_player = sockets_index[client];
-	sockets_index.erase(client);
-	sockets.erase(disconnect_player);
+	if (sockets_index.count(client) != 0) {
+		--player_num;
+		disconnect_player = sockets_index[client];
+		sockets_index.erase(client);
+		sockets.erase(disconnect_player);
+	}
 	socket_lock.unlock();
+
+	if (disconnect_player != -1) {
+		sscs_try_return_lobby packet{ disconnect_player };
+		packet_lock.lock();
+		packet_vector.emplace_back(&packet, packet.size);
+		packet_lock.unlock();
+	}
 }
 
 void DMRoom::start()
@@ -403,6 +413,9 @@ void DMRoom::process_type_packet(void* packet, PACKET_TYPE type)
 		process_chat(packet);
 		break;
 
+	case SSCS_TRY_RETURN_LOBBY:
+		process_return_lobby(packet);
+
 	default:
 		break;
 	}
@@ -479,6 +492,13 @@ void DMRoom::process_chat(void* packet)
 	for (auto& socket : sockets)
 		send_packet(socket.second, &retmsg, retmsg.size);
 	socket_lock.unlock();
+}
+
+void DMRoom::process_return_lobby(void* packet)
+{
+	sscs_try_return_lobby* msg = reinterpret_cast<sscs_try_return_lobby*>(packet);
+	m_heros[msg->client_id]->change_motion((char)MOTION_TYPE::IDLE);
+	m_heros[msg->client_id]->change_state((char)PLAYER_STATE::NON);
 }
 
 void DMRoom::update_score_packet(short obj_id)
