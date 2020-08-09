@@ -510,7 +510,7 @@ void DMRoom::update_score_packet(short obj_id)
 	};
 
 	socket_lock.lock();
-	if (sockets[obj_id] != INVALID_SOCKET)
+	if (sockets.count(obj_id) != 0)
 		send_packet(sockets[obj_id], &packet, packet.size);
 	socket_lock.unlock();
 }

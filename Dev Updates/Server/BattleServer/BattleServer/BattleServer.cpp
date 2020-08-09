@@ -204,16 +204,16 @@ namespace BattleArena {
 
 	void BATTLESERVER::disconnect_player(CLIENT* client)
 	{
-		std::wcout << L"[CLIENT - " << reinterpret_cast<int>(client) << L"] Disconnected" << std::endl;
-		if (client->socket != INVALID_SOCKET) {
-			closesocket(client->socket);
-			client->socket = INVALID_SOCKET;
-		}
+		std::wcout << L"[CLIENT - " << (client->socket) << L"] Disconnected" << std::endl;
 
 		client->room_lock.lock();
 		if (client->state == ST_INGAME) {
 			client->room->disconnect(client->socket);
 			client->state = ST_ENDGAME;
+			if (client->socket != INVALID_SOCKET) {
+				closesocket(client->socket);
+				client->socket = INVALID_SOCKET;
+			}
 			client->room_lock.unlock();
 		}
 		else {
