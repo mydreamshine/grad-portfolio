@@ -16,7 +16,7 @@ void NWMODULE<T>::error_display(const char* msg, int err_no)
 	std::cout << msg;
 	std::wcout << L"¿¡·¯ " << lpMsgBuf << std::endl;
 	LocalFree(lpMsgBuf);
-	while (true);
+	//while (true);
 }
 
 
