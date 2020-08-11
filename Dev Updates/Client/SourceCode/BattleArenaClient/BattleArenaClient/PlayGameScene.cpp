@@ -18,6 +18,8 @@ void PlayGameScene::OnInit(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 
 void PlayGameScene::OnInitProperties(CTimer& gt)
 {
+    auto& AllRitems = *m_AllRitemsRef;
+
     for (auto& Player_iter : m_Players)
     {
         auto Player = Player_iter.second.get();
@@ -113,6 +115,9 @@ void PlayGameScene::OnInitProperties(CTimer& gt)
         Object* ChattingLogLayer = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingLog");
         Object* ChattingLogPopUpButtonObject = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_GameChattingPopUpButton");
         Object* InputChatCaretObjet = ObjManager.FindObjectName(m_UILayOutObjects, "UI_Layout_InputBoxCaret");
+
+        std::vector<RenderItem*> Ritems = { AllRitems["UI_Layout_GameChattingPopUpButton"].get() };
+        ChattingLogPopUpButtonObject->m_RenderItems = Ritems;
 
         auto ChattingLogTextInfo = ChattingLogTextObject->m_Textinfo.get();
         auto ChattingInputTextInfo = ChattingInputTextObject->m_Textinfo.get();
