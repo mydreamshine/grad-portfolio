@@ -20,6 +20,8 @@ cbuffer cbObject : register(b0)
     float4x4 gLocal;
     float4x4 gWorld;
     float4x4 gTexTransform;
+    float2   gClipedUV_StartPos;
+    float2   gClipedUV_Size;
     float    gTexAlpha;
     float3   cbPerObjectPad3;
 };

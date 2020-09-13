@@ -1194,7 +1194,7 @@ void Framework::ExcludeNonShadowRenderObjects(std::vector<Object*>& newRednerLay
         if (TransformInfo != nullptr)
         {
             if (TransformInfo->m_nonShadowRender == true) continue;
-            if (TransformInfo->m_TexAlpha == 0.0f) continue;
+            if (compareFloat(TransformInfo->m_TexAlpha,0.0f) == true) continue;
         }
         newRednerLayer.push_back(obj);
     }

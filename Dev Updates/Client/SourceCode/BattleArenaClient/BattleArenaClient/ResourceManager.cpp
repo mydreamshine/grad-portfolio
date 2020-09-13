@@ -318,6 +318,7 @@ void ResourceManager::BuildShapeGeometry(ID3D12Device* device, ID3D12GraphicsCom
         EffectGeo_Meshs["SkillEffect_Heal_Area_GreenLight"]   = geoGen.CreateGrid(2000.0f, 2000.0f, 10, 10);
         EffectGeo_Meshs["SkillEffect_Fire_Wave_YellowLight"]  = geoGen.CreateGrid(100.0f, 326.0f, 10, 10);
         EffectGeo_Meshs["PickingEffect_CrossTarget"]          = geoGen.CreateGrid(150.0f, 150.0f, 10, 10);
+        EffectGeo_Meshs["CollisionEffect_Cloud_Explosion_Orange"] = geoGen.CreateGrid(500.0f, 500.0f, 2, 2);
         m_Geometries["GameEffectGeo"]
             = std::move(ResourceManager::BuildMeshGeometry(device, commandList, "GameEffectGeo", EffectGeo_Meshs));
     }
@@ -607,6 +608,7 @@ void ResourceManager::LoadTextures(ID3D12Device* device, ID3D12GraphicsCommandLi
         m_additionalAssetPath + "UI/Effect/Fire_Wave_YellowLight.png",
         m_additionalAssetPath + "UI/Effect/SwordSlash_a.png",
         m_additionalAssetPath + "UI/Effect/CrossTarget.png",
+        m_additionalAssetPath + "UI/Effect/SpriteSheet/Explosion_CloudShape_Orange.png",
         m_additionalAssetPath + "Models/Environment/Materials/TextureWorld.png",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Blue Silver.tga",
         m_additionalAssetPath + "Models/Polygonal Fantasy Pack/Textures/DS Brown Gold.tga",
@@ -1016,6 +1018,8 @@ void ResourceManager::BuildRenderItems()
                 SceneRitems[subMeshName]->Mat = m_Materials["Fire_Wave_YellowLight"].get();
             else if (subMeshName == "PickingEffect_CrossTarget")
                 SceneRitems[subMeshName]->Mat = m_Materials["CrossTarget"].get();
+            else if (subMeshName == "CollisionEffect_Cloud_Explosion_Orange")
+                SceneRitems[subMeshName]->Mat = m_Materials["Explosion_CloudShape_Orange"].get();
         }
     }
 

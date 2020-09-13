@@ -65,6 +65,9 @@ struct TransformInfo
 	int NumObjectCBDirty = gNumFrameResources;
 	DirectX::XMFLOAT4X4 m_WorldTransform = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_TexTransform = MathHelper::Identity4x4();
+	// Only used Quad or Grid(2x2) Geometry
+	DirectX::XMFLOAT2 ClipedUV_StartPos = { -1.0f, -1.0f };
+	DirectX::XMFLOAT2 ClipedUV_Size = { -1.0f, -1.0f };
 	float m_TexAlpha = 1.0f;
 	bool  m_nonShadowRender = false;
 
@@ -198,6 +201,15 @@ struct TransformInfo
 	DirectX::XMFLOAT3 m_InterPolationDestPosition = { 0.0f, 0.0f, 0.0f };
 	void SetInterpolatedDestPosition(const DirectX::XMFLOAT3& newPosition, bool WorldPosInterpolated = true);
 	void InterpolateTransformWorldPosition(CTimer& gt);
+
+	// Only used Quad or Grid(2x2) Geometry
+	bool SetedSpritedTexture = false;
+	DirectX::XMFLOAT2 SpritedTextureSize = { 1.0f, 1.0f };
+	DirectX::XMFLOAT2 ClipedTextureSize = { 1.0f, 1.0f };
+	void SetSpritedTextureSize(const DirectX::XMFLOAT2& TextureSize);
+	void SetClipedTextureSize(const DirectX::XMFLOAT2& ClipedSize);
+	void SetClipedTexturePos(float start_x, float start_y);
+	void UpdateClipedTexture(float CurrClipTime, float ClipChangedTotalTime, CTimer& gt);
 };
 
 

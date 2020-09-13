@@ -276,6 +276,12 @@ void TransformInfo::Init()
 
 	WorldPosIsInterpolation = false;
 	m_InterPolationDestPosition = { 0.0f, 0.0f, 0.0f };
+
+	SetedSpritedTexture = false;
+	SpritedTextureSize = { 1.0f, 1.0f };
+	ClipedTextureSize = { 1.0f, 1.0f };
+	ClipedUV_StartPos = { -1.0f, -1.0f };
+	ClipedUV_Size = { -1.0f, -1.0f };
 }
 
 void TransformInfo::SetInterpolatedDestPosition(const DirectX::XMFLOAT3& newPosition, bool WorldPosInterpolated)
@@ -300,6 +306,42 @@ void TransformInfo::InterpolateTransformWorldPosition(CTimer& gt)
 	TransformInfo::UpdateWorldTransform();
 }
 
+void TransformInfo::SetSpritedTextureSize(const DirectX::XMFLOAT2& TextureSize)
+{
+	SpritedTextureSize = TextureSize;
+}
+
+void TransformInfo::SetClipedTextureSize(const DirectX::XMFLOAT2& ClipedSize)
+{
+	ClipedTextureSize = ClipedSize;
+}
+
+void TransformInfo::SetClipedTexturePos(float start_x, float start_y)
+{
+	ClipedUV_StartPos.x = MathHelper::Clamp(start_x / SpritedTextureSize.x, 0.0f, 1.0f); // Cliped Start Position_X
+	ClipedUV_StartPos.y = MathHelper::Clamp(start_y / SpritedTextureSize.y, 0.0f, 1.0f); // Cliped Start Position_Y
+	ClipedUV_Size.x = MathHelper::Clamp(ClipedUV_StartPos.x + ClipedTextureSize.x / SpritedTextureSize.x, 0.0f, 1.0f); // Cliped Width
+	ClipedUV_Size.y = MathHelper::Clamp(ClipedUV_StartPos.y + ClipedTextureSize.y / SpritedTextureSize.y, 0.0f, 1.0f); // Cliped Height
+}
+
+void TransformInfo::UpdateClipedTexture(float CurrClipTime, float ClipChangedTotalTime, CTimer& gt)
+{
+	int ClipCol = (int)(SpritedTextureSize.x / ClipedTextureSize.x);
+	int ClipRow = (int)(SpritedTextureSize.y / ClipedTextureSize.y);
+
+	float ClipChangeInterval = ClipChangedTotalTime / (float)(ClipCol * ClipRow);
+
+	int CurrClipNum = (int)(CurrClipTime / ClipChangeInterval);
+	int CurrClipCol = CurrClipNum % ClipCol;
+	int CurrClipRow = CurrClipNum / ClipCol;
+
+	float CurrClipStart_x = (float)CurrClipCol * ClipedTextureSize.x;
+	float CurrClipStart_y = (float)CurrClipRow * ClipedTextureSize.y;
+
+	TransformInfo::SetClipedTexturePos(CurrClipStart_x, CurrClipStart_y);
+	m_TexAlpha = 1.0f;
+}
+
 bool Object::ProcessSelfDeActivate(CTimer& gt)
 {
 	if (SelfDeActivated == false) return !Activated;
@@ -309,7 +351,11 @@ bool Object::ProcessSelfDeActivate(CTimer& gt)
 		ObjectManager objManager;
 		objManager.DeActivateObj(this);
 	}
-	else DeActivatedDecrease -= gt.GetTimeElapsed();
+	else
+	{
+		DeActivatedDecrease -= gt.GetTimeElapsed();
+		if (DeActivatedDecrease < 0.0f) DeActivatedDecrease = 0.0f;
+	}
 
 	if (DisappearForDeAcTime == true)
 		m_TransformInfo->m_TexAlpha = DeActivatedDecrease / DeActivatedTime;

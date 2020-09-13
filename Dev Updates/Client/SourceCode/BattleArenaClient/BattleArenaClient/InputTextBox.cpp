@@ -340,9 +340,9 @@ void InputTextBox::Update(CTimer& gt, float ViewPortWidth, float ViewPortHeight)
         {
             if (CaretBlinkTimeStack >= CaretBlinkInterval)
             {
-                if (CaretTransform->m_TexAlpha == 1.0f)
+                if (fabs(CaretTransform->m_TexAlpha - 1.0f) < 0.000001f)
                     CaretTransform->m_TexAlpha = 0.0f;
-                else if (CaretTransform->m_TexAlpha == 0.0f)
+                else if (fabsf(CaretTransform->m_TexAlpha - 0.0f) < 0.000001f)
                     CaretTransform->m_TexAlpha = 1.0f;
                 CaretBlinkTimeStack = 0.0f;
             }

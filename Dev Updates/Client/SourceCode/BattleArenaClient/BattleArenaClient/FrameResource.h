@@ -9,6 +9,9 @@ struct ObjectConstants
     DirectX::XMFLOAT4X4 Local = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
+    // Only used Quad or Grid(2x2) Geometry
+    DirectX::XMFLOAT2 ClipedUV_StartPos = { -1.0f, -1.0f };
+    DirectX::XMFLOAT2 ClipedUV_Size = { -1.0f, -1.0f };
     float TexAlpha = 1.0f;
     DirectX::XMFLOAT3 cbPerObjectPad3 = { 0.0f, 0.0f, 0.0f };
 };

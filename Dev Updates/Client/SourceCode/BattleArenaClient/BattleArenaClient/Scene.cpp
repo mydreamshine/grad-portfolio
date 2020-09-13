@@ -64,6 +64,8 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
             XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(WorldM));
             XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(TexM));
             objConstants.TexAlpha = objInfo->m_TexAlpha;
+            objConstants.ClipedUV_StartPos = objInfo->ClipedUV_StartPos;
+            objConstants.ClipedUV_Size = objInfo->ClipedUV_Size;
 
             objCB->CopyData(objInfo->ObjCBIndex, objConstants);
 
@@ -90,6 +92,7 @@ void Scene::UpdateObjectCBs(UploadBuffer<ObjectConstants>* objCB, CTimer& gt)
             XMStoreFloat4x4(&objConstants.Local, XMMatrixTranspose(LocalM));
             XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(WorldM));
             XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(TexM));
+            //memcpy_s(objConstants.ClipedUVs, sizeof(float) * 4, objInfo->ClipedUVs, sizeof(float) * 4);
             objConstants.TexAlpha = objInfo->m_TexAlpha;
 
             objCB->CopyData(objInfo->ObjCBIndex, objConstants);

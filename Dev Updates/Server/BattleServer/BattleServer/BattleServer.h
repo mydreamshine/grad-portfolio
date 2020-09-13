@@ -15,7 +15,9 @@
 #include "..\Server\Common\CLIENT.h"
 #include "..\Server\Rooms\DMRoom.h"
 
-//#define TEST_FIELD
+#ifdef _DEBUG
+#define TEST_FIELD
+#endif // DEBUG
 
 namespace BattleArena {
 	constexpr auto RECV_BUF_SIZE = 512;

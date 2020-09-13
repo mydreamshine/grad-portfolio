@@ -69,9 +69,19 @@ PSInput VS(VSInput vin)
     // Transform to homogeneous clip space.
     vout.PosH = mul(PosW, gViewProj);
     
+    // Change UVs to cliped texture
+    float4 uv = float4(vin.uv, 0.0f, 1.0f);
+    if (gClipedUV_StartPos.x >= 0.0f && gClipedUV_StartPos.y >= 0.0f && gClipedUV_Size.x > 0.0f && gClipedUV_Size.y > 0.0f)
+    {
+        if (abs(uv.x - 0.0f) < 0.000001f) uv.x = gClipedUV_StartPos.x; // Cliped Start Position_X
+        else if (abs(uv.x - 1.0f) < 0.000001f) uv.x = gClipedUV_Size.x; // Cliped Width
+        if (abs(uv.y - 0.0f) < 0.000001f) uv.y = gClipedUV_StartPos.y; // Cliped Start Position_Y
+        else if (abs(uv.y - 1.0f) < 0.00001f) uv.y = gClipedUV_Size.y; // Cliped Height
+    }
+
     // 텍스쳐 좌표를 출력 정점의 해당 특성에 설정한다.
     // 출력 정점 특성들은 이후 삼각형을 따라 보간된다.
-    float4 uv = mul(float4(vin.uv, 0.0f, 1.0f), gTexTransform);
+    uv = mul(uv, gTexTransform);
     vout.uv = mul(uv, gMatTransform).xy;
 
     // Generate projective tex-coords to project shadow map onto scene.

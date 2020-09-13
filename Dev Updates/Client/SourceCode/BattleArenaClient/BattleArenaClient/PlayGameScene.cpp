@@ -1125,6 +1125,9 @@ void PlayGameScene::AnimateWorldObjectsTransform(CTimer& gt, std::queue<std::uni
 
         if (obj->m_TransformInfo->WorldPosIsInterpolation == true)
             obj->m_TransformInfo->InterpolateTransformWorldPosition(gt);
+
+        if (obj->m_TransformInfo->SetedSpritedTexture == true)
+            obj->m_TransformInfo->UpdateClipedTexture(obj->DeActivatedTime - obj->DeActivatedDecrease, obj->DeActivatedTime, gt);
     }
 }
 
@@ -2156,7 +2159,7 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
         auto newEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
         if (newEffectObj == nullptr)
         {
-            MessageBox(NULL, L"No equipment object available in the world object list.", L"Object Generate Warning", MB_OK);
+            MessageBox(NULL, L"No effect object available in the world object list.", L"Object Generate Warning", MB_OK);
             return;
         }
 
@@ -2165,7 +2168,7 @@ void PlayGameScene::SpawnEffectObjects(EFFECT_TYPE EffectType, XMFLOAT3 Position
         objManager.SetObjectComponent(newEffectObj, objName,
             Ritems, nullptr,
             &LocalScale, &LocalRotationEuler, &LocalPosition,
-            &WorldScale, &WorldRotationEuler, &Position);
+            &WorldScale, &WorldRotationEuler, &WorldPosition);
         newEffectObj->m_TransformInfo->m_nonShadowRender = true;
         newEffectObj->DeActivatedTime = 1.0f;
         newEffectObj->DeActivatedDecrease = 1.0f;
@@ -2304,21 +2307,86 @@ void PlayGameScene::DeActivateObject(int CE_ID)
 
             if (ControledObj != nullptr)
             {
-                std::string objName = ControledObj->m_Name;
+                std::string ControlledobjName = ControledObj->m_Name;
+                XMFLOAT3 ControlledWorldPosition = ControledObj->m_TransformInfo->GetWorldPosition();
+                XMFLOAT3 ControlledWorldRotationEuler = ControledObj->m_TransformInfo->GetWorldEuler();
+                std::string ControlledObjRitemName = ControledObj->m_RenderItems[0]->Name;
+                XMFLOAT3 ControlledObjExtents = ControledObj->m_RenderItems[0]->Geo->DrawArgs[ControlledObjRitemName].Bounds.Extents;
+
                 for (auto& child_obj : ControledObj->m_Childs)
                     ObjManager.DeActivateObj(child_obj);
                 ObjManager.DeActivateObj(ControledObj);
 
                 // HealArea에 한해서 FindDeactivateObject 기준이 RenderActivated이므로
                 // HealArea의 RenderActivated를 다음과 같이 false인 상태로 바꿔 놓는다.
+                if (ControlledobjName.find("Holy") != std::string::npos)
                 {
-                    if (objName.find("Holy") != std::string::npos)
+                    // 다른 Spawn 메소드에서 FindDeactivateObject()에 의해 색출되지 않도록
+                    // 아래와 같이 Activated는 true, RenderActivated는 false로 지정해준다.
+                    ControledObj->Activated = true;
+                    ControledObj->RenderActivated = false;
+                }
+                // NormalAttackObject나 SkillObject(SwordSlash)에 한해서
+                // 비활성화가 되는 경우는 무언가에 부딪혔을 때이므로
+                // 해당 "부딪힘"을 표현하기 위해 아래와 같이 ExplodingCloud Effect 오브젝트를 스폰해준다.
+                else if (ControlledobjName.find("NormalAttack") != std::string::npos || ControlledobjName.find("SwordSlash") != std::string::npos)
+                {
+                    if (m_AllRitemsRef == nullptr || m_GeometriesRef == nullptr || m_ModelSkeltonsRef == nullptr) return;
+                    auto& AllRitems = *m_AllRitemsRef;
+
+                    ObjectManager objManager;
+
+                    auto newEffectObj = objManager.FindDeactiveWorldObject(m_AllObjects, m_WorldObjects, m_MaxWorldObject);
+                    if (newEffectObj == nullptr)
                     {
-                        // 다른 Spawn 메소드에서 FindDeactivateObject()에 의해 색출되지 않도록
-                        // 아래와 같이 Activated는 true, RenderActivated는 false로 지정해준다.
-                        ControledObj->Activated = true;
-                        ControledObj->RenderActivated = false;
+                        MessageBox(NULL, L"No effect object available in the world object list.", L"Object Generate Warning", MB_OK);
+                        return;
                     }
+
+                    RenderItem* ExplosionRitem = AllRitems["CollisionEffect_Cloud_Explosion_Orange"].get();
+                    XMFLOAT3 newEffectObjExtents = ExplosionRitem->Geo->DrawArgs["CollisionEffect_Cloud_Explosion_Orange"].Bounds.Extents;
+
+                    // EffectObj SpawnPos Offset
+                    XMFLOAT3 Offset;
+                    {
+                        float deg2rad = MathHelper::Pi / 180.0f;
+
+                        XMVECTOR FRONT_VEC = XMVectorSet(0.0f, 0.0f, 1.0f, 1.0f);
+                        XMMATRIX RotM = DirectX::XMMatrixRotationRollPitchYaw(ControlledWorldRotationEuler.x * deg2rad, ControlledWorldRotationEuler.y * deg2rad, ControlledWorldRotationEuler.z * deg2rad);
+
+                        XMVECTOR ROTATE_VEC = XMVector3TransformNormal(FRONT_VEC, RotM);
+
+                        float Offset_Distance = ControlledObjExtents.z * 2.0f;
+                        XMVECTOR OFFSET_VEC = ROTATE_VEC * Offset_Distance;
+
+                        XMStoreFloat3(&Offset, OFFSET_VEC);
+                    }
+
+                    std::string objName = "ExplodingCloud - Instancing" + std::to_string(++m_EffectInstancingNum);
+                    std::vector<RenderItem*> Ritems = { ExplosionRitem };
+                    XMFLOAT3 newLocalScale = { 1.0f, 1.0f, 1.0f };
+                    XMFLOAT3 newLocalRotationEuler = { 0.0f, 0.0f, 0.0f };
+                    XMFLOAT3 newLocalPosition = { 0.0f, 0.0f, 0.0f };
+                    XMFLOAT3 newWorldScale = { 1.0f, 1.0f, 1.0f };
+                    XMFLOAT3 newWorldRotationEuler = { 0.0f, 0.0f, 0.0f };
+                    XMFLOAT3 newWorldPosition = ControlledWorldPosition;
+                    newWorldPosition.x += Offset.x;
+                    newWorldPosition.y += Offset.y;
+                    newWorldPosition.z += Offset.z;
+
+                    objManager.SetObjectComponent(newEffectObj, objName,
+                        Ritems, nullptr,
+                        &newLocalScale, &newLocalRotationEuler, &newLocalPosition,
+                        &newWorldScale, &newWorldRotationEuler, &newWorldPosition);
+                    newEffectObj->m_TransformInfo->m_nonShadowRender = true;
+                    newEffectObj->DeActivatedTime = 0.3f;
+                    newEffectObj->DeActivatedDecrease = 0.3f;
+                    newEffectObj->SelfDeActivated = true;
+                    newEffectObj->DisappearForDeAcTime = true;
+
+                    newEffectObj->m_TransformInfo->SetedSpritedTexture = true;
+                    newEffectObj->m_TransformInfo->SetSpritedTextureSize({ 1000.0f, 1000.0f });
+                    newEffectObj->m_TransformInfo->SetClipedTextureSize({ 1000.0f / 3.0f, 1000.0f / 3.0f});
                 }
             }
 
